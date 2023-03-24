@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]" />
+  <meta name="version" content="v 1.0.2" />
   <meta
           name="description"
           content="DigiChain loads syx samples for/from the Machinedrum and converts them to wav files for transfer via the Transfer app. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at 48Khz/16bit. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size."
@@ -15,10 +16,11 @@
       background-color: #202124;
     }
     * { user-select: none; }
-    .container { min-height: 95vh; }
+    .container { min-height: 95vh; transition: opacity .15s; }
     #getJoined, .wav-link-hidden { visibility: hidden; }
     #getJoined, #uploadInput { display: none; }
     #fileNum { padding-left: 1rem; }
+    th a { margin-left: -15px; }
     canvas.waveform {
       cursor: pointer;
       opacity: .7;
@@ -35,11 +37,14 @@
       padding: 0;
       width: 4rem;
     }
-    .toggle-check {
+    .toggle-check, .sort-check {
       outline: 0.1rem solid #d79c4e;
       border: 0.2rem solid #202124;
       width: 3.25rem;
       height: 3.25rem;
+    }
+    .sort-check {
+      margin-left: 0.5rem;
     }
     .move-up, .move-down, .duplicate, .remove { padding: 0; }
     .gg-info {
@@ -68,7 +73,7 @@
       opacity: 0.35;
     }
     .logo h3::after {
-      content: 'v 1.0.1';
+      content: 'v 1.0.2';
       font-size: 1rem;
       position: absolute;
       margin-left: -0.75rem;
@@ -125,17 +130,69 @@
       top: 0;
       margin-left: 1rem;
     }
+    .right-buttons i {
+      display: inline-block;
+      margin-top: 0;
+      margin-right: 0.5rem;
+      top: 0.35rem;
+    }
+    .no-files {
+      text-align: center;
+      padding-top: 7rem;
+      padding-bottom: 5rem;
+      opacity: .25;
+    }
+    .loading-message {
+      display: none;
+      top: 40vh;
+      position: fixed;
+      width: 100%;
+      font-size: 3rem;
+      text-align: center;
+    }
+    .loading-message div {
+      width: 32rem;
+      margin: auto;
+    }
+    .loading-message .gg-spinner {
+      transform: scale(2);
+      margin-top: 4rem;
+    }
+    .loading-message span {
+      margin-left: 5rem;
+      margin-top: -3.25rem;
+      display: block;
+    }
+    .loading .loading-message {
+      display: block;
+    }
+    .loading .container {
+      opacity: .15;
+    }
+    .gradient-text {
+      background-color: #606c76;
+      background-image: linear-gradient(90deg, #606c76, #606c76);
+      background-size: 100%;
+      background-repeat: repeat;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      -moz-background-clip: text;
+      -moz-text-fill-color: transparent;
+    }
     @media (max-width: 40.0rem) {
       .container { margin-top: 2.5rem; }
       .min-width-20, .column-33, .column-33 .download-buttons, .column-33 .slice-group { width: 100%; }
       .column-33 .btn-download { width: 49.3%;}
-      .column-33 .check { width: 15.5%; }
+      .column-33 .check { width: 15.4%; }
       .column-33 .dl-spaced { width: 81.5%;}
     }
   </style>
 </head>
 
 <body>
+<div class="loading-message">
+  <div><i class="gg-spinner"></i><span id="loadingText" class="gradient-text">Loading samples</span></div>
+</div>
 <div class="container">
   <div class="row">
     <div class="column">
@@ -158,20 +215,20 @@
         </div>
       </div>
     </div>
-    <div class="column-33 align-right">
+    <div class="column-33 align-right right-buttons">
       <div class="download-buttons">
-        <button class="btn-download" onclick="downloadAll()">Download</button>
-        <button class="btn-download" onclick="joinAll()">Download Joined</button>
+        <button class="btn-download" onclick="downloadAll()"><i class="gg-software-download"></i><span class="selection-count"> - </span></button>
+        <button class="btn-download" onclick="joinAll()"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined</button>
       </div>
       <div class="slice-group">
-        <button title="Select 4 samples" onclick="selectSliceAmount(4)" class="button-outline check sel-4">4</button>
-        <button title="Select 8 samples" onclick="selectSliceAmount(8)" class="button-outline check sel-8">8</button>
-        <button title="Select 16 samples" onclick="selectSliceAmount(16)" class="button-outline check sel-16">16</button>
-        <button title="Select 32 samples" onclick="selectSliceAmount(32)" class="button-outline check sel-32">32</button>
-        <button title="Select 64 samples" onclick="selectSliceAmount(64)" class="button-outline check sel-64">64</button>
-        <button title="Select 128 samples (good for wavetables / Model:Samples 0-127 start value.)" onclick="selectSliceAmount(128)" class="button-outline check sel-128">128</button><br>
-        <button title="Turn off slice grid" onclick="selectSliceAmount(0)" class="button check sel-0">Off</button>
-        <button class="min-width-20 dl-spaced" onclick="joinAll(true)">Download Joined (Spaced)</button>
+        <button title="Select 4 samples" onclick="selectSliceAmount(event, 4)" class="button-outline check sel-4">4</button>
+        <button title="Select 8 samples" onclick="selectSliceAmount(event, 8)" class="button-outline check sel-8">8</button>
+        <button title="Select 16 samples" onclick="selectSliceAmount(event, 16)" class="button-outline check sel-16">16</button>
+        <button title="Select 32 samples" onclick="selectSliceAmount(event, 32)" class="button-outline check sel-32">32</button>
+        <button title="Select 64 samples" onclick="selectSliceAmount(event, 64)" class="button-outline check sel-64">64</button>
+        <button title="Select 128 samples (good for wavetables / Model:Samples 0-127 start value.)" onclick="selectSliceAmount(event, 128)" class="button-outline check sel-128">128</button><br>
+        <button title="Turn off slice grid" onclick="selectSliceAmount(event, 0)" class="button check sel-0">Off</button>
+        <button class="min-width-20 dl-spaced" onclick="joinAll(true)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined (Spaced)</button>
         <a id="getJoined">_</a>
       </div>
     </div>
@@ -181,7 +238,7 @@
       <table>
         <thead>
         <tr>
-          <th></th>
+          <th class="w-0"><button title="Click to sort." onclick="sort('checked')" class="button-outline check sort-check">&nbsp;</button></th>
           <th class="w-0"></th>
           <th></th>
           <th style="width: 180px;"></th>
@@ -193,8 +250,7 @@
         </tr>
         </thead>
         <tbody id="fileList">
-        <tr><td colspan="6" style="text-align: center;padding: 5rem;
-    opacity: .25;"><h4>Load some samples to get started...</h4></td></tr>
+        <tr><td class="no-files" colspan="9"><h4>Load some samples to get started...</h4></td></tr>
         </tbody>
       </table>
     </div>
@@ -388,14 +444,10 @@
 <script>
   /*
   TODO:
-   - b When more than the slice grid is selected, the joined files exceed the grid size, need to export multiple files.
-   - Add loading indicator (big samples can stall the UI).
    - Add start/end point selection to table for sample export.
-   - Select header sort to sort by selected.
-   - Shift-click the slice-grid buttons to select randomly.
+   - Shift-double-click the slice-grid buttons to select randomly.
    - MIDI input to preview with a device connected. (channel picker)
    - Change default name (other than joined.wav)
-   - Slice groups to export more than one chain?
    - Buffer shuffler, randomize the buffer assignment to glitch exported samples.
   * */
 
@@ -428,7 +480,12 @@
   }
 
   function downloadAll() {
-    files.filter(f => f.meta.checked).forEach(file => {
+    const _files = files.filter(f => f.meta.checked);
+    if (_files.length > 5) {
+      const userReadyForTheCommitment = confirm(`You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`);
+      if (!userReadyForTheCommitment) { return; }
+    }
+    _files.forEach(file => {
         setTimeout(
           () => downloadFile(file.meta.id), 100
         )
@@ -443,6 +500,7 @@
   }
 
   function removeSelected() {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '' );
     files = files.filter(f => !f.meta.checked);
     unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
     renderList();
@@ -456,9 +514,13 @@
     document.querySelector('.info-panel-md').style.display = 'block';
   }
 
-  function joinAll(pad = false) {
-    const _files = files.filter(f => f.meta.checked);
-    if (pad && sliceGrid !== 0 && _files.length < sliceGrid) {
+  function joinAll(pad = false, filesRemaining = [], fileCount = 0) {
+    if (files.length === 0) { return; }
+    let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(f => f.meta.checked);
+    let tempFiles = _files.splice(0, (sliceGrid > 0 ? sliceGrid : _files.length));
+    filesRemaining = Array.from(_files);
+    _files = tempFiles;
+    if (pad && sliceGrid !== 0 && _files.length !== 0) {
       while (_files.length !== sliceGrid) {
         _files.push(_files[_files.length - 1]);
       }
@@ -496,8 +558,12 @@
       }
     });
     const joinedEl = document.getElementById('getJoined');
-    setWavLink({file: {name: 'joined.wav'}, buffer: audioArrayBuffer, meta: {}}, joinedEl);
+    setWavLink({file: {name: `joined_${fileCount}.wav`}, buffer: audioArrayBuffer, meta: {}}, joinedEl);
     joinedEl.click();
+    if (filesRemaining.length > 0) {
+      fileCount++
+      joinAll(pad, filesRemaining, fileCount);
+    }
   }
 
   const playFile = (event, id, loop) => {
@@ -521,7 +587,7 @@
     if (!file.meta.checked) {
       file.source?.stop();
     }
-    document.getElementById('fileNum').textContent = `${files.length}/${files.filter(f => f.meta.checked).length}`;
+    setCountValues();
   };
 
   const changeChannel = (id, channel) => {
@@ -532,18 +598,20 @@
     el.classList.add('selected');
   };
 
-  const selectSliceAmount = (size) => {
+  const selectSliceAmount = (event, size) => {
     const options = [0, 4, 8, 16, 32, 64, 128];
     sliceGrid = size;
-    if (size === 0) {
-      files.forEach(f => f.source?.stop());
-    }
     options.forEach(option => {
       const el = document.querySelector(`.sel-${option}`);
       option === size ?
               el.classList.remove('button-outline') :
               el.classList.add('button-outline');
     });
+    setCountValues();
+    if (size === 0) {
+      files.forEach(f => f.source?.stop());
+    }
+    if (event.shiftKey) { return; } /*Shift-click to change grid but keep selections.*/
     files.forEach(f => f.meta.checked = false);
     for (let i = 0; i < (size < files.length ? size : files.length) ; i++) {
       toggleCheck(files[i].meta.id);
@@ -639,6 +707,13 @@
     }
   };
 
+  const setCountValues = () => {
+    const selectionCount = files.filter(f => f.meta.checked).length;
+    document.getElementById('fileNum').textContent = `${files.length}/${selectionCount}`;
+    document.querySelector('.selection-count').textContent = ` ${selectionCount || '-'} `;
+    document.querySelectorAll('.join-count').forEach(el => el.textContent = ` ${selectionCount === 0 ? '-' : (selectionCount > 0 && sliceGrid > 0 ? Math.ceil(selectionCount / sliceGrid) : '1')} `);
+  };
+
   const renderList = () => {
     const listEl = document.getElementById('fileList');
     listEl.innerHTML = files.map( f => `
@@ -678,7 +753,7 @@
       </tr>
     `).join('');
     if (files.length === 0) {
-      listEl.innerHTML = `<tr><td colspan="6" style="text-align: center;padding: 5rem; opacity: .25;"><h4>Load some samples to get started...</h4></td></tr>`;
+      listEl.innerHTML = `<tr><td colspan="9" class="no-files"><h4>Load some samples to get started...</h4></td></tr>`;
     }
 
     document.querySelectorAll('.waveform').forEach((el, i) => {
@@ -689,7 +764,8 @@
         files[i].waveform = el;
       }
     });
-    document.getElementById('fileNum').textContent = `${files.length}/${files.filter(f => f.meta.checked).length}`;
+    setCountValues();
+    document.body.classList.remove('loading');
   };
   const bytesToInt = (bh, bm, bl) => {
     return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
@@ -739,6 +815,7 @@
       file: file, buffer: audioArrayBuffer, meta: {
         bitRate, masterSR, length: resample.outputBuffer.length, loopStart, loopEnd, loopType,
         duration: Number(resample.outputBuffer.length / masterSR).toFixed(4),
+        startFrame: 0, endFrame: resample.outputBuffer.length,
         checked: true, id: uuid
       }
     });
@@ -753,6 +830,7 @@
       file: file, buffer: audioArrayBuffer, meta: {
         masterSR, length: audioArrayBuffer.length,
         duration: Number(audioArrayBuffer.length / masterSR).toFixed(4),
+        startFrame: 0, endFrame: audioArrayBuffer.length,
         checked: true, id: uuid,
         channel: 'L'
       }
@@ -770,12 +848,19 @@
     }
   }
 
+  const setLoadingProgress = (count, total) => {
+    const el = document.getElementById('loadingText');
+    let progress = (count/total) * 100;
+    el.style.backgroundImage = `linear-gradient(90deg, #cf8600 ${progress}%, #606c76 ${progress + 1}%, #606c76 100%)`;
+  };
+
   uploadInput.addEventListener(
           'change',
            () => {
             // Calculate total size
             let numberOfBytes = 0;
             let count = [];
+             document.body.classList.add('loading');
             [...uploadInput.files].forEach((file, idx) => {
               numberOfBytes += file.size;
               var reader = new FileReader();
@@ -791,7 +876,8 @@
                 if (file.name.toLowerCase().endsWith('.wav')) {
                   await audioCtx.decodeAudioData(e.target.result, data => count.push(parseWav(data, file)));
                 }
-                document.getElementById('fileNum').textContent = `${files.length}/${files.length}`;
+                //document.getElementById('samplesLoadedProgress').textContent = ` (${idx + 1} / ${files.length})`;
+                setLoadingProgress(idx + 1, files.length);
               };
               reader.readAsArrayBuffer(file);
             });

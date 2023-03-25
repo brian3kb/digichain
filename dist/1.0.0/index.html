@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]" />
+  <meta
+          name="description"
+          content="DigiChain loads syx samples for/from the Machinedrum and converts them to wav files for transfer via the Transfer app. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at 48Khz/16bit. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size."
+  />
+  <title>DigiChain</title>
+  <link rel="stylesheet" href="styles.min.css">
+  <style>
+    body {
+      background-color: #202124;
+    }
+    .container { min-height: 95vh; }
+    #getJoined, .wav-link-hidden { visibility: hidden; }
+    #getJoined, #uploadInput { display: none; }
+    #fileNum { padding-left: 1rem; }
+    canvas.waveform {
+      cursor: pointer;
+      opacity: .7;
+      transition: opacity .2s;
+      margin-top: 0.4rem;
+      margin-bottom: -0.5rem;
+    }
+    canvas.waveform:hover { opacity: .98; }
+    td { padding: 0; }
+    td button { margin: 0.5rem; }
+    .min-width-20 { min-width: 20rem;}
+    .align-right { text-align: right; }
+    .check {
+      padding: 0;
+      width: 4rem;
+    }
+    .toggle-check {
+      outline: 0.1rem solid #d79c4e;
+      border: 0.2rem solid #202124;
+      width: 3.25rem;
+      height: 3.25rem;
+    }
+    .move-up, .move-down, .duplicate, .remove { padding: 0; }
+    .gg-info {
+      margin: 0.25rem;
+      transform: scale(.6);
+      margin-top: -0.15rem;
+    }
+    .channel-options {
+      border: 1px solid #40392e;
+      border-radius: 5px;
+      margin-right: 1.5rem;
+      padding: 0.5rem;
+      width: 6rem;
+      text-align: center;
+    }
+    .channel-options a {
+      color: #40392e;
+    }
+    .channel-options a.selected {
+      color: #d79c4e;
+    }
+    .logo {
+      position: absolute;
+      bottom: -4rem;
+      right: 1rem;
+      opacity: 0.35;
+    }
+    .info-panel-md {
+      position: fixed;
+      width: 50vw;
+      top: 16vh;
+      left: 25vw;
+      z-index: 1000;
+      background-color: #202124;
+      border: 1px solid orange;
+      padding: 2rem;
+      border-radius: 5px;
+      box-shadow: 0 0px 4px #cf8600;
+      display: none;
+    }
+    a {
+      cursor: pointer;
+    }
+    .w-0 { width: 0; }
+    tr:has(.check.button-outline) {
+      opacity: 0.55;
+    }
+    .dl-spaced{ width: 26.35rem; }
+    .slice-group {
+      border: 1px solid orange;
+      padding: 1rem;
+      border-radius: 5px;
+      text-align: center;
+      padding-bottom: 0.25rem;
+    }
+    .button-clear.remove {
+      color: #343433;
+      transition: color .2s;
+    }
+    .button-clear.remove:hover {
+      color: #5e1a1a;
+    }
+    @media (max-width: 40.0rem) {
+      .min-width-20 { width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <div class="row">
+    <div class="column">
+      <div class="row">
+        <div class="column">
+          <label for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</label>
+          <output class="float-left" id="fileNum">0/0</output>
+        </div>
+      </div>
+      <div class="row">
+        <label class="button min-width-20" for="uploadInput">Load Files...</label>
+        <input id="uploadInput" type="file" multiple/></div>
+      <div class="row">
+        <button class="min-width-20" onclick="removeSelected()">Remove Selected</button>
+      </div>
+      <div class="row">
+        <button title="Reset list to the order in which files were added to the pool." class="min-width-20 button-outline" onclick="sort('id')">Reset Sort/Order</button>
+      </div>
+    </div>
+    <div class="column"></div>
+    <div class="column align-right">
+      <button class="min-width-20" onclick="downloadAll()">Download</button>
+      <button class="min-width-20" onclick="joinAll()">Download Joined</button>
+      <div class="slice-group">
+        <button class="min-width-20 dl-spaced" onclick="joinAll(true)">Download Joined (Spaced)</button><br>
+        <button title="Turn off slice grid" onclick="selectSliceAmount(0)" class="button check sel-0">Off</button>
+        <button title="Select 4 samples" onclick="selectSliceAmount(4)" class="button-outline check sel-4">4</button>
+        <button title="Select 8 samples" onclick="selectSliceAmount(8)" class="button-outline check sel-8">8</button>
+        <button title="Select 16 samples" onclick="selectSliceAmount(16)" class="button-outline check sel-16">16</button>
+        <button title="Select 32 samples" onclick="selectSliceAmount(32)" class="button-outline check sel-32">32</button>
+        <button title="Select 64 samples" onclick="selectSliceAmount(64)" class="button-outline check sel-64">64</button>
+        <a id="getJoined">_</a>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="column">
+      <table>
+        <thead>
+        <tr>
+          <th></th>
+          <th class="w-0"></th>
+          <th></th>
+          <th style="width: 180px;"></th>
+          <th><a title="Click to sort." onclick="sort('name')">Filename / Download</a></th>
+          <th><a title="Click to sort." onclick="sort('duration')">Sample Length (s)</a></th>
+          <th class="w-0"></th>
+          <th class="w-0"></th>
+          <th class="w-0"></th>
+        </tr>
+        </thead>
+        <tbody id="fileList">
+        <tr><td colspan="6" style="text-align: center;padding: 5rem;
+    opacity: .25;"><h4>Load some samples to get started...</h4></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="row info-panel">
+    <div class="column column-25 column-offset-75 logo">
+      <h3 class="float-right">DigiChain <i class="gg-info float-right" style="cursor: pointer;" onclick="showInfo()"></i> </h3>
+    </div>
+  </div>
+</div>
+
+<div id="infoPanelMd" class="info-panel-md">
+  <a class="float-right" onclick="document.getElementById('infoPanelMd').style.display = 'none'"><i class="gg-close"></i></a>
+  <div class="content"></div>
+</div>
+<script src="main.min.js" type="application/javascript"></script>
+</body>
+</html>

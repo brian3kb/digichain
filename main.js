@@ -1,19 +1,5 @@
 import { Resampler, audioBufferToWav } from './resources.js';
 
-/*
- TODO:
-  - Import slices from .ot file/sample combos. (Octatrack)
-  - Import slices from tape.json file/sample combos. (OP-1 Field)
-  - Add start/end point selection to table for sample export.
-  - Option to normalize the sample.
-  - Save settings/configs to local-storage.
-  - Web compression API to save session.
-  - Shift-double-click the slice-grid buttons to select randomly.
-  - MIDI input to preview with a device connected. (channel picker)
-  - Change default name (other than joined.wav)
-  - Buffer shuffler, randomize the buffer assignment to glitch exported samples.
- * */
-
 const uploadInput = document.getElementById('uploadInput');
 const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
 const audioConfigOptions = {
@@ -110,22 +96,33 @@ function showInfo() {
   document.querySelector('.info-panel-md').style.display = 'block';
 }
 
+function getMonoFloat32ArrayFromBuffer(buffer, channel, getAudioBuffer = false) {
+  let result = getAudioBuffer ?
+      audioCtx.createBuffer(
+          masterChannels,
+          buffer.length,
+          masterSR
+      ) : new Float32Array(buffer.length);
+
+  if (channel === 'S') {
+    for (let i = 0; i < buffer.length; i++) {
+      (getAudioBuffer ? result.getChannelData(0) : result)[i] = (buffer.getChannelData(0)[i] + buffer.getChannelData(1)[i]) / 2;
+    }
+  } else {
+    const _channel = channel === 'R' ? 1 : 0;
+    for (let i = 0; i < buffer.length; i++) {
+      (getAudioBuffer ? result.getChannelData(0) : result)[i] = buffer.getChannelData(_channel)[i];
+    }
+  }
+  return result;
+}
+
 function joinToMono(audioArrayBuffer, _files, totalLength, largest, pad) {
   let totalWrite = 0;
   _files.forEach((file, idx) => {
     const bufferLength = pad ? largest : file.buffer.length;
-    let result = new Float32Array(file.buffer.length);
 
-    if (file?.meta?.channel === 'S') {
-      for (let i = 0; i < file.buffer.length; i++) {
-        result[i] = (file.buffer.getChannelData(0)[i] + file.buffer.getChannelData(1)[i]) / 2;
-      }
-    } else {
-      const channel = file?.meta?.channel === 'R' ? 1 : 0;
-      for (let i = 0; i < file.buffer.length; i++) {
-        result[i] = file.buffer.getChannelData(channel)[i];
-      }
-    }
+    let result = getMonoFloat32ArrayFromBuffer(file.buffer, file?.meta?.channel);
 
     for (let i = 0; i < bufferLength; i++) {
       audioArrayBuffer.getChannelData(0)[totalWrite] = result[i];
@@ -195,7 +192,9 @@ const playFile = (event, id, loop) => {
     file.source.stop();
   }
   file.source = audioCtx.createBufferSource();
-  file.source.buffer = file.buffer;
+  file.source.buffer = file.meta.channel ?
+      getMonoFloat32ArrayFromBuffer(file.buffer, file.meta.channel, true) :
+      file.buffer;
   file.source.connect(audioCtx.destination);
   file.source.loop = loop;
   file.source.start();
@@ -494,7 +493,7 @@ const parseWav = (audioArrayBuffer, file) => {
       duration: Number(audioArrayBuffer.length / masterSR).toFixed(4),
       startFrame: 0, endFrame: audioArrayBuffer.length,
       checked: true, id: uuid,
-      channel: 'L'
+      channel: audioArrayBuffer.numberOfChannels > 1 && masterChannels === 1 ? 'L': ''
     }
   });
   unsorted.push(uuid);

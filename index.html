@@ -299,7 +299,7 @@
         </tr>
         </thead>
         <tbody id="fileList">
-        <tr><td class="no-files" colspan="9"><h4>Load some samples to get started...</h4></td></tr>
+        <tr><td class="no-files" colspan="9"><h4>Load/Drag in some samples to get started...</h4></td></tr>
         </tbody>
       </table>
     </div>
@@ -498,7 +498,6 @@
 <script>
   /*
   TODO:
-   - Drag and drop sample importing.
    - 24bit bit depth support.
    - Import slices from .ot file/sample combos. (Octatrack)
    - Import slices from tape.json file/sample combos. (OP-1 Field)
@@ -513,6 +512,7 @@
   * */
 
   const uploadInput = document.getElementById('uploadInput');
+  const fileList = document.getElementById('fileList');
   const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
   const audioConfigOptions = {
     m4410016: { sr: 44100, bd: 16, c: 1 },
@@ -901,7 +901,7 @@
       </tr>
     `).join('');
     if (files.length === 0) {
-      listEl.innerHTML = `<tr><td colspan="9" class="no-files"><h4>Load some samples to get started...</h4></td></tr>`;
+      listEl.innerHTML = `<tr><td colspan="9" class="no-files"><h4>Load/Drag in some samples to get started...</h4></td></tr>`;
     }
 
     document.querySelectorAll('.waveform').forEach((el, i) => {
@@ -1001,38 +1001,56 @@
     el.style.backgroundImage = `linear-gradient(90deg, #cf8600 ${progress}%, #606c76 ${progress + 1}%, #606c76 100%)`;
   };
 
+  const consumeFileInput = (files) => {
+    let count = [];
+    document.body.classList.add('loading');
+    [...files].forEach((file, idx) => {
+      var reader = new FileReader();
+      reader.onload = async function(e) {
+        if (file.name.toLowerCase().endsWith('.syx')) {
+          // binary data
+          const buffer = e.target.result;
+          const bufferByteLength = buffer.byteLength;
+          const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
+          count.push(parseSds(bufferUint8Array, file));
+          setLoadingProgress(idx + 1, files.length);
+        }
+
+        if (file.name.toLowerCase().endsWith('.wav')) {
+          await audioCtx.decodeAudioData(e.target.result, data => {
+            count.push(parseWav(data, file));
+            setLoadingProgress(idx + 1, files.length);
+          });
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+    setTimeout(() => renderListWhenReady(count), 500);
+  };
+
   uploadInput.addEventListener(
           'change',
-           () => {
-            // Calculate total size
-            let numberOfBytes = 0;
-            let count = [];
-             document.body.classList.add('loading');
-            [...uploadInput.files].forEach((file, idx) => {
-              numberOfBytes += file.size;
-              var reader = new FileReader();
-              reader.onload = async function(e) {
-                if (file.name.toLowerCase().endsWith('.syx')) {
-                  // binary data
-                  const buffer = e.target.result;
-                  const bufferByteLength = buffer.byteLength;
-                  const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
-                  count.push(parseSds(bufferUint8Array, file));
-                  setLoadingProgress(idx + 1, files.length);
-                }
+          () => consumeFileInput(uploadInput.files),
+          false
+  );
 
-                if (file.name.toLowerCase().endsWith('.wav')) {
-                  await audioCtx.decodeAudioData(e.target.result, data => {
-                    count.push(parseWav(data, file));
-                    setLoadingProgress(idx + 1, files.length);
-                  });
-                }
-              };
-              reader.readAsArrayBuffer(file);
-            });
-            setTimeout(() => renderListWhenReady(count), 500);
+  fileList.addEventListener(
+          'dragover',
+          (event) => {
+            event.preventDefault();
           },
-          false,
+          false
+  );
+
+  fileList.addEventListener(
+          'drop',
+          (event) => {
+            event.preventDefault();
+            if (event?.dataTransfer?.files) {
+              consumeFileInput(event.dataTransfer.files);
+            }
+          },
+          false
   );
 
   /*---*/

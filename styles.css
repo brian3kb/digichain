@@ -279,8 +279,79 @@
     0% { transform: rotate(0deg) }
     to { transform: rotate(359deg) }
 }
-
-
+.gg-music-speaker {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(1);
+    width: 16px;
+    height: 22px;
+    border: 2px solid;
+    border-radius: 3px
+}
+.gg-music-speaker::after,
+.gg-music-speaker::before {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    border: 2px solid;
+    border-radius: 100px
+}
+.gg-music-speaker::before {
+    bottom: 2px;
+    width: 8px;
+    height: 8px;
+    left: 2px
+}
+.gg-music-speaker::after {
+    width: 4px;
+    height: 4px;
+    left: 4px;
+    top: 2px
+}
+.gg-calibrate {
+    display: block;
+    box-sizing: border-box;
+    position: relative;
+    transform: scale(1);
+    width: 18px;
+    height: 18px;
+    overflow: hidden
+}
+.gg-calibrate::after,
+.gg-calibrate::before {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    border-radius: 22px
+}
+.gg-calibrate::before {
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+    top: 10px;
+    left: 6px
+}
+.gg-calibrate::after {
+    width: 22px;
+    height: 22px;
+    border: 6px solid transparent;
+    border-top: 6px solid;
+    left: -2px;
+    top: 1px
+}
+.gg-shape-circle {
+    box-sizing: border-box;
+    position: relative;
+    display: inline-block;
+    transform: scale(1);
+    width: 16px;
+    height: 16px;
+    border: 3px solid;
+    border-radius: 100px
+}
 
 /*!
   * Milligram v1.4.1

@@ -4,11 +4,12 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]" />
-  <meta name="version" content="v 1.0.2" />
+  <meta name="version" content="v 1.1.0" />
   <meta
           name="description"
           content="DigiChain loads syx samples for/from the Machinedrum and converts them to wav files for transfer via the Transfer app. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at 48Khz/16bit. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size."
   />
+  <meta name="google-site-verification" content="W97nmMeI8CcybxJA7gLG-CFeJmztv03Jh9_bTExYJLY" />
   <title>DigiChain</title>
   <link rel="stylesheet" href="styles.css">
   <style>
@@ -66,6 +67,13 @@
     .channel-options a.selected {
       color: #d79c4e;
     }
+    .channel-options-stereo i {
+      display: inline-block;
+      transform: translateY(0.25rem);
+    }
+    .channel-options-stereo i.stereo-circle {
+      margin-left: -1.35rem;
+    }
     .logo {
       position: absolute;
       bottom: -4rem;
@@ -73,7 +81,7 @@
       opacity: 0.35;
     }
     .logo h3::after {
-      content: 'v 1.0.2';
+      content: 'v 1.1.0';
       font-size: 1rem;
       position: absolute;
       margin-left: -0.75rem;
@@ -127,15 +135,33 @@
     }
     .file-num {
       position: fixed;
-      top: 0;
+      bottom: 1.5rem;
       margin-left: 1rem;
+      opacity: .45;
+      background: #202124;
+      border-radius: 5px;
+      text-align: center;
+      line-height: 1.5rem;
+      vertical-align: middle;
+      padding: 0.5rem 0.7rem 0.1rem 0;
+      transform: scale(0.9);
     }
-    .right-buttons i {
+    .left-buttons .button, .left-buttons .btn-audio-config {
+      padding: 0 1.5rem;
+      margin-right: 0.5rem;
+      width: 47%;
+    }
+    .left-buttons .button:last-child {
+      margin-right: 0;
+    }
+    .right-buttons i, .left-buttons i {
       display: inline-block;
       margin-top: 0;
       margin-right: 0.5rem;
       top: 0.35rem;
     }
+    .btn-audio-config * { color: #7a6241; }
+    .btn-audio-config:hover * { color: #d79c4e;; }
     .no-files {
       text-align: center;
       padding-top: 7rem;
@@ -179,12 +205,34 @@
       -moz-background-clip: text;
       -moz-text-fill-color: transparent;
     }
+    .btn-audio-config {
+      background-color: #202124;
+      text-align: left;
+      /*color: #d79c4e;*/
+      color: #606c76;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-block;
+      height: 3.8rem;
+      letter-spacing: .1rem;
+      line-height: 3.8rem;
+      padding: 0 3.0rem;
+      text-decoration: none;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border-color: #313438;
+      background-blend-mode: soft-light;
+    }
     @media (max-width: 40.0rem) {
       .container { margin-top: 2.5rem; }
       .min-width-20, .column-33, .column-33 .download-buttons, .column-33 .slice-group { width: 100%; }
       .column-33 .btn-download { width: 49.3%;}
       .column-33 .check { width: 15.4%; }
       .column-33 .dl-spaced { width: 81.5%;}
+      .left-buttons .row { display: block; }
+      .left-buttons .button { width: 48.5%; margin-right: 0.1rem; }
+      .left-buttons .row .button:first-child { margin-left: 0.25rem;}
     }
   </style>
 </head>
@@ -195,25 +243,26 @@
 </div>
 <div class="container">
   <div class="row">
-    <div class="column">
+    <div class="column left-buttons">
 
       <div class="row">
-        <label class="button min-width-20" for="uploadInput">Load Files...</label>
-        <input id="uploadInput" type="file" multiple/></div>
-      <div class="row">
-        <button class="min-width-20" onclick="removeSelected()">Remove Selected</button>
+        <label class="button" for="uploadInput">Load Files...</label>
+        <input id="uploadInput" type="file" multiple/>
+          <select title="Change audio file export settings." onchange="changeAudioConfig(event)" data-selection="m4800016" class="btn-audio-config gg-calibrate" name="audioConfigOptions" id="audioConfigOptions">
+            <option value="m4410016">44.1K/16BIT MONO</option>
+            <option value="s4410016">44.1K/16BIT STEREO</option>
+            <option value="m4800016" selected>48K/16BIT MONO</option>
+            <option value="s4800016">48K/16BIT STEREO</option>
+          </select>
       </div>
       <div class="row">
-        <button title="Reset list to the order in which files were added to the pool." class="min-width-20 button-outline" onclick="sort('id')">Reset Sort/Order</button>
+        <button class="button" onclick="removeSelected()">Remove Selected</button>
+<!--      </div>-->
+<!--      <div class="row">-->
+        <button title="Reset list to the order in which files were added to the pool." class="button button-outline" onclick="sort('id')">Reset Sort/Order</button>
       </div>
     </div>
     <div class="column">
-      <div class="row">
-        <div class="column file-num">
-          <label for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</label>
-          <output class="float-left" id="fileNum">0/0</output>
-        </div>
-      </div>
     </div>
     <div class="column-33 align-right right-buttons">
       <div class="download-buttons">
@@ -221,12 +270,12 @@
         <button class="btn-download" onclick="joinAll()"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined</button>
       </div>
       <div class="slice-group">
-        <button title="Select 4 samples" onclick="selectSliceAmount(event, 4)" class="button-outline check sel-4">4</button>
-        <button title="Select 8 samples" onclick="selectSliceAmount(event, 8)" class="button-outline check sel-8">8</button>
-        <button title="Select 16 samples" onclick="selectSliceAmount(event, 16)" class="button-outline check sel-16">16</button>
-        <button title="Select 32 samples" onclick="selectSliceAmount(event, 32)" class="button-outline check sel-32">32</button>
-        <button title="Select 64 samples" onclick="selectSliceAmount(event, 64)" class="button-outline check sel-64">64</button>
-        <button title="Select 128 samples (good for wavetables / Model:Samples 0-127 start value.)" onclick="selectSliceAmount(event, 128)" class="button-outline check sel-128">128</button><br>
+        <button onclick="selectSliceAmount(event, sliceOptions[1])" class="button-outline check sel-1">4</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[2])" class="button-outline check sel-2">8</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[3])" class="button-outline check sel-3">16</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[4])" class="button-outline check sel-4">32</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[5])" class="button-outline check sel-5">64</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[6])" class="button-outline check sel-6">120</button><br>
         <button title="Turn off slice grid" onclick="selectSliceAmount(event, 0)" class="button check sel-0">Off</button>
         <button class="min-width-20 dl-spaced" onclick="joinAll(true)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined (Spaced)</button>
         <a id="getJoined">_</a>
@@ -266,12 +315,17 @@
   <a class="float-right" onclick="document.getElementById('infoPanelMd').style.display = 'none'"><i class="gg-close"></i></a>
   <div class="content"></div>
 </div>
+
+<div class="file-num">
+  <label for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</label>
+  <output class="float-left" id="fileNum">0/0</output>
+</div>
 <script>
   "use strict";
-  //JavaScript Audio Resampler
-  //Copyright (C) 2011-2015 Grant Galitz
-  //Released to Public Domain https://raw.githubusercontent.com/taisel/XAudioJS/master/resampler.js
   function Resampler(fromSampleRate, toSampleRate, channels, inputBuffer) {
+    //JavaScript Audio Resampler
+    //Copyright (C) 2011-2015 Grant Galitz
+    //Released to Public Domain https://raw.githubusercontent.com/taisel/XAudioJS/master/resampler.js
     //Input Sample Rate:
     this.fromSampleRate = +fromSampleRate;
     //Output Sample Rate:
@@ -444,7 +498,14 @@
 <script>
   /*
   TODO:
+   - Drag and drop sample importing.
+   - 24bit bit depth support.
+   - Import slices from .ot file/sample combos. (Octatrack)
+   - Import slices from tape.json file/sample combos. (OP-1 Field)
    - Add start/end point selection to table for sample export.
+   - Option to normalize the sample.
+   - Save settings/configs to local-storage.
+   - Web compression API to save session.
    - Shift-double-click the slice-grid buttons to select randomly.
    - MIDI input to preview with a device connected. (channel picker)
    - Change default name (other than joined.wav)
@@ -452,13 +513,38 @@
   * */
 
   const uploadInput = document.getElementById('uploadInput');
-  const masterSR = 48000;
-  const audioCtx = new AudioContext({sampleRate: masterSR});
+  const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
+  const audioConfigOptions = {
+    m4410016: { sr: 44100, bd: 16, c: 1 },
+    s4410016: { sr: 44100, bd: 16, c: 2 },
+    m4800016: { sr: 48000, bd: 16, c: 1 },
+    s4800016: { sr: 48000, bd: 16, c: 2 }
+  };
+  let masterSR = 48000;
+  let masterBitDepth = 16;
+  let masterChannels = 1;
+  let audioCtx = new AudioContext({sampleRate: masterSR});
   let files = [];
   let unsorted = [];
   let lastSort = '';
   let sliceGrid = 0;
+  let sliceOptions = Array.from(DefaultSliceOptions);
 
+  function changeAudioConfig(event) {
+    const selection = event?.target?.selectedOptions[0]?.value || 'm4800016';
+    if (files.length > 0) {
+      let conf = confirm(`Changing audio export settings will remove all files from the sample list.\n\n Do you want to continue?`);
+      if (!conf) {
+        event.target.selectedIndex = [...event.target.options].findIndex(s => s.value === event.target.dataset.selection);
+        return false;
+      }
+    }
+    files = [];
+    [masterSR, masterBitDepth, masterChannels] = [audioConfigOptions[selection].sr, audioConfigOptions[selection].bd, audioConfigOptions[selection].c];
+    event.target.dataset.selection = selection;
+    audioCtx = new AudioContext({sampleRate: masterSR});
+    renderList();
+  }
   const getFileById = (id) => {
     return files.find(f => f.meta.id === id);
   };
@@ -514,6 +600,49 @@
     document.querySelector('.info-panel-md').style.display = 'block';
   }
 
+  function joinToMono(audioArrayBuffer, _files, totalLength, largest, pad) {
+    let totalWrite = 0;
+    _files.forEach((file, idx) => {
+      const bufferLength = pad ? largest : file.buffer.length;
+      let result = new Float32Array(file.buffer.length);
+
+      if (file?.meta?.channel === 'S') {
+        for (let i = 0; i < file.buffer.length; i++) {
+          result[i] = (file.buffer.getChannelData(0)[i] + file.buffer.getChannelData(1)[i]) / 2;
+        }
+      } else {
+        const channel = file?.meta?.channel === 'R' ? 1 : 0;
+        for (let i = 0; i < file.buffer.length; i++) {
+          result[i] = file.buffer.getChannelData(channel)[i];
+        }
+      }
+
+      for (let i = 0; i < bufferLength; i++) {
+        audioArrayBuffer.getChannelData(0)[totalWrite] = result[i];
+        totalWrite++;
+      }
+    });
+  }
+
+  function joinToStereo(audioArrayBuffer, _files, totalLength, largest, pad) {
+    let totalWrite = 0;
+    _files.forEach((file, idx) => {
+      const bufferLength = pad ? largest : file.buffer.length;
+      let result = [new Float32Array(file.buffer.length), new Float32Array(file.buffer.length)];
+
+      for (let i = 0; i < file.buffer.length; i++) {
+        result[0][i] = file.buffer.getChannelData(0)[i];
+        result[1][i] = file.buffer.getChannelData(file.buffer.numberOfChannels === 2 ? 1 : 0)[i];
+      }
+
+      for (let i = 0; i < bufferLength; i++) {
+        audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i];
+        audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i];
+        totalWrite++;
+      }
+    });
+  }
+
   function joinAll(pad = false, filesRemaining = [], fileCount = 0) {
     if (files.length === 0) { return; }
     let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(f => f.meta.checked);
@@ -530,33 +659,16 @@
       total +=  pad ? largest : file.buffer.length;
       return total;
     }, 0);
+
     const audioArrayBuffer = audioCtx.createBuffer(
-            1,
+            masterChannels,
             totalLength,
             masterSR
     );
-    let totalWrite = 0;
-    _files.forEach((file, idx) => {
-      const bufferLength = pad ? largest : file.buffer.length;
-      let result = new Float32Array(file.buffer.length);
 
-      if (file.meta.channel) {
-        if (file.meta.channel === 'L') { result = file.buffer.getChannelData(0); }
-        if (file.meta.channel === 'R') { result = file.buffer.getChannelData(1); }
-        if (file.meta.channel === 'S') {
-          for (let i = 0; i < file.buffer.length; i++) {
-            result[i] = (file.buffer.getChannelData(0)[i] + file.buffer.getChannelData(1)[i]) / 2;
-          }
-        }
-      } else {
-        result = file.buffer.getChannelData(0);
-      }
+    if (masterChannels === 1) { joinToMono(audioArrayBuffer, _files, totalLength, largest, pad); }
+    if (masterChannels === 2) { joinToStereo(audioArrayBuffer, _files, totalLength, largest, pad); }
 
-      for (let i = 0; i < bufferLength; i++) {
-        audioArrayBuffer.getChannelData(0)[totalWrite] = result[i];
-        totalWrite++;
-      }
-    });
     const joinedEl = document.getElementById('getJoined');
     setWavLink({file: {name: `joined_${fileCount}.wav`}, buffer: audioArrayBuffer, meta: {}}, joinedEl);
     joinedEl.click();
@@ -598,11 +710,31 @@
     el.classList.add('selected');
   };
 
+  const changeSliceOption = (targetEl, size, silent = false) => {
+    let newValue = size;
+    if (!silent) { newValue = prompt(`Change slice value "${size}" to what new value?`); }
+    if (newValue && !isNaN(newValue)) {
+      newValue = Math.abs(Math.ceil(+newValue));
+      sliceOptions[targetEl.classList.value.split('sel-')[1]] = +newValue;
+      targetEl.textContent = newValue;
+    }
+    return +newValue;
+  };
+
   const selectSliceAmount = (event, size) => {
-    const options = [0, 4, 8, 16, 32, 64, 128];
+    if (event.ctrlKey) {
+      if (size === 0) {
+        DefaultSliceOptions.forEach((option, index) => changeSliceOption(
+                document.querySelector(`.sel-${index}`), option, true
+        ));
+        sliceOptions = Array.from(DefaultSliceOptions);
+        return selectSliceAmount({ shiftKey: true }, 0);
+      }
+      return selectSliceAmount({ shiftKey: true }, changeSliceOption(event.target, size));
+    }
     sliceGrid = size;
-    options.forEach(option => {
-      const el = document.querySelector(`.sel-${option}`);
+    sliceOptions.forEach((option, index) => {
+      const el = document.querySelector(`.sel-${index}`);
       option === size ?
               el.classList.remove('button-outline') :
               el.classList.add('button-outline');
@@ -738,10 +870,14 @@
             <span>${f.meta.duration} s</span>
         </td>
         <td>
-            <div class="channel-options" style="display: ${f.buffer.numberOfChannels > 1 ? 'block' : 'none'}">
+            <div class="channel-options" style="display: ${f.buffer.numberOfChannels > 1 && masterChannels === 1 ? 'block' : 'none'}">
             <a title="Left channel" onclick="changeChannel('${f.meta.id}', 'L')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
             <a title="Sum to mono" onclick="changeChannel('${f.meta.id}', 'S')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
             <a title="Right channel" onclick="changeChannel('${f.meta.id}', 'R')" class="${f.meta.channel === 'R' ? 'selected' : ''} channel-option-R">R</a>
+            </div>
+            <div class="channel-options channel-options-stereo" title="${f.buffer.numberOfChannels === 1 ? 'Mono sample' : 'Stereo sample'}" style="display: ${masterChannels === 2 ? 'block' : 'none'}">
+                <i class="gg-shape-circle"></i>
+                <i class="gg-shape-circle stereo-circle" style="display: ${f.buffer.numberOfChannels === 2 ? 'inline-block' : 'none'}"></i>
             </div>
         </td>
         <td>
@@ -770,6 +906,7 @@
   const bytesToInt = (bh, bm, bl) => {
     return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
   };
+
   const parseSds = (fd, file) => {
     // Check header is correct.
     if (!(fd[0] === 240 && fd[1] === 126 && fd[3] === 1 && fd[20] === 247)) {
@@ -787,17 +924,15 @@
     if (sampleRate < 4000 || sampleRate > 96000) { return false; }
     if (bitRate !== 16) { return false; }
 
-    const startIndex = fd.findIndex(
+    let idx = fd.findIndex(
             (x, i) => (x === 0xf0 && fd[i + 1] === 0x7e && fd[i + 3] === 0x02 && fd[i + 126] === 0xf7));
 
-    let idx = startIndex;
     let lengthRead = 0;
     let data = [];
 
     while (lengthRead < length) {
       for (let t = (idx + 5); t < (idx + 125) && lengthRead < length; t += 3) {
-        let val = (((fd[t] << 9) | (fd[t + 1] << 2) | (fd[t + 2] >> 5)) - 0x8000);
-        data[lengthRead++] = val;
+        data[lengthRead++] = (((fd[t] << 9) | (fd[t + 1] << 2) | (fd[t + 2] >> 5)) - 0x8000);
       }
       idx = idx + 127;
     }
@@ -813,7 +948,7 @@
 
     files.push({
       file: file, buffer: audioArrayBuffer, meta: {
-        bitRate, masterSR, length: resample.outputBuffer.length, loopStart, loopEnd, loopType,
+        length: resample.outputBuffer.length, loopStart, loopEnd, loopType,
         duration: Number(resample.outputBuffer.length / masterSR).toFixed(4),
         startFrame: 0, endFrame: resample.outputBuffer.length,
         checked: true, id: uuid
@@ -828,7 +963,7 @@
     /*duration, length, numberOfChannels, sampleRate*/
     files.push({
       file: file, buffer: audioArrayBuffer, meta: {
-        masterSR, length: audioArrayBuffer.length,
+        length: audioArrayBuffer.length,
         duration: Number(audioArrayBuffer.length / masterSR).toFixed(4),
         startFrame: 0, endFrame: audioArrayBuffer.length,
         checked: true, id: uuid,
@@ -871,13 +1006,15 @@
                   const bufferByteLength = buffer.byteLength;
                   const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
                   count.push(parseSds(bufferUint8Array, file));
+                  setLoadingProgress(idx + 1, files.length);
                 }
 
                 if (file.name.toLowerCase().endsWith('.wav')) {
-                  await audioCtx.decodeAudioData(e.target.result, data => count.push(parseWav(data, file)));
+                  await audioCtx.decodeAudioData(e.target.result, data => {
+                    count.push(parseWav(data, file));
+                    setLoadingProgress(idx + 1, files.length);
+                  });
                 }
-                //document.getElementById('samplesLoadedProgress').textContent = ` (${idx + 1} / ${files.length})`;
-                setLoadingProgress(idx + 1, files.length);
               };
               reader.readAsArrayBuffer(file);
             });
@@ -891,7 +1028,7 @@
   function audioBufferToWav(buffer, meta) {
     const sampleRate = masterSR;
     const format = meta.float32 ? 3 : 1;
-    const bitDepth = (meta.format || meta.bitRate) === 3 ? 32 : 16;
+    const bitDepth = masterBitDepth; //(meta.format || meta.bitRate) === 3 ? 32 : 16;
     let numChannels = buffer.numberOfChannels;
 
     let result;

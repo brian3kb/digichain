@@ -270,13 +270,13 @@
         <button class="btn-download" onclick="joinAll()"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined</button>
       </div>
       <div class="slice-group">
-        <button onclick="selectSliceAmount(event, sliceOptions[1])" class="button-outline check sel-1">4</button>
-        <button onclick="selectSliceAmount(event, sliceOptions[2])" class="button-outline check sel-2">8</button>
-        <button onclick="selectSliceAmount(event, sliceOptions[3])" class="button-outline check sel-3">16</button>
-        <button onclick="selectSliceAmount(event, sliceOptions[4])" class="button-outline check sel-4">32</button>
-        <button onclick="selectSliceAmount(event, sliceOptions[5])" class="button-outline check sel-5">64</button>
-        <button onclick="selectSliceAmount(event, sliceOptions[6])" class="button-outline check sel-6">120</button><br>
-        <button title="Turn off slice grid" onclick="selectSliceAmount(event, 0)" class="button check sel-0">Off</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[1])" class="button-outline check sel-1" data-sel="1">4</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[2])" class="button-outline check sel-2" data-sel="2">8</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[3])" class="button-outline check sel-3" data-sel="3">16</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[4])" class="button-outline check sel-4" data-sel="4">32</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[5])" class="button-outline check sel-5" data-sel="5">64</button>
+        <button onclick="selectSliceAmount(event, sliceOptions[6])" class="button-outline check sel-6" data-sel="6">120</button><br>
+        <button title="Turn off slice grid" onclick="selectSliceAmount(event, 0)" class="button check sel-0" data-sel="0">Off</button>
         <button class="min-width-20 dl-spaced" onclick="joinAll(true)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined (Spaced)</button>
         <a id="getJoined">_</a>
       </div>
@@ -702,9 +702,21 @@
     setCountValues();
   };
 
-  const changeChannel = (id, channel) => {
+  const changeChannel = (event, id, channel) => {
     const el = getRowElementById(id).querySelector('.channel-option-' + channel);
     const file = getFileById(id);
+    if (event.shiftKey) {
+      const opts = {
+        L: 'audio from the Left channel',
+        R: 'audio from the Right channel',
+        S: 'Sum both channels of audio to mono'
+      };
+      const confirmSetAllSelected = confirm(`Confirm setting all selected samples that are stereo to ${opts[channel]}?`);
+      if (confirmSetAllSelected) {
+        files.filter(f => f.meta.checked).forEach(f => f.meta.channel = channel);
+      }
+      return renderList();
+    }
     file.meta.channel = channel;
    getRowElementById(id).querySelectorAll('.channel-options a').forEach(opt => opt.classList.remove('selected'));
     el.classList.add('selected');
@@ -715,7 +727,7 @@
     if (!silent) { newValue = prompt(`Change slice value "${size}" to what new value?`); }
     if (newValue && !isNaN(newValue)) {
       newValue = Math.abs(Math.ceil(+newValue));
-      sliceOptions[targetEl.classList.value.split('sel-')[1]] = +newValue;
+      sliceOptions[targetEl.dataset.sel] = +newValue;
       targetEl.textContent = newValue;
     }
     return +newValue;
@@ -871,9 +883,9 @@
         </td>
         <td>
             <div class="channel-options" style="display: ${f.buffer.numberOfChannels > 1 && masterChannels === 1 ? 'block' : 'none'}">
-            <a title="Left channel" onclick="changeChannel('${f.meta.id}', 'L')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
-            <a title="Sum to mono" onclick="changeChannel('${f.meta.id}', 'S')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
-            <a title="Right channel" onclick="changeChannel('${f.meta.id}', 'R')" class="${f.meta.channel === 'R' ? 'selected' : ''} channel-option-R">R</a>
+            <a title="Left channel" onclick="changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
+            <a title="Sum to mono" onclick="changeChannel(event, '${f.meta.id}', 'S')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
+            <a title="Right channel" onclick="changeChannel(event, '${f.meta.id}', 'R')" class="${f.meta.channel === 'R' ? 'selected' : ''} channel-option-R">R</a>
             </div>
             <div class="channel-options channel-options-stereo" title="${f.buffer.numberOfChannels === 1 ? 'Mono sample' : 'Stereo sample'}" style="display: ${masterChannels === 2 ? 'block' : 'none'}">
                 <i class="gg-shape-circle"></i>

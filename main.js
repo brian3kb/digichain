@@ -1,6 +1,7 @@
 import { Resampler, audioBufferToWav } from './resources.js';
 
 const uploadInput = document.getElementById('uploadInput');
+const listEl = document.getElementById('fileList');
 const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
 const audioConfigOptions = {
   m4410016: { sr: 44100, bd: 16, c: 1 },
@@ -19,6 +20,7 @@ let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
 let unsorted = [];
 let lastSort = '';
+let lastSelectedRow;
 let sliceGrid = 0;
 let sliceOptions = Array.from(DefaultSliceOptions);
 
@@ -325,6 +327,13 @@ const sort = (by) => {
   renderList();
 };
 
+const handleRowClick = (event, id) => {
+  const row = getRowElementById(id);
+  if (lastSelectedRow) { lastSelectedRow.classList.remove('selected'); }
+  row.classList.add('selected');
+  lastSelectedRow = row;
+};
+
 const draw = (normalizedData, id, canvas) => {
   const drawLineSegment = (ctx, x, height, width, isEven) => {
     ctx.lineWidth = 1; // how thick the line is
@@ -368,9 +377,11 @@ const setCountValues = () => {
 };
 
 const renderList = () => {
-  const listEl = document.getElementById('fileList');
   listEl.innerHTML = files.map( f => `
-      <tr data-id="${f.meta.id}">
+      <tr data-id="${f.meta.id}" onclick="digichain.handleRowClick(event, '${f.meta.id}')">
+        <td>
+            
+        </td>
         <td>
             <button onclick="digichain.toggleCheck('${f.meta.id}')" class="${f.meta.checked ? '' : 'button-outline'} check toggle-check">&nbsp;</button>
         </td>
@@ -568,6 +579,38 @@ document.body.addEventListener(
     },
     false
 );
+
+document.body.addEventListener('keydown', (event) => {
+  const eventCodes = ['ArrowDown', 'ArrowUp', 'Space', 'Enter', 'KeyL', 'KeyR', 'KeyS'];
+  if (event.code === 'ArrowDown' && (!lastSelectedRow || !lastSelectedRow.isConnected)) {
+    lastSelectedRow = document.querySelector('#fileList tr');
+    return;
+  }
+  if (eventCodes.includes(event.code) && lastSelectedRow && lastSelectedRow?.isConnected) {
+    if (event.code === 'ArrowDown' && lastSelectedRow.nextElementSibling) {
+      if (!event.shiftKey) { return handleRowClick(event, lastSelectedRow.nextElementSibling.dataset.id); }
+      let idx = getFileIndexById(lastSelectedRow.dataset.id);
+      let item = files.splice(idx, 1)[0];
+      files.splice(idx + 1, 0, item);
+      lastSelectedRow.nextElementSibling.after(lastSelectedRow);
+    } else if (event.code === 'ArrowUp' && lastSelectedRow.previousElementSibling) {
+      if (!event.shiftKey) { return handleRowClick(event, lastSelectedRow.previousElementSibling.dataset.id); }
+      let idx = getFileIndexById(lastSelectedRow.dataset.id);
+      let item = files.splice(idx, 1)[0];
+      files.splice(idx - 1, 0, item);
+      lastSelectedRow.previousElementSibling.before(lastSelectedRow);
+    } else if (event.code === 'Enter') {
+      toggleCheck(lastSelectedRow.dataset.id);
+    } else if (event.code === 'Space') {
+      playFile(event, lastSelectedRow.dataset.id);
+    } else if (masterChannels === 1 && (event.code === 'KeyL' || event.code === 'KeyR' || event.code === 'KeyS')) {
+      const item = getFileById(lastSelectedRow.dataset.id);
+      if (item.meta.channel) {
+        changeChannel(event, lastSelectedRow.dataset.id, event.code.replace('Key', ''));
+      }
+    }
+  }
+});
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {
   sliceOptions,
@@ -584,7 +627,8 @@ window.digichain = {
   downloadAll,
   changeChannel,
   duplicate,
-  remove
+  remove,
+  handleRowClick
 };
 
 

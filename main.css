@@ -7,7 +7,9 @@ body {
 #getJoined, .wav-link-hidden { visibility: hidden; }
 #getJoined, #uploadInput { display: none; }
 #fileNum { padding-left: 1rem; }
+table { padding-bottom: 3rem; }
 th a { margin-left: -15px; }
+tr.selected { background-color: #cb9d5b0d; }
 canvas.waveform {
     cursor: pointer;
     opacity: .7;

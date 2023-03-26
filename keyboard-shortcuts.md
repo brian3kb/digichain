@@ -1,6 +1,13 @@
 **Keyboard Shortcuts**
  
-**Shift + Click**
+ - Up / Down Arrow Keys: when a sample row is highlighted, this changes the highlighted sample.
+ - Space Bar : plays the currently highlighted sample in the list.
+ - Enter / Return : toggles the selection of the currently highlighted sample in the list.
+ - L / S / R : changes the channel for stereo files being processed to mono.
+
+**Shift + Click / Shift + Key**
+ - Up / Down Keys : moves the highlighted sample up or down in the list.
+ - Space Bar : plays the currently highlighted sample looped. 
  - Waveform View : plays the sample looped, click again to go back to one-shot.
  - Slice Grid Number & Off Buttons : changes the slice grid size, but keeps the selected samples in the list.
  - Duplicate Icon : puts the duplicated file at the end of the sample list.
@@ -9,5 +16,5 @@
  - L S R Options : sets all stereo samples method for mono conversion (take left, right, or sum to mono).
 
 **Ctrl + Click**
- - Slice Grid Number Buttons : Prompts to enter a custom value for the slice grid.
- - Slice Grid Off Button : Restores the default slice grid options.
+ - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.
+ - Slice Grid Off Button : restores the default slice grid options.

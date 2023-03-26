@@ -20,6 +20,7 @@ canvas.waveform {
 }
 canvas.waveform:hover { opacity: .98; }
 td { padding: 0; }
+td .gg-more-vertical { opacity: .25; }
 td button { margin: 0.5rem; }
 .min-width-20 { min-width: 20rem;}
 .align-right { text-align: right; }
@@ -34,7 +35,7 @@ td button { margin: 0.5rem; }
     height: 3.25rem;
 }
 .sort-check {
-    margin-left: 0.5rem;
+    margin-left: -1rem;
 }
 .move-up, .move-down, .duplicate, .remove { padding: 0; }
 .gg-info {

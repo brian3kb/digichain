@@ -334,6 +334,12 @@ const handleRowClick = (event, id) => {
   lastSelectedRow = row;
 };
 
+const rowDragStart = (event) => {
+  if (event.target?.classList?.contains('file-row')) {
+    lastSelectedRow = event.target;
+  }
+};
+
 const draw = (normalizedData, id, canvas) => {
   const drawLineSegment = (ctx, x, height, width, isEven) => {
     ctx.lineWidth = 1; // how thick the line is
@@ -378,9 +384,12 @@ const setCountValues = () => {
 
 const renderList = () => {
   listEl.innerHTML = files.map( f => `
-      <tr data-id="${f.meta.id}" onclick="digichain.handleRowClick(event, '${f.meta.id}')">
+      <tr class="file-row" data-id="${f.meta.id}"
+          onclick="digichain.handleRowClick(event, '${f.meta.id}')"
+          onmousedown="digichain.handleRowClick(event, '${f.meta.id}')"  
+          ondragstart="digichain.rowDragStart(event)" draggable="true">
         <td>
-            
+            <i class="gg-more-vertical"></i>
         </td>
         <td>
             <button onclick="digichain.toggleCheck('${f.meta.id}')" class="${f.meta.checked ? '' : 'button-outline'} check toggle-check">&nbsp;</button>
@@ -573,8 +582,22 @@ document.body.addEventListener(
     'drop',
     (event) => {
       event.preventDefault();
-      if (event?.dataTransfer?.files) {
+      if (event?.dataTransfer?.files?.length) {
         consumeFileInput(event.dataTransfer.files);
+      } else {
+        let target = event.target;
+        while (!target.classList.contains('file-row')) {
+          target = target.parentElement || document.body;
+          target = target.nodeName === 'THEAD' ? document.querySelector('tr.file-row') : target;
+          target = target === document.body ? document.querySelector('tr.file-row:last-of-type') : target;
+        }
+        if (target) {
+          let selectedRowId = getFileIndexById(lastSelectedRow.dataset.id);
+          let targetRowId = getFileIndexById(target.dataset.id);
+          let item = files.splice(selectedRowId, 1)[0];
+          files.splice(targetRowId, 0, item);
+          targetRowId === 0 ? target.before(lastSelectedRow) : target.after(lastSelectedRow);
+        }
       }
     },
     false
@@ -628,7 +651,8 @@ window.digichain = {
   changeChannel,
   duplicate,
   remove,
-  handleRowClick
+  handleRowClick,
+  rowDragStart
 };
 
 

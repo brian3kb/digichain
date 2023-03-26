@@ -208,6 +208,7 @@ const toggleCheck = (id) => {
   if (!file.meta.checked) {
     file.source?.stop();
   }
+  lastSort = '';
   setCountValues();
 };
 
@@ -317,14 +318,14 @@ const sort = (by) => {
     } else {
       files = by === 'name' ?
           files.sort((a, b) => a.file[by].localeCompare(b.file[by])) :
-          files.sort((a, b) => a.meta[by] - b.meta[by]);
+          files.sort((a, b) => (a.meta[by] - b.meta[by]));
       lastSort = by;
     }
   }
   renderList();
 };
 
-const draw = (normalizedData, id) => {
+const draw = (normalizedData, id, canvas) => {
   const drawLineSegment = (ctx, x, height, width, isEven) => {
     ctx.lineWidth = 1; // how thick the line is
     ctx.strokeStyle = '#a8a8a8'; // what color our line is
@@ -337,7 +338,6 @@ const draw = (normalizedData, id) => {
     ctx.stroke();
   };
   // set up the canvas
-  const canvas = document.querySelector('canvas.waveform-'+id);
   const dpr = window.devicePixelRatio || 1;
   const padding = 0;
   canvas.width = 150; //canvas.offsetWidth * dpr;
@@ -350,7 +350,7 @@ const draw = (normalizedData, id) => {
   const width = canvas.offsetWidth / normalizedData.length;
   for (let i = 0; i < normalizedData.length; i++) {
     const x = width * i;
-    let height = (normalizedData[i] / 3) * canvas.offsetHeight - padding;
+    let height = (normalizedData[i] / 2) * canvas.offsetHeight - padding;
     if (height < 0) {
       height = 0;
     } else if (height > canvas.offsetHeight / 2) {
@@ -419,10 +419,12 @@ const renderList = () => {
     } else {
       //draw([...files[i].buffer.getChannelData(0)].filter((x, i) => !(i /50 % 1)), files[i].meta.id);
       let drawData = [];
-      for (let y = 0; y < files[i].buffer.length; y += Math.floor(files[i].buffer.length / 1024)) {
+      let drawResolution = Math.floor(files[i].buffer.length / 20);
+      drawResolution = drawResolution > 4096 ? 4096: drawResolution;
+      for (let y = 0; y < files[i].buffer.length; y += Math.floor(files[i].buffer.length / drawResolution)) {
         drawData.push(files[i].buffer.getChannelData(0)[y]);
       }
-      draw(drawData, files[i].meta.id);
+      draw(drawData, files[i].meta.id, el);
       files[i].waveform = el;
     }
   });

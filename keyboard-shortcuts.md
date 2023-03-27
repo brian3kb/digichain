@@ -1,7 +1,9 @@
 **Keyboard Shortcuts**
  
  - Up / Down Arrow Keys: when a sample row is highlighted, this changes the highlighted sample.
- - Space Bar : plays the currently highlighted sample in the list.
+ - P : plays the currently highlighted sample in the list.
+ - I : inverts the selected items in the list.
+ - Escape : closes any open dialog windows and stops all sample playback.
  - Enter / Return : toggles the selection of the currently highlighted sample in the list.
  - L / S / R : changes the channel for stereo files being processed to mono.
 
@@ -14,6 +16,7 @@
  - Move Up Icon : moves directly to the top of the sample list.
  - Move Down Icon : moved directly to the end of the sample list.
  - L S R Options : sets all stereo samples method for mono conversion (take left, right, or sum to mono).
+ - Joined / Joined Spaced : audio will be resampled internally back to the list instead of prompting to save as a file (clicking the filename in the list will still allow the wav download).
 
 **Ctrl + Click**
  - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.

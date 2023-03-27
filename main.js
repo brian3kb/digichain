@@ -23,22 +23,27 @@ let lastSort = '';
 let lastSelectedRow;
 let sliceGrid = 0;
 let sliceOptions = Array.from(DefaultSliceOptions);
+let modifierKeys = {
+  shiftKey: false,
+  ctrlKey: false
+};
 
 function changeAudioConfig(event) {
   const selection = event?.target?.selectedOptions[0]?.value || 'm4800016';
-  if (files.length > 0) {
-    let conf = confirm(`Changing audio export settings will remove all files from the sample list.\n\n Do you want to continue?`);
+  if (files.length > 0 && audioConfigOptions[selection].sr !== masterSR) {
+    let conf = confirm(`Changing audio export sample rate will remove all files from the sample list.\n\n Do you want to continue?`);
     if (!conf) {
       event.target.selectedIndex = [...event.target.options].findIndex(s => s.value === event.target.dataset.selection);
       return false;
     }
   }
-  files = [];
+  files = audioConfigOptions[selection].sr !== masterSR ? [] : files;
   [masterSR, masterBitDepth, masterChannels] = [audioConfigOptions[selection].sr, audioConfigOptions[selection].bd, audioConfigOptions[selection].c];
   event.target.dataset.selection = selection;
   audioCtx = new AudioContext({sampleRate: masterSR});
   renderList();
 }
+
 const getFileById = (id) => {
   return files.find(f => f.meta.id === id);
 };
@@ -48,35 +53,53 @@ const getFileIndexById = (id) => {
 const getRowElementById = (id) => {
   return document.querySelector(`tr[data-id="${id}"]`);
 };
-function setWavLink(file, linkEl) {
+const toggleModifier = (key) => {
+  if (key === 'shiftKey' || key === 'ctrlKey') {
+    modifierKeys[key] = !modifierKeys[key];
+    document.getElementById('modifierKey' + key).classList[modifierKeys[key] ? 'add' : 'remove']('active');
+  }
+};
 
-  const wav = audioBufferToWav(file.buffer, file.meta, masterSR, masterBitDepth);
+function setWavLink(file, linkEl) {
+  const fileName = getNiceFileName('', file);
+  const wav = audioBufferToWav(file.buffer, file.meta, masterSR, masterBitDepth, masterChannels);
   const blob = new window.Blob([new DataView(wav)], {
     type: 'audio/wav',
   });
 
   linkEl.href = URL.createObjectURL(blob);
-  linkEl.setAttribute('download', file.file.name.replace('.syx', '.wav'));
+  linkEl.setAttribute('download', fileName);
+  return linkEl;
 }
 
-function downloadAll() {
+async function downloadAll() {
   const _files = files.filter(f => f.meta.checked);
+  const links = [];
   if (_files.length > 5) {
     const userReadyForTheCommitment = confirm(`You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`);
     if (!userReadyForTheCommitment) { return; }
   }
-  _files.forEach(file => {
-    setTimeout(
-        () => downloadFile(file.meta.id), 100
-    )
-  });
+
+  for (const file of _files) {
+    const link = await downloadFile(file.meta.id);
+    links.push(link);
+  }
+
+  const intervalId = setInterval(() => {
+    const lnk = links.shift();
+    lnk?.click();
+    if (links.length === 0 && lnk) {
+      clearInterval(intervalId);
+    }
+  }, 500);
+
 }
 
 function downloadFile(id) {
   const el = getRowElementById(id).querySelector('.wav-link-hidden');
   const file = getFileById(id);
-  setWavLink(file, el);
-  el.click();
+  const link = setWavLink(file, el);
+  return link;
 }
 
 function removeSelected() {
@@ -152,8 +175,9 @@ function joinToStereo(audioArrayBuffer, _files, totalLength, largest, pad) {
   });
 }
 
-function joinAll(pad = false, filesRemaining = [], fileCount = 0) {
+function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInternal = false) {
   if (files.length === 0) { return; }
+  if (event.shiftKey) { toInternal = true; }
   let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(f => f.meta.checked);
   let tempFiles = _files.splice(0, (sliceGrid > 0 ? sliceGrid : _files.length));
   filesRemaining = Array.from(_files);
@@ -179,11 +203,21 @@ function joinAll(pad = false, filesRemaining = [], fileCount = 0) {
   if (masterChannels === 2) { joinToStereo(audioArrayBuffer, _files, totalLength, largest, pad); }
 
   const joinedEl = document.getElementById('getJoined');
-  setWavLink({file: {name: `joined_${fileCount}.wav`}, buffer: audioArrayBuffer, meta: {}}, joinedEl);
-  joinedEl.click();
+  const fileData = {file: {name: `joined_${pad ? 'spaced_' : ''}${fileCount+1}.wav`}, buffer: audioArrayBuffer, meta: {}};
+  if (toInternal) {
+    parseWav(audioArrayBuffer, {
+      lastModified: new Date().getTime(), name: `resample_${pad ? 'spaced_' : ''}${fileCount+1}.wav`,
+      size: ((masterBitDepth * masterSR * (audioArrayBuffer.length / masterSR)) / 8) * audioArrayBuffer.numberOfChannels /1024,
+      type: 'audio/wav'
+    });
+  } else {
+    setWavLink(fileData, joinedEl).click();
+  }
   if (filesRemaining.length > 0) {
-    fileCount++
-    joinAll(pad, filesRemaining, fileCount);
+    fileCount++;
+    joinAll(event, pad, filesRemaining, fileCount, toInternal);
+  } else {
+    renderList();
   }
 }
 
@@ -194,9 +228,10 @@ const playFile = (event, id, loop) => {
     file.source.stop();
   }
   file.source = audioCtx.createBufferSource();
-  file.source.buffer = file.meta.channel ?
+  file.source.buffer = file.meta.channel && masterChannels === 1 ?
       getMonoFloat32ArrayFromBuffer(file.buffer, file.meta.channel, true) :
       file.buffer;
+  //file.source.playbackRate.value = 8;
   file.source.connect(audioCtx.destination);
   file.source.loop = loop;
   file.source.start();
@@ -231,8 +266,16 @@ const changeChannel = (event, id, channel) => {
     return renderList();
   }
   file.meta.channel = channel;
+  file.waveform.getContext('2d').clear();
+  drawWaveform(file, file.waveform, file.buffer.numberOfChannels);
   getRowElementById(id).querySelectorAll('.channel-options a').forEach(opt => opt.classList.remove('selected'));
   el.classList.add('selected');
+};
+
+const invertFileSelection = () => {
+  if (files.length === 0) { return ; }
+  files.forEach(file => file.meta.checked = !file.meta.checked);
+  renderList();
 };
 
 const changeSliceOption = (targetEl, size, silent = false) => {
@@ -250,7 +293,7 @@ const selectSliceAmount = (event, size) => {
   if (event.ctrlKey) {
     if (size === 0) {
       DefaultSliceOptions.forEach((option, index) => changeSliceOption(
-          document.querySelector(`.sel-${index}`), option, true
+          document.querySelector(`.master-slices .sel-${index}`), option, true
       ));
       sliceOptions = Array.from(DefaultSliceOptions);
       return selectSliceAmount({ shiftKey: true }, 0);
@@ -259,7 +302,7 @@ const selectSliceAmount = (event, size) => {
   }
   sliceGrid = size;
   sliceOptions.forEach((option, index) => {
-    const el = document.querySelector(`.sel-${index}`);
+    const el = document.querySelector(`.master-slices .sel-${index}`);
     option === size ?
         el.classList.remove('button-outline') :
         el.classList.add('button-outline');
@@ -288,6 +331,37 @@ const duplicate = (event, id) => {
   unsorted.push(item.meta.id);
   renderList();
 };
+const splitEvenly = (event, id, slices) => {
+  const file = getFileById(id);
+  const frameSize = file.buffer.length / slices;
+  for (let i = 0; i < slices; i++) {
+    const audioArrayBuffer = audioCtx.createBuffer(
+        file.buffer.numberOfChannels,
+        frameSize,
+        file.buffer.sampleRate
+    );
+    const slice = {};
+    const uuid = crypto.randomUUID();
+    slice.buffer = audioArrayBuffer;
+    slice.file = {...file.file};
+    slice.meta = {
+      length: audioArrayBuffer.length,
+      duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
+      startFrame: 0, endFrame: audioArrayBuffer.length,
+      checked: true, id: uuid,
+      sliceNumber: `${file.meta.sliceNumber ? file.meta.sliceNumber + '-' : ''}${i+1}`, slicedFrom: file.meta.id,
+      channel: audioArrayBuffer.numberOfChannels > 1 ? 'L': ''
+    };
+
+    file.buffer.getChannelData(0).slice((i * frameSize), (i * frameSize) + frameSize).forEach((a, idx) => slice.buffer.getChannelData(0)[idx] = a);
+    if (file.buffer.numberOfChannels === 2) {
+      file.buffer.getChannelData(1).slice((i * frameSize), (i * frameSize) + frameSize).forEach((a, idx) => slice.buffer.getChannelData(1)[idx] = a);
+    }
+    files.push(slice);
+    unsorted.push(uuid);
+  }
+  renderList();
+}
 
 const remove = (id) => {
   const fileIdx = getFileIndexById(id);
@@ -333,12 +407,30 @@ const handleRowClick = (event, id) => {
   if (lastSelectedRow) { lastSelectedRow.classList.remove('selected'); }
   row.classList.add('selected');
   lastSelectedRow = row;
+  lastSelectedRow.scrollIntoViewIfNeeded();
 };
 
 const rowDragStart = (event) => {
   if (event.target?.classList?.contains('file-row')) {
     lastSelectedRow = event.target;
   }
+};
+
+const splitAction = (event, id, slices) => {
+  const el = document.getElementById('splitOptions');
+  const fileNameEl = document.getElementById('splitFileName');
+  let item;
+  if (id) {
+    lastSelectedRow = getRowElementById(id);
+  }
+  item = getFileById(id || lastSelectedRow.dataset.id);
+  if (slices) {
+    id = id || item.meta.id;
+    splitEvenly(event, id, slices);
+    return el.style.display = 'none';
+  }
+  fileNameEl.textContent = getNiceFileName('', item, true);
+  el.style.display = 'block';
 };
 
 const draw = (normalizedData, id, canvas) => {
@@ -393,6 +485,30 @@ const setCountValues = () => {
   document.getElementById('lengthHeaderLink').textContent = `Length (${secondsToMinutes(filesSelectedDuration)}/${secondsToMinutes(filesDuration)})`;
 };
 
+const getNiceFileName = (name, file, excludeExtension) => {
+  const fname = file ? `${file.file.name.replace(/\.[^.]*$/,'')}${file.meta?.dupeOf ? '-d' : ''}${file.meta?.sliceNumber ? '-s' + file.meta.sliceNumber : ''}.wav`:
+      name.replace(
+      /\.syx$|\.wav$/, '');
+  return excludeExtension ? fname.replace(/\.[^.]*$/,'') : fname;
+};
+
+const drawWaveform = (file, el, channel) => {
+  let drawData = [];
+  let drawResolution = Math.floor(file.buffer.length / 20);
+  if (masterChannels === 2 && file.buffer.numberOfChannels > 1) { channel = 'S'; }
+  drawResolution = drawResolution > 4096 ? 4096: drawResolution;
+  for (let y = 0; y < file.buffer.length; y += Math.floor(file.buffer.length / drawResolution)) {
+    if (channel === 'S') {
+      drawData.push(
+          (file.buffer.getChannelData(0)[y] + file.buffer.getChannelData(1)[y]) / 2
+      );
+    } else  {
+      drawData.push(file.buffer.getChannelData((channel === 'R' ? 1 : 0))[y]);
+    }
+  }
+  draw(drawData, file.meta.id, el);
+};
+
 const renderList = () => {
   listEl.innerHTML = files.map( f => `
       <tr class="file-row" data-id="${f.meta.id}"
@@ -415,8 +531,10 @@ const renderList = () => {
             <canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id}"></canvas>
         </td>
         <td>
-            <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}')">${f.file.name.replace(
-      /\.syx$|\.wav$/, '')}</a>${f.meta.dupeOf ? ' d' : ''}<a class="wav-link-hidden"></a>
+            <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}').click()">${getNiceFileName(f.file.name)}</a>
+            ${f.meta.dupeOf ? ' d' : ''}
+            ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
+            <a class="wav-link-hidden" target="_blank"></a>
         </td>
         <td>
             <span>${f.meta.duration} s</span>
@@ -431,6 +549,9 @@ const renderList = () => {
                 <i class="gg-shape-circle"></i>
                 <i class="gg-shape-circle stereo-circle" style="display: ${f.buffer.numberOfChannels === 2 ? 'inline-block' : 'none'}"></i>
             </div>
+        </td>
+        <td>
+            <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r"><i class="gg-menu-grid-r"></i></button>
         </td>
         <td>
             <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate"></i></button>
@@ -449,13 +570,7 @@ const renderList = () => {
       el.replaceWith(files[i].waveform);
     } else {
       //draw([...files[i].buffer.getChannelData(0)].filter((x, i) => !(i /50 % 1)), files[i].meta.id);
-      let drawData = [];
-      let drawResolution = Math.floor(files[i].buffer.length / 20);
-      drawResolution = drawResolution > 4096 ? 4096: drawResolution;
-      for (let y = 0; y < files[i].buffer.length; y += Math.floor(files[i].buffer.length / drawResolution)) {
-        drawData.push(files[i].buffer.getChannelData(0)[y]);
-      }
-      draw(drawData, files[i].meta.id, el);
+      drawWaveform(files[i], el, files[i].buffer.numberOfChannels);
       files[i].waveform = el;
     }
   });
@@ -506,7 +621,8 @@ const parseSds = (fd, file) => {
   resample.outputBuffer.filter(x => x !== undefined).forEach((y, i) => audioArrayBuffer.getChannelData(0)[i] = y / 32767);
 
   files.push({
-    file: file, buffer: audioArrayBuffer, meta: {
+    file: { lastModified: file.lastModified, name: file.name, size: file.size, type: file.type },
+    buffer: audioArrayBuffer, meta: {
       length: resample.outputBuffer.length, loopStart, loopEnd, loopType,
       duration: Number(resample.outputBuffer.length / masterSR).toFixed(3),
       startFrame: 0, endFrame: resample.outputBuffer.length,
@@ -521,12 +637,13 @@ const parseWav = (audioArrayBuffer, file) => {
   const uuid = crypto.randomUUID();
   /*duration, length, numberOfChannels, sampleRate*/
   files.push({
-    file: file, buffer: audioArrayBuffer, meta: {
+    file: { lastModified: file.lastModified, name: file.name, size: file.size, type: file.type },
+    buffer: audioArrayBuffer, meta: {
       length: audioArrayBuffer.length,
       duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
       startFrame: 0, endFrame: audioArrayBuffer.length,
       checked: true, id: uuid,
-      channel: audioArrayBuffer.numberOfChannels > 1 && masterChannels === 1 ? 'L': ''
+      channel: audioArrayBuffer.numberOfChannels > 1 ? 'L': ''
     }
   });
   unsorted.push(uuid);
@@ -615,10 +732,19 @@ document.body.addEventListener(
 );
 
 document.body.addEventListener('keydown', (event) => {
-  const eventCodes = ['ArrowDown', 'ArrowUp', 'Space', 'Enter', 'KeyL', 'KeyR', 'KeyS'];
+  const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyL', 'KeyR', 'KeyS', 'KeyP', 'KeyI'];
   if (event.code === 'ArrowDown' && (!lastSelectedRow || !lastSelectedRow.isConnected)) {
     lastSelectedRow = document.querySelector('#fileList tr');
     return;
+  }
+  if (event.code === 'Escape') {
+    if (files.length && !event.shiftKey) {
+      files.forEach(f => f.source?.stop());
+    }
+    return document.querySelectorAll('.pop-up').forEach(w => w.style.display = 'none');
+  }
+  if (files.length && (event.code === 'KeyI')) {
+    return invertFileSelection();
   }
   if (eventCodes.includes(event.code) && lastSelectedRow && lastSelectedRow?.isConnected) {
     if (event.code === 'ArrowDown' && lastSelectedRow.nextElementSibling) {
@@ -627,15 +753,17 @@ document.body.addEventListener('keydown', (event) => {
       let item = files.splice(idx, 1)[0];
       files.splice(idx + 1, 0, item);
       lastSelectedRow.nextElementSibling.after(lastSelectedRow);
+      lastSelectedRow.scrollIntoViewIfNeeded();
     } else if (event.code === 'ArrowUp' && lastSelectedRow.previousElementSibling) {
       if (!event.shiftKey) { return handleRowClick(event, lastSelectedRow.previousElementSibling.dataset.id); }
       let idx = getFileIndexById(lastSelectedRow.dataset.id);
       let item = files.splice(idx, 1)[0];
       files.splice(idx - 1, 0, item);
       lastSelectedRow.previousElementSibling.before(lastSelectedRow);
+      lastSelectedRow.scrollIntoViewIfNeeded();
     } else if (event.code === 'Enter') {
       toggleCheck(event, lastSelectedRow.dataset.id);
-    } else if (event.code === 'Space') {
+    } else if (event.code === 'KeyP') {
       playFile(event, lastSelectedRow.dataset.id);
     } else if (masterChannels === 1 && (event.code === 'KeyL' || event.code === 'KeyR' || event.code === 'KeyS')) {
       const item = getFileById(lastSelectedRow.dataset.id);
@@ -664,7 +792,9 @@ window.digichain = {
   remove,
   handleRowClick,
   rowDragStart,
-  lsr:() => lastSelectedRow
+  splitAction,
+  splitEvenly,
+  toggleModifier
 };
 
 

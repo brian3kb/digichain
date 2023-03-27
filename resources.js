@@ -1,9 +1,9 @@
-export function audioBufferToWav(buffer, meta, sampleRate, bitDepth) {
+export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels) {
   let numChannels = buffer.numberOfChannels;
   let format = meta?.float32 ? 3 : 1;
 
   let result;
-  if (meta.channel) {
+  if (meta.channel && masterNumChannels === 1) {
     numChannels = 1;
     if (meta.channel === 'L') { result = buffer.getChannelData(0); }
     if (meta.channel === 'R') { result = buffer.getChannelData(1); }
@@ -283,6 +283,21 @@ Resampler.prototype.initializeBuffers = function () {
     this.lastOutput = [];
   }
 }
+
+CanvasRenderingContext2D.prototype.clear =
+    CanvasRenderingContext2D.prototype.clear || function (preserveTransform) {
+      if (preserveTransform) {
+        this.save();
+        this.setTransform(1, 0, 0, 1, 0, 0);
+      }
+
+      this.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.beginPath();
+
+      if (preserveTransform) {
+        this.restore();
+      }
+    };
 /*Resources used:
   https://github.com/Jam3/audiobuffer-to-wav
   https://github.com/eh2k/uwedit/blob/master/core/MidiSDS.cpp

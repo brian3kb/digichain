@@ -2,9 +2,9 @@
 <html lang="en-US">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name = "viewport" content = "width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
   <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]" />
-  <meta name="version" content="v 1.1.0" />
+  <meta name="version" content="v 1.2.0" />
   <meta
           name="description"
           content="DigiChain loads uncompressed wav files or syx samples for/from the Machinedrum and converts them to wav files for transfer via the Transfer app. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size."
@@ -49,9 +49,9 @@
     <div class="column-33 align-right right-buttons">
       <div class="download-buttons">
         <button class="btn-download" onclick="digichain.downloadAll()"><i class="gg-software-download"></i><span class="selection-count"> - </span></button>
-        <button class="btn-download" onclick="digichain.joinAll()"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined</button>
+        <button class="btn-download" onclick="digichain.joinAll(event)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined</button>
       </div>
-      <div class="slice-group">
+      <div class="slice-group master-slices">
         <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[1])" class="button-outline check sel-1" data-sel="1">4</button>
         <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[2])" class="button-outline check sel-2" data-sel="2">8</button>
         <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[3])" class="button-outline check sel-3" data-sel="3">16</button>
@@ -59,7 +59,7 @@
         <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[5])" class="button-outline check sel-5" data-sel="5">64</button>
         <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[6])" class="button-outline check sel-6" data-sel="6">120</button><br>
         <button title="Turn off slice grid" onclick="digichain.selectSliceAmount(event, 0)" class="button check sel-0" data-sel="0">Off</button>
-        <button class="min-width-20 dl-spaced" onclick="digichain.joinAll(true)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined (Spaced)</button>
+        <button class="min-width-20 dl-spaced" onclick="digichain.joinAll(event, true)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined (Spaced)</button>
         <a id="getJoined">_</a>
       </div>
     </div>
@@ -79,6 +79,7 @@
           <th class="w-0"></th>
           <th class="w-0"></th>
           <th class="w-0"></th>
+          <th class="w-0"></th>
         </tr>
         </thead>
         <tbody id="fileList">
@@ -94,7 +95,7 @@
   </div>
 </div>
 
-<div id="infoPanelMd" class="info-panel-md">
+<div id="infoPanelMd" class="info-panel-md pop-up">
   <a class="float-right" onclick="document.getElementById('infoPanelMd').style.display = 'none'"><i class="gg-close"></i></a>
   <div class="content"></div>
 </div>
@@ -103,5 +104,27 @@
   <label for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</label>
   <output class="float-left" id="fileNum">0/0</output>
 </div>
+
+<div id="splitOptions" class="split-panel-options pop-up">
+  <a class="float-right" onclick="document.getElementById('splitOptions').style.display = 'none'"><i class="gg-close"></i></a>
+  <p>
+    Choose how many slices to make from '<span id="splitFileName"></span>'
+  </p>
+  <div class="slice-group">
+    <button onclick="digichain.splitAction(event, false, 2)" class="button-outline check sel-0" data-sel="1">2</button>
+    <button onclick="digichain.splitAction(event, false, 4)" class="button-outline check sel-1" data-sel="1">4</button>
+    <button onclick="digichain.splitAction(event, false, 8)" class="button-outline check sel-2" data-sel="2">8</button>
+    <button onclick="digichain.splitAction(event, false, 16)" class="button-outline check sel-3" data-sel="3">16</button>
+    <button onclick="digichain.splitAction(event, false, 32)" class="button-outline check sel-4" data-sel="4">32</button>
+    <button onclick="digichain.splitAction(event, false, 64)" class="button-outline check sel-5" data-sel="5">64</button>
+    <button onclick="digichain.splitAction(event, false, 128)" class="button-outline check sel-6" data-sel="6">128</button>
+  </div>
+</div>
+
+<div class="touch-buttons">
+  <button id="modifierKeyshiftKey" onclick="digichain.toggleModifier('shiftKey')" class="button-outline">SHIFT</button>
+  <button id="modifierKeyctrlKey" onclick="digichain.toggleModifier('ctrlKey')"class="button-outline">CTRL</button>
+</div>
+
 </body>
 </html>

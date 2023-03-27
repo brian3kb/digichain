@@ -7,7 +7,7 @@ body {
 #getJoined, .wav-link-hidden { visibility: hidden; }
 #getJoined, #uploadInput { display: none; }
 #fileNum { padding-left: 1rem; }
-table { padding-bottom: 3rem; }
+table { padding-bottom: 12rem; }
 th a { margin-left: -15px; }
 tr.selected { background-color: #cb9d5b0d; }
 canvas.waveform {
@@ -43,6 +43,10 @@ td button { margin: 0.5rem; }
     transform: scale(.6);
     margin-top: -0.15rem;
 }
+/*.select.split {*/
+/*    background: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" > <path d="M4 4H8V8H4V4Z" fill="currentColor" /> <path d="M4 10H8V14H4V10Z" fill="currentColor" /> <path d="M8 16H4V20H8V16Z" fill="currentColor" /> <path d="M10 4H14V8H10V4Z" fill="currentColor" /> <path d="M14 10H10V14H14V10Z" fill="currentColor" /> <path d="M10 16H14V20H10V16Z" fill="currentColor" /> <path d="M20 4H16V8H20V4Z" fill="currentColor" /><path d="M16 10H20V14H16V10Z" fill="currentColor" /> <path d="M20 16H16V20H20V16Z" fill="currentColor" /> </svg>') center right no-repeat !important;*/
+/*    padding-right: 3.0rem;*/
+/*}*/
 .channel-options {
     border: 1px solid #40392e;
     border-radius: 5px;
@@ -71,13 +75,13 @@ td button { margin: 0.5rem; }
     opacity: 0.35;
 }
 .logo h3::after {
-    content: 'v 1.1.0';
+    content: 'v 1.2.0';
     font-size: 1rem;
     position: absolute;
     margin-left: -0.75rem;
     margin-top: 2.55rem;
 }
-.info-panel-md {
+.info-panel-md, .split-panel-options {
     position: fixed;
     width: 50vw;
     top: 16vh;
@@ -214,6 +218,26 @@ tr:has(.check.button-outline) {
     border-color: #313438;
     background-blend-mode: soft-light;
 }
+#splitOptions .slice-group {
+    width: auto;
+    border: none;
+}
+.touch-buttons {
+    display: none;
+    position: fixed;
+    bottom: 5rem;
+    width: 10rem;
+}
+.touch-buttons button {
+    width: 100%;
+    background: #202124 !important;
+    opacity: .33;
+}
+.touch-buttons button.active {
+    opacity: 1;
+    background-color: #d79c4e !important;
+    color: #fff !important;
+}
 @media (max-width: 40.0rem) {
     .container { margin-top: 2.5rem; }
     .min-width-20, .column-33, .column-33 .download-buttons, .column-33 .slice-group { width: 100%; }
@@ -223,5 +247,16 @@ tr:has(.check.button-outline) {
     .left-buttons .row { display: block; }
     .left-buttons .button { width: 48.5%; margin-right: 0.1rem; }
     .left-buttons .row .button:first-child { margin-left: 0.25rem;}
-    .info-panel-md { width: 95%; left: 2.5%; }
+    .info-panel-md, .split-panel-options { width: 95%; left: 2.5%; }
 }
+
+/*
+
+@media (hover: none) and (pointer: coarse) {
+    .touch-buttons { display: block; }
+}
+
+@media (hover: none) and (pointer: fine) {
+    .touch-buttons { display: block; }
+}
+*/

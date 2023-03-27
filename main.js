@@ -202,9 +202,10 @@ const playFile = (event, id, loop) => {
   file.source.start();
 };
 
-const toggleCheck = (id) => {
+const toggleCheck = (event, id) => {
   const el = getRowElementById(id).querySelector('.toggle-check');
   const file = getFileById(id);
+  event.preventDefault();
   file.meta.checked = !file.meta.checked;
   file.meta.checked ? el.classList.remove('button-outline') : el.classList.add('button-outline');
   if (!file.meta.checked) {
@@ -270,7 +271,7 @@ const selectSliceAmount = (event, size) => {
   if (event.shiftKey) { return; } /*Shift-click to change grid but keep selections.*/
   files.forEach(f => f.meta.checked = false);
   for (let i = 0; i < (size < files.length ? size : files.length) ; i++) {
-    toggleCheck(files[i].meta.id);
+    toggleCheck(event, files[i].meta.id);
   }
   renderList();
 }
@@ -375,11 +376,21 @@ const draw = (normalizedData, id, canvas) => {
   }
 };
 
+const secondsToMinutes = (time) => {
+  const mins =  Math.floor(time / 60);
+  const seconds = Number(time % 60).toFixed(2);
+  return  mins > 0 ? `${mins}m ${Math.round(+seconds)}s` : `${seconds}s`;
+};
+
 const setCountValues = () => {
-  const selectionCount = files.filter(f => f.meta.checked).length;
+  const filesSelected = files.filter(f => f.meta.checked);
+  const selectionCount = filesSelected.length;
+  const filesDuration = files.reduce((a, f) => a += +f.meta.duration, 0);
+  const filesSelectedDuration = filesSelected.reduce((a, f) => a += +f.meta.duration, 0);
   document.getElementById('fileNum').textContent = `${files.length}/${selectionCount}`;
   document.querySelector('.selection-count').textContent = ` ${selectionCount || '-'} `;
   document.querySelectorAll('.join-count').forEach(el => el.textContent = ` ${selectionCount === 0 ? '-' : (selectionCount > 0 && sliceGrid > 0 ? Math.ceil(selectionCount / sliceGrid) : '1')} `);
+  document.getElementById('lengthHeaderLink').textContent = `Length (${secondsToMinutes(filesSelectedDuration)}/${secondsToMinutes(filesDuration)})`;
 };
 
 const renderList = () => {
@@ -392,7 +403,7 @@ const renderList = () => {
             <i class="gg-more-vertical"></i>
         </td>
         <td>
-            <button onclick="digichain.toggleCheck('${f.meta.id}')" class="${f.meta.checked ? '' : 'button-outline'} check toggle-check">&nbsp;</button>
+            <button onclick="digichain.toggleCheck(event, '${f.meta.id}')" class="${f.meta.checked ? '' : 'button-outline'} check toggle-check">&nbsp;</button>
         </td>
         <td>
             <button title="Move up in sample list." onclick="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r"></i></button>
@@ -497,7 +508,7 @@ const parseSds = (fd, file) => {
   files.push({
     file: file, buffer: audioArrayBuffer, meta: {
       length: resample.outputBuffer.length, loopStart, loopEnd, loopType,
-      duration: Number(resample.outputBuffer.length / masterSR).toFixed(4),
+      duration: Number(resample.outputBuffer.length / masterSR).toFixed(3),
       startFrame: 0, endFrame: resample.outputBuffer.length,
       checked: true, id: uuid
     }
@@ -512,7 +523,7 @@ const parseWav = (audioArrayBuffer, file) => {
   files.push({
     file: file, buffer: audioArrayBuffer, meta: {
       length: audioArrayBuffer.length,
-      duration: Number(audioArrayBuffer.length / masterSR).toFixed(4),
+      duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
       startFrame: 0, endFrame: audioArrayBuffer.length,
       checked: true, id: uuid,
       channel: audioArrayBuffer.numberOfChannels > 1 && masterChannels === 1 ? 'L': ''
@@ -623,7 +634,7 @@ document.body.addEventListener('keydown', (event) => {
       files.splice(idx - 1, 0, item);
       lastSelectedRow.previousElementSibling.before(lastSelectedRow);
     } else if (event.code === 'Enter') {
-      toggleCheck(lastSelectedRow.dataset.id);
+      toggleCheck(event, lastSelectedRow.dataset.id);
     } else if (event.code === 'Space') {
       playFile(event, lastSelectedRow.dataset.id);
     } else if (masterChannels === 1 && (event.code === 'KeyL' || event.code === 'KeyR' || event.code === 'KeyS')) {
@@ -652,7 +663,8 @@ window.digichain = {
   duplicate,
   remove,
   handleRowClick,
-  rowDragStart
+  rowDragStart,
+  lsr:() => lastSelectedRow
 };
 
 

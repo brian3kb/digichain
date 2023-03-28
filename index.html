@@ -49,17 +49,17 @@
     <div class="column-33 align-right right-buttons">
       <div class="download-buttons">
         <button class="btn-download" onclick="digichain.downloadAll()"><i class="gg-software-download"></i><span class="selection-count"> - </span></button>
-        <button class="btn-download" onclick="digichain.joinAll(event)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined</button>
+        <button title="Download the selected samples joined. Shift+click will resample back to the list." class="btn-download has-shift-mod" onclick="digichain.joinAll(event)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined</button>
       </div>
-      <div class="slice-group master-slices">
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[1])" class="button-outline check sel-1" data-sel="1">4</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[2])" class="button-outline check sel-2" data-sel="2">8</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[3])" class="button-outline check sel-3" data-sel="3">16</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[4])" class="button-outline check sel-4" data-sel="4">32</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[5])" class="button-outline check sel-5" data-sel="5">64</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[6])" class="button-outline check sel-6" data-sel="6">120</button><br>
-        <button title="Turn off slice grid" onclick="digichain.selectSliceAmount(event, 0)" class="button check sel-0" data-sel="0">Off</button>
-        <button class="min-width-20 dl-spaced" onclick="digichain.joinAll(event, true)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined (Spaced)</button>
+      <div class="slice-group master-slices" title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[1])" class="button-outline has-shift-mod has-ctrl-mod check sel-1" data-sel="1">4</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[2])" class="button-outline has-shift-mod has-ctrl-mod check sel-2" data-sel="2">8</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[3])" class="button-outline has-shift-mod has-ctrl-mod check sel-3" data-sel="3">16</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[4])" class="button-outline has-shift-mod has-ctrl-mod check sel-4" data-sel="4">32</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[5])" class="button-outline has-shift-mod has-ctrl-mod check sel-5" data-sel="5">64</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[6])" class="button-outline has-shift-mod has-ctrl-mod check sel-6" data-sel="6">120</button><br>
+        <button title="Turn off slice grid" onclick="digichain.selectSliceAmount(event, 0)" class="button check has-shift-mod has-ctrl-mod sel-0" data-sel="0">Off</button>
+        <button title="Download the selected samples joined, spaced evenly. Shift+click will resample back to the list." class="min-width-20 dl-spaced has-shift-mod" onclick="digichain.joinAll(event, true)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined (Spaced)</button>
         <a id="getJoined">_</a>
       </div>
     </div>
@@ -122,8 +122,8 @@
 </div>
 
 <div class="touch-buttons">
-  <button id="modifierKeyshiftKey" onclick="digichain.toggleModifier('shiftKey')" class="button-outline">SHIFT</button>
-  <button id="modifierKeyctrlKey" onclick="digichain.toggleModifier('ctrlKey')"class="button-outline">CTRL</button>
+  <button id="modifierKeyshiftKey" title="Locks the shift key (useful for touch users with no keyboard access)." onclick="digichain.toggleModifier('shiftKey')" class="button-outline">SHIFT</button>
+  <button id="modifierKeyctrlKey" title="Locks the ctrl key (useful for touch users with no keyboard access)." onclick="digichain.toggleModifier('ctrlKey')" class="button-outline">CTRL</button>
 </div>
 
 </body>

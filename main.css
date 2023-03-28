@@ -223,7 +223,7 @@ tr:has(.check.button-outline) {
     border: none;
 }
 .touch-buttons {
-    display: none;
+    /*display: none;*/
     position: fixed;
     bottom: 5rem;
     width: 10rem;
@@ -233,10 +233,40 @@ tr:has(.check.button-outline) {
     background: #202124 !important;
     opacity: .33;
 }
-.touch-buttons button.active {
+.touch-buttons button#modifierKeyshiftKey.active {
     opacity: 1;
-    background-color: #d79c4e !important;
+    background-color: #d74e81a1 !important;
     color: #fff !important;
+}
+.touch-buttons button#modifierKeyctrlKey.active {
+    opacity: 1;
+    background-color: #4E99D7A0 !important;
+    color: #fff !important;
+}
+body.shiftKey-mod-down .has-shift-mod,
+body.shiftKey-down .has-shift-mod {
+    border-color: #663247 !important;
+    color: #d79c4e;
+    background-color: transparent !important;
+}
+body.ctrlKey-mod-down .has-ctrl-mod,
+body.ctrlKey-down .has-ctrl-mod {
+    border-color: #4E99D7A0 !important;
+    background-color: transparent !important;
+    color: #d79c4e;
+}
+body.shiftKey-mod-down.ctrlKey-mod-down .has-shift-mod.has-ctrl-mod,
+body.shiftKey-down.ctrlKey-down .has-shift-mod.has-ctrl-mod {
+    border-left-color: #663247 !important;
+    border-top-color: #663247 !important;
+    border-right-color: #4E99D7A0 !important;
+    border-bottom-color: #4E99D7A0 !important;
+    background-color: transparent !important;
+    color: #d79c4e;
+}
+body.shiftKey-mod-down i.has-shift-mod-i,
+body.shiftKey-down i.has-shift-mod-i {
+    color: #663247 !important;
 }
 @media (max-width: 40.0rem) {
     .container { margin-top: 2.5rem; }
@@ -250,13 +280,11 @@ tr:has(.check.button-outline) {
     .info-panel-md, .split-panel-options { width: 95%; left: 2.5%; }
 }
 
-/*
+/*@media (hover: none) and (pointer: coarse) {*/
+/*    .touch-buttons { display: block; }*/
+/*}*/
 
-@media (hover: none) and (pointer: coarse) {
-    .touch-buttons { display: block; }
-}
+/*@media (hover: none) and (pointer: fine) {*/
+/*    .touch-buttons { display: block; }*/
+/*}*/
 
-@media (hover: none) and (pointer: fine) {
-    .touch-buttons { display: block; }
-}
-*/

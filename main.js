@@ -57,6 +57,7 @@ const toggleModifier = (key) => {
   if (key === 'shiftKey' || key === 'ctrlKey') {
     modifierKeys[key] = !modifierKeys[key];
     document.getElementById('modifierKey' + key).classList[modifierKeys[key] ? 'add' : 'remove']('active');
+    document.body.classList[modifierKeys[key] ? 'add' : 'remove'](key + '-mod-down');
   }
 };
 
@@ -177,7 +178,7 @@ function joinToStereo(audioArrayBuffer, _files, totalLength, largest, pad) {
 
 function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInternal = false) {
   if (files.length === 0) { return; }
-  if (event.shiftKey) { toInternal = true; }
+  if ((event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
   let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(f => f.meta.checked);
   let tempFiles = _files.splice(0, (sliceGrid > 0 ? sliceGrid : _files.length));
   filesRemaining = Array.from(_files);
@@ -205,11 +206,31 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
   const joinedEl = document.getElementById('getJoined');
   const fileData = {file: {name: `joined_${pad ? 'spaced_' : ''}${fileCount+1}.wav`}, buffer: audioArrayBuffer, meta: {}};
   if (toInternal) {
-    parseWav(audioArrayBuffer, {
-      lastModified: new Date().getTime(), name: `resample_${pad ? 'spaced_' : ''}${fileCount+1}.wav`,
-      size: ((masterBitDepth * masterSR * (audioArrayBuffer.length / masterSR)) / 8) * audioArrayBuffer.numberOfChannels /1024,
-      type: 'audio/wav'
+    // parseWav(audioArrayBuffer, {
+    //   lastModified: new Date().getTime(), name: `resample_${pad ? 'spaced_' : ''}${fileCount+1}.wav`,
+    //   size: ((masterBitDepth * masterSR * (audioArrayBuffer.length / masterSR)) / 8) * audioArrayBuffer.numberOfChannels /1024,
+    //   type: 'audio/wav'
+    // });
+    setWavLink(fileData, joinedEl);
+    const wav = audioBufferToWav(fileData.buffer, fileData.meta, masterSR, masterBitDepth, masterChannels);
+    const blob = new window.Blob([new DataView(wav)], {
+      type: 'audio/wav',
     });
+    const fileReader = new FileReader();
+    fileReader.readAsArrayBuffer(blob);
+    fileReader.fileCount = fileCount;
+
+    fileReader.onload = (e) => {
+      audioCtx.decodeAudioData(e.target.result, function(buffer) {
+        parseWav(buffer, {
+          lastModified: new Date().getTime(), name: `resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}.wav`,
+          size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
+          type: 'audio/wav'
+        });
+        renderList();
+      })
+    };
+
   } else {
     setWavLink(fileData, joinedEl).click();
   }
@@ -223,7 +244,7 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
 
 const playFile = (event, id, loop) => {
   const file = getFileById(id);
-  loop = loop || event.shiftKey || false;
+  loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
   if (file.source) {
     file.source.stop();
   }
@@ -253,7 +274,7 @@ const toggleCheck = (event, id) => {
 const changeChannel = (event, id, channel) => {
   const el = getRowElementById(id).querySelector('.channel-option-' + channel);
   const file = getFileById(id);
-  if (event.shiftKey) {
+  if ((event.shiftKey || modifierKeys.shiftKey)) {
     const opts = {
       L: 'audio from the Left channel',
       R: 'audio from the Right channel',
@@ -290,7 +311,8 @@ const changeSliceOption = (targetEl, size, silent = false) => {
 };
 
 const selectSliceAmount = (event, size) => {
-  if (event.ctrlKey) {
+  if (!event.target) { return ; }
+  if ((event.ctrlKey || modifierKeys.ctrlKey)) {
     if (size === 0) {
       DefaultSliceOptions.forEach((option, index) => changeSliceOption(
           document.querySelector(`.master-slices .sel-${index}`), option, true
@@ -311,7 +333,7 @@ const selectSliceAmount = (event, size) => {
   if (size === 0) {
     files.forEach(f => f.source?.stop());
   }
-  if (event.shiftKey) { return; } /*Shift-click to change grid but keep selections.*/
+  if ((event.shiftKey || modifierKeys.shiftKey)) { return; } /*Shift-click to change grid but keep selections.*/
   files.forEach(f => f.meta.checked = false);
   for (let i = 0; i < (size < files.length ? size : files.length) ; i++) {
     toggleCheck(event, files[i].meta.id);
@@ -327,7 +349,7 @@ const duplicate = (event, id) => {
   item.meta.dupeOf = id;
   item.waveform = false;
   item.meta.id = crypto.randomUUID();
-  files.splice((event.shiftKey ? files.length : fileIdx + 1), 0, item);
+  files.splice(((event.shiftKey || modifierKeys.shiftKey) ? files.length : fileIdx + 1), 0, item);
   unsorted.push(item.meta.id);
   renderList();
 };
@@ -378,7 +400,7 @@ const move = (event, id, direction) => {
   if (to === -1) { to = files.length - 1; }
   if (to >= files.length) { to = 0; }
   item = files.splice(from, 1)[0];
-  if (event.shiftKey) { /*If shift key, move to top or bottom of list.*/
+  if ((event.shiftKey || modifierKeys.shiftKey)) { /*If shift key, move to top or bottom of list.*/
     from > to ? files.splice(0, 0, item): files.splice(files.length, 0, item);
   } else {
     files.splice(to, 0, item);
@@ -522,10 +544,10 @@ const renderList = () => {
             <button onclick="digichain.toggleCheck(event, '${f.meta.id}')" class="${f.meta.checked ? '' : 'button-outline'} check toggle-check">&nbsp;</button>
         </td>
         <td>
-            <button title="Move up in sample list." onclick="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r"></i></button>
+            <button title="Move up in sample list." onclick="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
         </td>
         <td>
-            <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r"></i></button>
+            <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
         </td>
         <td>
             <canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id}"></canvas>
@@ -540,7 +562,7 @@ const renderList = () => {
             <span>${f.meta.duration} s</span>
         </td>
         <td>
-            <div class="channel-options" style="display: ${f.buffer.numberOfChannels > 1 && masterChannels === 1 ? 'block' : 'none'}">
+            <div class="channel-options has-shift-mod" style="display: ${f.buffer.numberOfChannels > 1 && masterChannels === 1 ? 'block' : 'none'}">
             <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
             <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
             <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R')" class="${f.meta.channel === 'R' ? 'selected' : ''} channel-option-R">R</a>
@@ -554,7 +576,7 @@ const renderList = () => {
             <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r"><i class="gg-menu-grid-r"></i></button>
         </td>
         <td>
-            <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate"></i></button>
+            <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
         </td>
         <td>
             <button title="Remove sample (double-click)." ondblclick="digichain.remove('${f.meta.id}')" class="button-clear remove"><i class="gg-trash"></i></button>
@@ -731,14 +753,21 @@ document.body.addEventListener(
     false
 );
 
+document.body.addEventListener('keyup', (event) => {
+  if (!event.shiftKey) { document.body.classList.remove('shiftKey-down'); }
+  if (!event.ctrlKey) { document.body.classList.remove('ctrlKey-down'); }
+});
+
 document.body.addEventListener('keydown', (event) => {
   const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyL', 'KeyR', 'KeyS', 'KeyP', 'KeyI'];
+  if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
+  if (event.ctrlKey) { document.body.classList.add('ctrlKey-down'); }
   if (event.code === 'ArrowDown' && (!lastSelectedRow || !lastSelectedRow.isConnected)) {
     lastSelectedRow = document.querySelector('#fileList tr');
     return;
   }
   if (event.code === 'Escape') {
-    if (files.length && !event.shiftKey) {
+    if (files.length && !(event.shiftKey || modifierKeys.shiftKey)) {
       files.forEach(f => f.source?.stop());
     }
     return document.querySelectorAll('.pop-up').forEach(w => w.style.display = 'none');
@@ -748,14 +777,14 @@ document.body.addEventListener('keydown', (event) => {
   }
   if (eventCodes.includes(event.code) && lastSelectedRow && lastSelectedRow?.isConnected) {
     if (event.code === 'ArrowDown' && lastSelectedRow.nextElementSibling) {
-      if (!event.shiftKey) { return handleRowClick(event, lastSelectedRow.nextElementSibling.dataset.id); }
+      if (!(event.shiftKey || modifierKeys.shiftKey)) { return handleRowClick(event, lastSelectedRow.nextElementSibling.dataset.id); }
       let idx = getFileIndexById(lastSelectedRow.dataset.id);
       let item = files.splice(idx, 1)[0];
       files.splice(idx + 1, 0, item);
       lastSelectedRow.nextElementSibling.after(lastSelectedRow);
       lastSelectedRow.scrollIntoViewIfNeeded();
     } else if (event.code === 'ArrowUp' && lastSelectedRow.previousElementSibling) {
-      if (!event.shiftKey) { return handleRowClick(event, lastSelectedRow.previousElementSibling.dataset.id); }
+      if (!(event.shiftKey || modifierKeys.shiftKey)) { return handleRowClick(event, lastSelectedRow.previousElementSibling.dataset.id); }
       let idx = getFileIndexById(lastSelectedRow.dataset.id);
       let item = files.splice(idx, 1)[0];
       files.splice(idx - 1, 0, item);

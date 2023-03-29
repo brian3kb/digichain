@@ -23,6 +23,7 @@ let lastSort = '';
 let lastSelectedRow;
 let sliceGrid = 0;
 let sliceOptions = Array.from(DefaultSliceOptions);
+let keyboardShortcutsDisabled = false;
 let modifierKeys = {
   shiftKey: false,
   ctrlKey: false
@@ -62,7 +63,7 @@ const toggleModifier = (key) => {
 };
 
 function setWavLink(file, linkEl) {
-  const fileName = getNiceFileName('', file);
+  const fileName = getNiceFileName('', file, false, true);
   const wav = audioBufferToWav(file.buffer, file.meta, masterSR, masterBitDepth, masterChannels);
   const blob = new window.Blob([new DataView(wav)], {
     type: 'audio/wav',
@@ -204,7 +205,8 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
   if (masterChannels === 2) { joinToStereo(audioArrayBuffer, _files, totalLength, largest, pad); }
 
   const joinedEl = document.getElementById('getJoined');
-  const fileData = {file: {name: `joined_${pad ? 'spaced_' : ''}${fileCount+1}.wav`}, buffer: audioArrayBuffer, meta: {}};
+  const path = _files[0].file.path ? `${(_files[0].file.path || '').replace(/\//gi, '-')}` : '';
+  const fileData = {file: {name: `${path}joined_${pad ? 'spaced_' : ''}${fileCount+1}--[${_files.length}].wav`}, buffer: audioArrayBuffer, meta: {}};
   if (toInternal) {
     // parseWav(audioArrayBuffer, {
     //   lastModified: new Date().getTime(), name: `resample_${pad ? 'spaced_' : ''}${fileCount+1}.wav`,
@@ -223,10 +225,10 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
     fileReader.onload = (e) => {
       audioCtx.decodeAudioData(e.target.result, function(buffer) {
         parseWav(buffer, {
-          lastModified: new Date().getTime(), name: `resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}.wav`,
+          lastModified: new Date().getTime(), name: `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}--[${_files.length}].wav`,
           size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
           type: 'audio/wav'
-        });
+        }, '');
         renderList();
       })
     };
@@ -259,16 +261,22 @@ const playFile = (event, id, loop) => {
 };
 
 const toggleCheck = (event, id) => {
-  const el = getRowElementById(id).querySelector('.toggle-check');
-  const file = getFileById(id);
-  event.preventDefault();
-  file.meta.checked = !file.meta.checked;
-  file.meta.checked ? el.classList.remove('button-outline') : el.classList.add('button-outline');
-  if (!file.meta.checked) {
-    file.source?.stop();
+  try {
+    const el = getRowElementById(id).querySelector('.toggle-check');
+    const file = getFileById(id);
+    event.preventDefault();
+    file.meta.checked = !file.meta.checked;
+    file.meta.checked
+        ? el.classList.remove('button-outline')
+        : el.classList.add('button-outline');
+    if (!file.meta.checked) {
+      file.source?.stop();
+    }
+    lastSort = '';
+    setCountValues();
+  } catch (err) {
+    setCountValues();
   }
-  lastSort = '';
-  setCountValues();
 };
 
 const changeChannel = (event, id, channel) => {
@@ -507,10 +515,11 @@ const setCountValues = () => {
   document.getElementById('lengthHeaderLink').textContent = `Length (${secondsToMinutes(filesSelectedDuration)}/${secondsToMinutes(filesDuration)})`;
 };
 
-const getNiceFileName = (name, file, excludeExtension) => {
-  const fname = file ? `${file.file.name.replace(/\.[^.]*$/,'')}${file.meta?.dupeOf ? '-d' : ''}${file.meta?.sliceNumber ? '-s' + file.meta.sliceNumber : ''}.wav`:
+const getNiceFileName = (name, file, excludeExtension, includePath) => {
+  let fname = file ? `${file.file.name.replace(/\.[^.]*$/,'')}${file.meta?.dupeOf ? '-d' : ''}${file.meta?.sliceNumber ? '-s' + file.meta.sliceNumber : ''}.wav`:
       name.replace(
       /\.syx$|\.wav$/, '');
+  fname = (includePath && file.file.path) ? `${file.file.path.replace(/\//gi, '-')}` + fname : fname;
   return excludeExtension ? fname.replace(/\.[^.]*$/,'') : fname;
 };
 
@@ -553,6 +562,7 @@ const renderList = () => {
             <canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id}"></canvas>
         </td>
         <td>
+            <span class="file-path">${f.file.path}</span>
             <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}').click()">${getNiceFileName(f.file.name)}</a>
             ${f.meta.dupeOf ? ' d' : ''}
             ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
@@ -603,76 +613,101 @@ const bytesToInt = (bh, bm, bl) => {
   return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
 };
 
-const parseSds = (fd, file) => {
-  // Check header is correct.
-  if (!(fd[0] === 240 && fd[1] === 126 && fd[3] === 1 && fd[20] === 247)) {
-    return false;
-  }
-  const uuid = crypto.randomUUID();
-  const bitRate = fd[6];
-  const sampleRate = Math.ceil(10e7 / bytesToInt(fd[9], fd[8], fd[7])) * 10;
-  const length = bytesToInt(fd[12], fd[11], fd[10]);
-  let loopStart = bytesToInt(fd[15], fd[14], fd[13]);
-  let loopEnd = bytesToInt(fd[18], fd[17], fd[16]) + 1;
-  const loopType = fd[19];
-
-  if (loopType === 0x7f) { loopStart = loopEnd = length; }
-  if (sampleRate < 4000 || sampleRate > 96000) { return false; }
-  if (bitRate !== 16) { return false; }
-
-  let idx = fd.findIndex(
-      (x, i) => (x === 0xf0 && fd[i + 1] === 0x7e && fd[i + 3] === 0x02 && fd[i + 126] === 0xf7));
-
-  let lengthRead = 0;
-  let data = [];
-
-  while (lengthRead < length) {
-    for (let t = (idx + 5); t < (idx + 125) && lengthRead < length; t += 3) {
-      data[lengthRead++] = (((fd[t] << 9) | (fd[t + 1] << 2) | (fd[t + 2] >> 5)) - 0x8000);
+const parseSds = (fd, file, fullPath) => {
+  const uuid = file.uuid || crypto.randomUUID();
+  try {
+    // Check header is correct.
+    if (!(fd[0] === 240 && fd[1] === 126 && fd[3] === 1 && fd[20] === 247)) {
+      return { uuid, failed: true };
     }
-    idx = idx + 127;
-  }
+    const bitRate = fd[6];
+    const sampleRate = Math.ceil(10e7 / bytesToInt(fd[9], fd[8], fd[7])) * 10;
+    const length = bytesToInt(fd[12], fd[11], fd[10]);
+    let loopStart = bytesToInt(fd[15], fd[14], fd[13]);
+    let loopEnd = bytesToInt(fd[18], fd[17], fd[16]) + 1;
+    const loopType = fd[19];
 
-  const resample = new Resampler(sampleRate, masterSR, 1, data.filter(x => x !== undefined));
-  resample.resampler(resample.inputBuffer.length);
-  const audioArrayBuffer = audioCtx.createBuffer(
-      1,
-      resample.outputBuffer.length - ((resample.outputBuffer.length / 120) * 5),
-      masterSR
-  );
-  resample.outputBuffer.filter(x => x !== undefined).forEach((y, i) => audioArrayBuffer.getChannelData(0)[i] = y / 32767);
+    if (loopType === 0x7f) { loopStart = loopEnd = length; }
+    if (sampleRate < 4000 || sampleRate > 96000) { return false; }
+    if (bitRate !== 16) { return false; }
 
-  files.push({
-    file: { lastModified: file.lastModified, name: file.name, size: file.size, type: file.type },
-    buffer: audioArrayBuffer, meta: {
-      length: resample.outputBuffer.length, loopStart, loopEnd, loopType,
-      duration: Number(resample.outputBuffer.length / masterSR).toFixed(3),
-      startFrame: 0, endFrame: resample.outputBuffer.length,
-      checked: true, id: uuid
+    let idx = fd.findIndex(
+        (x, i) => (x === 0xf0 && fd[i + 1] === 0x7e && fd[i + 3] === 0x02 &&
+            fd[i + 126] === 0xf7));
+
+    let lengthRead = 0;
+    let data = [];
+
+    while (lengthRead < length) {
+      for (let t = (idx + 5); t < (idx + 125) && lengthRead < length; t += 3) {
+        data[lengthRead++] = (((fd[t] << 9) | (fd[t + 1] << 2) |
+            (fd[t + 2] >> 5)) - 0x8000);
+      }
+      idx = idx + 127;
     }
-  });
-  unsorted.push(uuid);
-  return uuid;
+
+    const resample = new Resampler(sampleRate, masterSR, 1,
+        data.filter(x => x !== undefined));
+    resample.resampler(resample.inputBuffer.length);
+    const audioArrayBuffer = audioCtx.createBuffer(
+        1,
+        resample.outputBuffer.length -
+        ((resample.outputBuffer.length / 120) * 5),
+        masterSR
+    );
+    resample.outputBuffer.filter(x => x !== undefined).
+        forEach((y, i) => audioArrayBuffer.getChannelData(0)[i] = y / 32767);
+
+    files.push({
+      file: {
+        lastModified: file.lastModified,
+        name: file.name,
+        path: fullPath.replace(file.name, ''),
+        size: file.size,
+        type: file.type
+      },
+      buffer: audioArrayBuffer, meta: {
+        length: resample.outputBuffer.length, loopStart, loopEnd, loopType,
+        duration: Number(resample.outputBuffer.length / masterSR).toFixed(3),
+        startFrame: 0, endFrame: resample.outputBuffer.length,
+        checked: true, id: uuid
+      }
+    });
+    unsorted.push(uuid);
+    return uuid;
+  } catch(err) {
+    return { uuid, failed: true };
+  }
 };
 
-const parseWav = (audioArrayBuffer, file) => {
-  const uuid = crypto.randomUUID();
-  /*duration, length, numberOfChannels, sampleRate*/
-  files.push({
-    file: { lastModified: file.lastModified, name: file.name, size: file.size, type: file.type },
-    buffer: audioArrayBuffer, meta: {
-      length: audioArrayBuffer.length,
-      duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
-      startFrame: 0, endFrame: audioArrayBuffer.length,
-      checked: true, id: uuid,
-      channel: audioArrayBuffer.numberOfChannels > 1 ? 'L': ''
-    }
-  });
-  unsorted.push(uuid);
-  return uuid;
+const parseWav = (audioArrayBuffer, file, fullPath) => {
+  const uuid = file.uuid || crypto.randomUUID();
+  try {
+    /*duration, length, numberOfChannels, sampleRate*/
+    files.push({
+      file: {
+        lastModified: file.lastModified,
+        name: file.name,
+        path: fullPath.replace(file.name, ''),
+        size: file.size,
+        type: file.type
+      },
+      buffer: audioArrayBuffer, meta: {
+        length: audioArrayBuffer.length,
+        duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
+        startFrame: 0, endFrame: audioArrayBuffer.length,
+        checked: true, id: uuid,
+        channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : ''
+      }
+    });
+    unsorted.push(uuid);
+    return uuid;
+  } catch (err) {
+    return { uuid, failed: true };
+  }
 };
 
-const renderListWhenReady = (count) => {
+const renderListWhenReady = (count, fileCount) => {
   count = count.filter(c => c !== false);
   if (count.every(c => unsorted.includes(c))) {
     renderList();
@@ -687,36 +722,65 @@ const setLoadingProgress = (count, total) => {
   el.style.backgroundImage = `linear-gradient(90deg, #cf8600 ${progress}%, #606c76 ${progress + 1}%, #606c76 100%)`;
 };
 
-const consumeFileInput = (files) => {
+const consumeFileInput = (files, fullPaths = []) => {
+  const checkCount = (idx, _files) => {
+    //count = count.filter(c => c !== false);
+    if (idx === _files.length - 1) {
+      if (count.every(c => unsorted.includes(c))) {
+        renderList();
+      } else {
+        setTimeout(() => renderListWhenReady(count), 500);
+      }
+    }
+  };
   let count = [];
+
   document.body.classList.add('loading');
-  [...files].forEach((file, idx) => {
+  const _files = [...files].filter(
+      f => ['syx', 'wav'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
+  );
+  if (_files.length === 0) {
+    return renderList();
+  }
+  _files.forEach((file, idx) => {
     var reader = new FileReader();
-    reader.onload = async function(e) {
+    reader.onload = function(e) {
+      const fullPath = fullPaths[idx] || '';
+      file.uuid = crypto.randomUUID();
       if (file.name.toLowerCase().endsWith('.syx')) {
         // binary data
         const buffer = e.target.result;
         const bufferByteLength = buffer.byteLength;
         const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
-        count.push(parseSds(bufferUint8Array, file));
-        setLoadingProgress(idx + 1, files.length);
+        count.push(file.uuid);
+        let result = parseSds(bufferUint8Array, file, fullPath);
+        if (result.failed) {
+          count.splice(count.findIndex(c => c === result.uuid ),1);
+        }
+        setLoadingProgress(idx + 1, _files.length);
+        checkCount(idx, _files);
       }
 
       if (file.name.toLowerCase().endsWith('.wav')) {
-        await audioCtx.decodeAudioData(e.target.result, data => {
-          count.push(parseWav(data, file));
-          setLoadingProgress(idx + 1, files.length);
+        count.push(file.uuid);
+        audioCtx.decodeAudioData(e.target.result, data => {
+          let result = parseWav(data, file, fullPath);
+          if (result.failed) {
+            count.splice(count.findIndex(c => c === result.uuid ),1);
+          }
+          setLoadingProgress(idx + 1, _files.length);
+          checkCount(idx, _files);
         });
       }
     };
     reader.readAsArrayBuffer(file);
   });
-  setTimeout(() => renderListWhenReady(count), 500);
+
 };
 
 uploadInput.addEventListener(
     'change',
-    () => consumeFileInput(uploadInput.files),
+    () => { consumeFileInput(uploadInput.files); },
     false
 );
 
@@ -732,8 +796,38 @@ document.body.addEventListener(
     'drop',
     (event) => {
       event.preventDefault();
-      if (event?.dataTransfer?.files?.length) {
-        consumeFileInput(event.dataTransfer.files);
+      if (event?.dataTransfer?.items?.length) {
+        let toConsume = [];
+        let total = event.dataTransfer.items.length;
+        toConsume.count = 0;
+        const addItem = item => {
+          if (item.isFile) {
+            item.file((file) => toConsume.push({ file, fullPath: item.fullPath.replace('/', '') }));
+            toConsume.count++;
+            total--;
+          } else if (item.isDirectory) {
+            const dirReader = item.createReader();
+            dirReader.readEntries(entries => {
+              total += entries.length;
+              for (const entry of entries) {
+                addItem(entry);
+              }
+              total--;
+            });
+          }
+        }
+        for (const entry of event.dataTransfer.items) {
+          const itemAsEntry = entry.getAtEntry ? entry.getAtEntry() : entry.webkitGetAsEntry();
+          if (itemAsEntry) {
+            addItem(itemAsEntry);
+          }
+        }
+        let doneInterval = setInterval(() => {
+          if (total <= 0 && toConsume.count === toConsume.length) {
+            clearInterval(doneInterval);
+            consumeFileInput(toConsume.map(f => f.file), toConsume.map(p => p.fullPath));
+          }
+        }, 500);
       } else {
         let target = event.target;
         while (!target.classList.contains('file-row')) {
@@ -760,6 +854,7 @@ document.body.addEventListener('keyup', (event) => {
 
 document.body.addEventListener('keydown', (event) => {
   const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyL', 'KeyR', 'KeyS', 'KeyP', 'KeyI'];
+  if (keyboardShortcutsDisabled) { return ; }
   if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
   if (event.ctrlKey) { document.body.classList.add('ctrlKey-down'); }
   if (event.code === 'ArrowDown' && (!lastSelectedRow || !lastSelectedRow.isConnected)) {

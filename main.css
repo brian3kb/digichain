@@ -3,12 +3,30 @@ body {
     background-color: #202124;
 }
 * { user-select: none; }
+.logo {
+    position: fixed;
+    bottom: 0;
+    right: 1rem;
+    opacity: 0.35;
+}
+.logo h3::after {
+    content: 'v 1.3.0';
+    font-size: 1rem;
+    position: absolute;
+    margin-left: -0.75rem;
+    margin-top: 2.55rem;
+}
 .container { min-height: 95vh; transition: opacity .15s; }
 #getJoined, .wav-link-hidden { visibility: hidden; }
 #getJoined, #uploadInput { display: none; }
 #fileNum { padding-left: 1rem; }
 table { padding-bottom: 12rem; }
 th a { margin-left: -15px; }
+.sort-by-selected {
+    width: 4.5rem;
+    display: inline-block;
+    margin-left: -2.5rem;
+}
 tr.selected { background-color: #cb9d5b0d; }
 canvas.waveform {
     cursor: pointer;
@@ -28,6 +46,7 @@ td button { margin: 0.5rem; }
     padding: 0;
     width: 4rem;
 }
+.file-path { display: block; }
 .toggle-check, .sort-check {
     outline: 0.1rem solid #d79c4e;
     border: 0.2rem solid #202124;
@@ -67,19 +86,6 @@ td button { margin: 0.5rem; }
 }
 .channel-options-stereo i.stereo-circle {
     margin-left: -1.35rem;
-}
-.logo {
-    position: fixed;
-    bottom: 0;
-    right: 1rem;
-    opacity: 0.35;
-}
-.logo h3::after {
-    content: 'v 1.2.0';
-    font-size: 1rem;
-    position: absolute;
-    margin-left: -0.75rem;
-    margin-top: 2.55rem;
 }
 .info-panel-md, .split-panel-options {
     position: fixed;
@@ -235,23 +241,28 @@ tr:has(.check.button-outline) {
 }
 .touch-buttons button#modifierKeyshiftKey.active {
     opacity: 1;
-    background-color: #d74e81a1 !important;
+    background-color: #4E99D7A0 !important;
     color: #fff !important;
 }
 .touch-buttons button#modifierKeyctrlKey.active {
     opacity: 1;
-    background-color: #4E99D7A0 !important;
+    background-color: #d74e81a1 !important;
     color: #fff !important;
 }
+
+.has-shift-mod, .has-ctrl-mod, .has-shift-mod-i {
+    transition: all .1s linear;
+}
+
 body.shiftKey-mod-down .has-shift-mod,
 body.shiftKey-down .has-shift-mod {
-    border-color: #663247 !important;
+    border-color: #4E99D7A0 !important;
     color: #d79c4e;
     background-color: transparent !important;
 }
 body.ctrlKey-mod-down .has-ctrl-mod,
 body.ctrlKey-down .has-ctrl-mod {
-    border-color: #4E99D7A0 !important;
+    border-color: #663247 !important;
     background-color: transparent !important;
     color: #d79c4e;
 }
@@ -266,7 +277,7 @@ body.shiftKey-down.ctrlKey-down .has-shift-mod.has-ctrl-mod {
 }
 body.shiftKey-mod-down i.has-shift-mod-i,
 body.shiftKey-down i.has-shift-mod-i {
-    color: #663247 !important;
+    color: #4E99D7A0  !important;
 }
 @media (max-width: 40.0rem) {
     .container { margin-top: 2.5rem; }

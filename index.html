@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name = "viewport" content = "width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
   <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]" />
-  <meta name="version" content="v 1.2.0" />
+  <meta name="version" content="v 1.3.0" />
   <meta
           name="description"
           content="DigiChain loads uncompressed wav files or syx samples for/from the Machinedrum and converts them to wav files for transfer via the Transfer app. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size."
@@ -70,7 +70,7 @@
         <thead>
         <tr>
           <th class="w-0"></th>
-          <th class="w-0"><button title="Click to sort." onclick="digichain.sort('checked')" class="button-outline check sort-check">&nbsp;</button></th>
+          <th class="w-0"><a title="Click to sort." onclick="digichain.sort('checked')" class="sort-by-selected">Selected</a></th>
           <th class="w-0"></th>
           <th></th>
           <th style="width: 180px;"></th>

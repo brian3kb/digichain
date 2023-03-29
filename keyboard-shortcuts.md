@@ -9,7 +9,7 @@
 
 **Shift + Click / Shift + Key**
  - Up / Down Keys : moves the highlighted sample up or down in the list.
- - Space Bar : plays the currently highlighted sample looped. 
+ - P : plays the currently highlighted sample looped. 
  - Waveform View : plays the sample looped, click again to go back to one-shot.
  - Slice Grid Number & Off Buttons : changes the slice grid size, but keeps the selected samples in the list.
  - Duplicate Icon : puts the duplicated file at the end of the sample list.

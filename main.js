@@ -19,6 +19,7 @@ let masterChannels = 1;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
 let unsorted = [];
+let metaFiles = [];
 let lastSort = '';
 let lastSelectedRow;
 let sliceGrid = 0;
@@ -28,6 +29,26 @@ let modifierKeys = {
   shiftKey: false,
   ctrlKey: false
 };
+
+metaFiles.getByFileName = function(filename) {
+  return this.find(m =>m.name.replace(/\.[^.]*$/,'') === filename.replace(/\.[^.]*$/,''));
+};
+metaFiles.getByFile = function(file) {
+  if (file.meta.slicedFrom) { return false; }
+  return this.find(m =>m.name.replace(/\.[^.]*$/,'') === file.file.name.replace(/\.[^.]*$/,''));
+};
+metaFiles.removeSelected = function() {
+  files.forEach(f => {
+    const idx = this.findIndex(i => i === this.getByFileName(f.file.name));
+    f.meta.checked && idx !== -1 ? this.splice(idx, 1) : false;
+  });
+};
+metaFiles.removeByName = function(filename) {
+  const idx = this.findIndex(i => i === this.getByFileName(filename));
+  if (idx !== -1) {
+    this.splice(idx, 1);
+  }
+}
 
 function changeAudioConfig(event) {
   const selection = event?.target?.selectedOptions[0]?.value || 'm4800016';
@@ -60,6 +81,13 @@ const toggleModifier = (key) => {
     document.getElementById('modifierKey' + key).classList[modifierKeys[key] ? 'add' : 'remove']('active');
     document.body.classList[modifierKeys[key] ? 'add' : 'remove'](key + '-mod-down');
   }
+};
+
+const toggleOptionsPanel = () => {
+  const buttonsEl = document.getElementById('allOptionsPanel');
+  const toggleButtonEl = document.getElementById('toggleOptionsButton');
+  buttonsEl.classList.contains('hidden') ? buttonsEl.classList.remove('hidden') : buttonsEl.classList.add('hidden');
+  buttonsEl.classList.contains('hidden') ? toggleButtonEl.classList.add('collapsed') : toggleButtonEl.classList.remove('collapsed');
 };
 
 function setWavLink(file, linkEl) {
@@ -105,6 +133,7 @@ function downloadFile(id) {
 }
 
 function removeSelected() {
+  metaFiles.removeSelected();
   files.forEach(f => f.meta.checked ? f.source?.stop() : '' );
   files = files.filter(f => !f.meta.checked);
   unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
@@ -176,6 +205,31 @@ function joinToStereo(audioArrayBuffer, _files, totalLength, largest, pad) {
     }
   });
 }
+//TODO: Finish mix-down method.
+function mixDown(_files) {
+  const mixDownLength = _files.reduce((big, cur) => big > cur.buffer.length ? big : cur.buffer.length, 0);
+  const audioArrayBuffer = audioCtx.createBuffer(
+      masterChannels,
+      mixDownLength,
+      masterSR
+  );
+  let totalWrite = 0;
+  _files.forEach((file, idx) => {
+    const bufferLength = pad ? largest : file.buffer.length;
+    let result = [new Float32Array(file.buffer.length), new Float32Array(file.buffer.length)];
+
+    for (let i = 0; i < file.buffer.length; i++) {
+      result[0][i] = file.buffer.getChannelData(0)[i];
+      result[1][i] = file.buffer.getChannelData(file.buffer.numberOfChannels === 2 ? 1 : 0)[i];
+    }
+
+    for (let i = 0; i < bufferLength; i++) {
+      audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i];
+      audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i];
+      totalWrite++;
+    }
+  });
+}
 
 function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInternal = false) {
   if (files.length === 0) { return; }
@@ -228,7 +282,7 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
           lastModified: new Date().getTime(), name: `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}--[${_files.length}].wav`,
           size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
           type: 'audio/wav'
-        }, '');
+        }, '', true);
         renderList();
       })
     };
@@ -295,8 +349,8 @@ const changeChannel = (event, id, channel) => {
     return renderList();
   }
   file.meta.channel = channel;
-  file.waveform.getContext('2d').clear();
-  drawWaveform(file, file.waveform, file.buffer.numberOfChannels);
+  //file.waveform.getContext('2d').clear();
+  //drawWaveform(file, file.waveform, file.buffer.numberOfChannels);
   getRowElementById(id).querySelectorAll('.channel-options a').forEach(opt => opt.classList.remove('selected'));
   el.classList.add('selected');
 };
@@ -351,7 +405,7 @@ const selectSliceAmount = (event, size) => {
 
 const duplicate = (event, id) => {
   const file = getFileById(id);
-  const fileIdx = getFileIndexById(id);
+  const fileIdx = getFileIndexById(id) + 1;
   const item = Object.assign({}, file);
   item.meta = Object.assign({}, file.meta);
   item.meta.dupeOf = id;
@@ -361,9 +415,52 @@ const duplicate = (event, id) => {
   unsorted.push(item.meta.id);
   renderList();
 };
-const splitEvenly = (event, id, slices) => {
+
+const splitByOtSlices = (event, id, pushInPlace = false) => {
+  const file = getFileById(id);
+  const otMeta = metaFiles.getByFile(file);
+  const pushInPlaceItems = [];
+  if (!otMeta) { return ; }
+  for (let i = 0; i < otMeta.sliceCount; i++) {
+    const audioArrayBuffer = audioCtx.createBuffer(
+        file.buffer.numberOfChannels,
+        (otMeta.slices[i].endPoint - otMeta.slices[i].startPoint),
+        file.buffer.sampleRate
+    );
+    const slice = {};
+    const uuid = crypto.randomUUID();
+    slice.buffer = audioArrayBuffer;
+    slice.file = {...file.file};
+    slice.meta = {
+      length: audioArrayBuffer.length,
+      duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
+      startFrame: 0, endFrame: audioArrayBuffer.length,
+      checked: true, id: uuid,
+      sliceNumber: `${file.meta.sliceNumber ? file.meta.sliceNumber + '-' : ''}${i+1}`, slicedFrom: file.meta.id,
+      channel: audioArrayBuffer.numberOfChannels > 1 ? 'L': ''
+    };
+
+    file.buffer.getChannelData(0).slice(otMeta.slices[i].startPoint, otMeta.slices[i].endPoint).forEach((a, idx) => slice.buffer.getChannelData(0)[idx] = a);
+    if (file.buffer.numberOfChannels === 2) {
+      file.buffer.getChannelData(1).slice(otMeta.slices[i].startPoint, otMeta.slices[i].endPoint).forEach((a, idx) => slice.buffer.getChannelData(1)[idx] = a);
+    }
+    if (pushInPlace) {
+      pushInPlaceItems.push(slice);
+    } else {
+      files.push(slice);
+    }
+    unsorted.push(uuid);
+  }
+  if (pushInPlaceItems.length) {
+    files.splice(getFileIndexById(id) + 1, 0, ...pushInPlaceItems);
+  }
+  renderList();
+};
+
+const splitEvenly = (event, id, slices, pushInPlace = false) => {
   const file = getFileById(id);
   const frameSize = file.buffer.length / slices;
+  const pushInPlaceItems = [];
   for (let i = 0; i < slices; i++) {
     const audioArrayBuffer = audioCtx.createBuffer(
         file.buffer.numberOfChannels,
@@ -387,17 +484,27 @@ const splitEvenly = (event, id, slices) => {
     if (file.buffer.numberOfChannels === 2) {
       file.buffer.getChannelData(1).slice((i * frameSize), (i * frameSize) + frameSize).forEach((a, idx) => slice.buffer.getChannelData(1)[idx] = a);
     }
-    files.push(slice);
+    if (pushInPlace) {
+      pushInPlaceItems.push(slice);
+    } else {
+      files.push(slice);
+    }
     unsorted.push(uuid);
+  }
+  if (pushInPlaceItems.length) {
+    files.splice(getFileIndexById(id) + 1, 0, ...pushInPlaceItems);
   }
   renderList();
 }
 
 const remove = (id) => {
   const fileIdx = getFileIndexById(id);
-  files.splice(fileIdx, 1);
+  const removed = files.splice(fileIdx, 1);
   const unsortIdx = unsorted.findIndex(uuid => uuid === id);
   unsorted.splice(unsortIdx, 1);
+  if (removed[0]) {
+    metaFiles.removeByName(removed[0].file.name);
+  }
   renderList();
 }
 
@@ -449,17 +556,26 @@ const rowDragStart = (event) => {
 const splitAction = (event, id, slices) => {
   const el = document.getElementById('splitOptions');
   const fileNameEl = document.getElementById('splitFileName');
+  const sliceByOtButtonEl = document.getElementById('sliceByOtButton');
   let item;
+  let otMeta;
+  let pushInPlace = (event.shiftKey || modifierKeys.shiftKey);
   if (id) {
     lastSelectedRow = getRowElementById(id);
   }
   item = getFileById(id || lastSelectedRow.dataset.id);
   if (slices) {
     id = id || item.meta.id;
-    splitEvenly(event, id, slices);
+    if (slices === 'ot') {
+      splitByOtSlices(event, id, pushInPlace);
+    } else {
+      splitEvenly(event, id, slices, pushInPlace);
+    }
     return el.style.display = 'none';
   }
+  otMeta = metaFiles.getByFile(item);
   fileNameEl.textContent = getNiceFileName('', item, true);
+  sliceByOtButtonEl.style.display = otMeta ? 'inline-block' : 'none';
   el.style.display = 'block';
 };
 
@@ -509,10 +625,17 @@ const setCountValues = () => {
   const selectionCount = filesSelected.length;
   const filesDuration = files.reduce((a, f) => a += +f.meta.duration, 0);
   const filesSelectedDuration = filesSelected.reduce((a, f) => a += +f.meta.duration, 0);
+  const joinCount = selectionCount === 0 ? 0 : (selectionCount > 0 && sliceGrid > 0 ? Math.ceil(selectionCount / sliceGrid) : 1);
   document.getElementById('fileNum').textContent = `${files.length}/${selectionCount}`;
   document.querySelector('.selection-count').textContent = ` ${selectionCount || '-'} `;
-  document.querySelectorAll('.join-count').forEach(el => el.textContent = ` ${selectionCount === 0 ? '-' : (selectionCount > 0 && sliceGrid > 0 ? Math.ceil(selectionCount / sliceGrid) : '1')} `);
+  document.querySelectorAll('.join-count').forEach(el => el.textContent = ` ${joinCount === 0 ? '-' : joinCount} `);
   document.getElementById('lengthHeaderLink').textContent = `Length (${secondsToMinutes(filesSelectedDuration)}/${secondsToMinutes(filesDuration)})`;
+  try {
+    const sliceRule = document.styleSheets[1].cssRules[0].cssText;
+    const replaceRule = `type(${sliceGrid}${sliceGrid > 0 ? 'n' : ''}`;
+    document.styleSheets[1].deleteRule(0);
+    document.styleSheets[1].insertRule(sliceRule.replace(/child\(\d+[n]|type\(0/g, replaceRule));
+  } catch(e) {}
 };
 
 const getNiceFileName = (name, file, excludeExtension, includePath) => {
@@ -549,29 +672,29 @@ const renderList = () => {
         <td>
             <i class="gg-more-vertical"></i>
         </td>
-        <td>
+        <td class="toggle-td">
             <button onclick="digichain.toggleCheck(event, '${f.meta.id}')" class="${f.meta.checked ? '' : 'button-outline'} check toggle-check">&nbsp;</button>
         </td>
-        <td>
+        <td class="move-up-td">
             <button title="Move up in sample list." onclick="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
         </td>
-        <td>
+        <td class="move-down-td">
             <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
         </td>
-        <td>
+        <td class="waveform-td">
             <canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id}"></canvas>
         </td>
-        <td>
+        <td class="file-path-td">
             <span class="file-path">${f.file.path}</span>
             <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}').click()">${getNiceFileName(f.file.name)}</a>
             ${f.meta.dupeOf ? ' d' : ''}
             ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
             <a class="wav-link-hidden" target="_blank"></a>
         </td>
-        <td>
+        <td class="duration-td">
             <span>${f.meta.duration} s</span>
         </td>
-        <td>
+        <td class="channel-options-td">
             <div class="channel-options has-shift-mod" style="display: ${f.buffer.numberOfChannels > 1 && masterChannels === 1 ? 'block' : 'none'}">
             <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
             <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
@@ -582,13 +705,13 @@ const renderList = () => {
                 <i class="gg-shape-circle stereo-circle" style="display: ${f.buffer.numberOfChannels === 2 ? 'inline-block' : 'none'}"></i>
             </div>
         </td>
-        <td>
-            <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r"><i class="gg-menu-grid-r"></i></button>
+        <td class="split-td">
+            <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(f) ?'is-ot-file' : ''}"><i class="gg-menu-grid-r"></i></button>
         </td>
-        <td>
+        <td class="duplicate-td">
             <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
         </td>
-        <td>
+        <td class="remove-td">
             <button title="Remove sample (double-click)." ondblclick="digichain.remove('${f.meta.id}')" class="button-clear remove"><i class="gg-trash"></i></button>
         </td>
       </tr>
@@ -613,7 +736,54 @@ const bytesToInt = (bh, bm, bl) => {
   return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
 };
 
-const parseSds = (fd, file, fullPath) => {
+const parseOt = (fd, file, fullPath) => {
+  const uuid = file.uuid || crypto.randomUUID();
+  const getInt32 = values => {
+    const arr = new Uint8Array(values);
+    const view = new DataView(arr.buffer);
+    return view.getInt32(0);
+  };
+  try {
+    // Check header is correct.
+    if (![0x46,0x4F,0x52,0x4D,0x00,0x00,0x00,0x00,0x44,0x50,0x53,0x31,0x53,0x4D,
+      0x50,0x41].every(
+          (b, i) => b === fd[i])
+    ) {
+      return { uuid, failed: true };
+    }
+    let slices = [];
+    let sliceCount = getInt32 ([fd[826], fd[827], fd[828], fd[829]]);
+    let t = 58;
+    for (let s = 0; s < sliceCount; s++) {
+      if (masterSR === 44100) {
+        slices.push({
+          startPoint: getInt32([fd[t], fd[t + 1], fd[t + 2], fd[t + 3]]),
+          endPoint: getInt32([fd[t+4], fd[t+5], fd[t+6], fd[t+7]]),
+          loopPoint: getInt32([fd[t+8], fd[t+9], fd[t+10], fd[t+11]])
+        });
+      } else {
+        slices.push({
+          startPoint: Math.round( (getInt32([fd[t], fd[t + 1], fd[t + 2], fd[t + 3]]) / 44100) * masterSR ),
+          endPoint: Math.round( (getInt32([fd[t+4], fd[t+5], fd[t+6], fd[t+7]]) / 44100) * masterSR ),
+          loopPoint: Math.round ((getInt32([fd[t+8], fd[t+9], fd[t+10], fd[t+11]]) / 44100) * masterSR )
+        });
+      }
+      t = t + 12;
+    }
+    metaFiles.push({
+      uuid,
+      name: file.name,
+      path: fullPath,
+      sliceCount,
+      slices
+    });
+    unsorted.push(uuid);
+    return uuid;
+  } catch(err) {
+    return { uuid, failed: true };
+  }
+};
+const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
   const uuid = file.uuid || crypto.randomUUID();
   try {
     // Check header is correct.
@@ -658,7 +828,7 @@ const parseSds = (fd, file, fullPath) => {
     resample.outputBuffer.filter(x => x !== undefined).
         forEach((y, i) => audioArrayBuffer.getChannelData(0)[i] = y / 32767);
 
-    files.push({
+    files[pushToTop ? 'unshift' : 'push']({
       file: {
         lastModified: file.lastModified,
         name: file.name,
@@ -680,11 +850,11 @@ const parseSds = (fd, file, fullPath) => {
   }
 };
 
-const parseWav = (audioArrayBuffer, file, fullPath) => {
+const parseWav = (audioArrayBuffer, file, fullPath = '', pushToTop = false) => {
   const uuid = file.uuid || crypto.randomUUID();
   try {
     /*duration, length, numberOfChannels, sampleRate*/
-    files.push({
+    files[pushToTop ? 'unshift' : 'push']({
       file: {
         lastModified: file.lastModified,
         name: file.name,
@@ -722,8 +892,35 @@ const setLoadingProgress = (count, total) => {
   el.style.backgroundImage = `linear-gradient(90deg, #cf8600 ${progress}%, #606c76 ${progress + 1}%, #606c76 100%)`;
 };
 
-const consumeFileInput = (files, fullPaths = []) => {
-  const checkCount = (idx, _files) => {
+const consumeFileInput = (inputFiles) => {
+  document.body.classList.add('loading');
+  const _files = [...inputFiles].filter(
+      f => ['syx', 'wav', 'flac'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
+  );
+  const _mFiles = [...inputFiles].filter(
+      f => ['ot'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
+  );
+
+  _mFiles.forEach((file, idx) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      file.uuid = crypto.randomUUID();
+      file.fullPath = file.fullPath || '';
+      if (file.name.toLowerCase().endsWith('.ot')) {
+        // binary data
+        const buffer = e.target.result;
+        const bufferByteLength = buffer.byteLength;
+        const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
+        let result = parseOt(bufferUint8Array, file, file.fullPath);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+  if (_files.length === 0) {
+    return renderList();
+  }
+
+  const checkCount = (idx) => {
     //count = count.filter(c => c !== false);
     if (idx === _files.length - 1) {
       if (count.every(c => unsorted.includes(c))) {
@@ -735,41 +932,34 @@ const consumeFileInput = (files, fullPaths = []) => {
   };
   let count = [];
 
-  document.body.classList.add('loading');
-  const _files = [...files].filter(
-      f => ['syx', 'wav'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
-  );
-  if (_files.length === 0) {
-    return renderList();
-  }
   _files.forEach((file, idx) => {
-    var reader = new FileReader();
+    const reader = new FileReader();
     reader.onload = function(e) {
-      const fullPath = fullPaths[idx] || '';
       file.uuid = crypto.randomUUID();
+      file.fullPath = file.fullPath || '';
       if (file.name.toLowerCase().endsWith('.syx')) {
         // binary data
         const buffer = e.target.result;
         const bufferByteLength = buffer.byteLength;
         const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
         count.push(file.uuid);
-        let result = parseSds(bufferUint8Array, file, fullPath);
+        let result = parseSds(bufferUint8Array, file, file.fullPath);
         if (result.failed) {
           count.splice(count.findIndex(c => c === result.uuid ),1);
         }
         setLoadingProgress(idx + 1, _files.length);
-        checkCount(idx, _files);
+        checkCount(idx, _files.length);
       }
 
-      if (file.name.toLowerCase().endsWith('.wav')) {
+      if (file.name.toLowerCase().endsWith('.wav') || file.name.toLowerCase().endsWith('.flac')) {
         count.push(file.uuid);
         audioCtx.decodeAudioData(e.target.result, data => {
-          let result = parseWav(data, file, fullPath);
+          let result = parseWav(data, file, file.fullPath);
           if (result.failed) {
             count.splice(count.findIndex(c => c === result.uuid ),1);
           }
           setLoadingProgress(idx + 1, _files.length);
-          checkCount(idx, _files);
+          checkCount(idx, _files.length);
         });
       }
     };
@@ -780,7 +970,7 @@ const consumeFileInput = (files, fullPaths = []) => {
 
 uploadInput.addEventListener(
     'change',
-    () => { consumeFileInput(uploadInput.files); },
+    () => consumeFileInput(uploadInput.files),
     false
 );
 
@@ -802,7 +992,12 @@ document.body.addEventListener(
         toConsume.count = 0;
         const addItem = item => {
           if (item.isFile) {
-            item.file((file) => toConsume.push({ file, fullPath: item.fullPath.replace('/', '') }));
+            item.file(
+                (file) => {
+                  file.fullPath = item.fullPath.replace('/', '');
+                  toConsume.push(file);
+                }
+            );
             toConsume.count++;
             total--;
           } else if (item.isDirectory) {
@@ -825,7 +1020,7 @@ document.body.addEventListener(
         let doneInterval = setInterval(() => {
           if (total <= 0 && toConsume.count === toConsume.length) {
             clearInterval(doneInterval);
-            consumeFileInput(toConsume.map(f => f.file), toConsume.map(p => p.fullPath));
+            consumeFileInput(toConsume);
           }
         }, 500);
       } else {
@@ -853,7 +1048,7 @@ document.body.addEventListener('keyup', (event) => {
 });
 
 document.body.addEventListener('keydown', (event) => {
-  const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyL', 'KeyR', 'KeyS', 'KeyP', 'KeyI'];
+  const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyG', 'KeyH', 'KeyI', 'KeyL', 'KeyP', 'KeyR', 'KeyS', 'KeyX' ];
   if (keyboardShortcutsDisabled) { return ; }
   if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
   if (event.ctrlKey) { document.body.classList.add('ctrlKey-down'); }
@@ -869,6 +1064,12 @@ document.body.addEventListener('keydown', (event) => {
   }
   if (files.length && (event.code === 'KeyI')) {
     return invertFileSelection();
+  }
+  if (event.code === 'KeyH' && (event.shiftKey || modifierKeys.shiftKey)) {
+    toggleOptionsPanel();
+  }
+  if (event.code === 'KeyG' && (event.shiftKey || modifierKeys.shiftKey)) {
+    document.body.classList.contains('grid-view') ? document.body.classList.remove('grid-view') : document.body.classList.add('grid-view');
   }
   if (eventCodes.includes(event.code) && lastSelectedRow && lastSelectedRow?.isConnected) {
     if (event.code === 'ArrowDown' && lastSelectedRow.nextElementSibling) {
@@ -918,7 +1119,8 @@ window.digichain = {
   rowDragStart,
   splitAction,
   splitEvenly,
-  toggleModifier
+  toggleModifier,
+  toggleOptionsPanel
 };
 
 

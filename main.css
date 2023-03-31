@@ -9,6 +9,19 @@ body {
     right: 1rem;
     opacity: 0.35;
 }
+#toggleOptionsButton {
+    position: absolute;
+    margin-left: 50vw;
+    margin-top: 19rem;
+    color: #d79c4e30;
+    text-align: center;
+    background-color: #202124;
+    cursor: pointer;
+    transition: margin-top .25s ease-in;
+}
+#toggleOptionsButton.collapsed {
+    margin-top: 0.75rem;
+}
 .logo h3::after {
     content: 'v 1.3.0';
     font-size: 1rem;
@@ -16,18 +29,50 @@ body {
     margin-left: -0.75rem;
     margin-top: 2.55rem;
 }
-.container { min-height: 95vh; transition: opacity .15s; }
+.container {
+    min-height: 95vh;
+    transition: opacity .15s;
+    min-width: 400px;
+    padding: 0 1rem;
+}
+.all-options {
+    position: sticky;
+    top: 0;
+    background-color: #202124;
+    z-index: 2;
+    padding-top: 4rem;
+    margin-top: -1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 0.1rem solid #d79c4e30;
+    transition: all .25s ease-in;
+}
+.all-options.hidden {
+    transform: translateY(-19rem);
+    margin-top: -19rem;
+}
+.header-menu {
+    position: fixed;
+    background-color: #2c2d30;
+    width: 100vw;
+    left: 0;
+    top: 0;
+    z-index: 3;
+}
 #getJoined, .wav-link-hidden { visibility: hidden; }
 #getJoined, #uploadInput { display: none; }
 #fileNum { padding-left: 1rem; }
-table { padding-bottom: 12rem; }
-th a { margin-left: -15px; }
+table { padding-bottom: 12rem; padding-top: 1rem; }
+th a { color: #606c76; }
+th a:first-of-type { margin-left: -15px; color: #d79c4e; }
 .sort-by-selected {
     width: 4.5rem;
     display: inline-block;
     margin-left: -2.5rem;
 }
-tr.selected { background-color: #cb9d5b0d; }
+tr.selected {
+    /*background-color: #cb9d5b0d;*/
+    background-color: #cb9d5b14;
+}
 canvas.waveform {
     cursor: pointer;
     opacity: .7;
@@ -45,6 +90,17 @@ td button { margin: 0.5rem; }
 .check {
     padding: 0;
     width: 4rem;
+}
+.is-ot-file::after {
+    text-align: center;
+    content: 'OT';
+    color: #b91c1c;
+    font-size: .75rem;
+    margin-top: -0.55rem;
+    position: absolute;
+    margin-left: 0.9rem;
+    background-color: #202124;
+    line-height: 1rem;
 }
 .file-path { display: block; }
 .toggle-check, .sort-check {
@@ -66,7 +122,7 @@ td button { margin: 0.5rem; }
 /*    background: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" > <path d="M4 4H8V8H4V4Z" fill="currentColor" /> <path d="M4 10H8V14H4V10Z" fill="currentColor" /> <path d="M8 16H4V20H8V16Z" fill="currentColor" /> <path d="M10 4H14V8H10V4Z" fill="currentColor" /> <path d="M14 10H10V14H14V10Z" fill="currentColor" /> <path d="M10 16H14V20H10V16Z" fill="currentColor" /> <path d="M20 4H16V8H20V4Z" fill="currentColor" /><path d="M16 10H20V14H16V10Z" fill="currentColor" /> <path d="M20 16H16V20H20V16Z" fill="currentColor" /> </svg>') center right no-repeat !important;*/
 /*    padding-right: 3.0rem;*/
 /*}*/
-.channel-options {
+.channel-options, .pan-options {
     border: 1px solid #40392e;
     border-radius: 5px;
     margin-right: 1.5rem;
@@ -74,19 +130,19 @@ td button { margin: 0.5rem; }
     width: 6rem;
     text-align: center;
 }
-.channel-options a {
+.channel-options a, .pan-options a {
     color: #40392e;
 }
-.channel-options a.selected {
+.channel-options a.selected, .pan-options a.selected {
     color: #d79c4e;
 }
-.channel-options-stereo i {
-    display: inline-block;
-    transform: translateY(0.25rem);
-}
-.channel-options-stereo i.stereo-circle {
-    margin-left: -1.35rem;
-}
+/*.channel-options-stereo i {*/
+/*    display: inline-block;*/
+/*    transform: translateY(0.25rem);*/
+/*}*/
+/*.channel-options-stereo i.stereo-circle {*/
+/*    margin-left: -1.35rem;*/
+/*}*/
 .info-panel-md, .split-panel-options {
     position: fixed;
     width: 50vw;
@@ -125,6 +181,11 @@ tr:has(.check.button-outline) {
     text-align: center;
     padding-bottom: 0.25rem;
     width: 29rem;
+    background-color: #202124;
+    transition: transform .2s ease-in;
+}
+.all-options.hidden .slice-group.float-down {
+    transform: translateY(14rem);
 }
 .button-clear.remove {
     color: #343433;
@@ -134,8 +195,8 @@ tr:has(.check.button-outline) {
     color: #5e1a1a;
 }
 .file-num {
-    position: fixed;
-    bottom: 1.5rem;
+    /*position: fixed;*/
+    /*bottom: 1.5rem;*/
     margin-left: 1rem;
     opacity: .45;
     background: #202124;
@@ -231,7 +292,7 @@ tr:has(.check.button-outline) {
 .touch-buttons {
     /*display: none;*/
     position: fixed;
-    bottom: 5rem;
+    bottom: 0;
     width: 10rem;
 }
 .touch-buttons button {
@@ -279,6 +340,84 @@ body.shiftKey-mod-down i.has-shift-mod-i,
 body.shiftKey-down i.has-shift-mod-i {
     color: #4E99D7A0  !important;
 }
+
+@media (min-width: 430px) {
+    body.grid-view tr {
+        display: none;
+    }
+
+    body.grid-view tr.file-row {
+        display: block;
+        width: 26rem;
+        height: 30rem;
+        float: left;
+        border: 0.1rem solid #d79c4e30;
+        border-radius: 10px;
+        padding: 1.2rem 1.5rem;
+        margin: .5rem;
+    }
+
+    body.grid-view td {
+        border: none;
+        display: inline-block;
+    }
+
+
+    body.grid-view .move-up-td {
+        position: absolute;
+        margin-left: 15rem;
+        margin-top: -1rem;
+    }
+
+    body.grid-view .move-down-td {
+        position: absolute;
+        margin-left: 15rem;
+        margin-top: 2rem;
+    }
+
+    body.grid-view .waveform-td {
+        margin-left: 4rem;
+    }
+
+    body.grid-view td.file-path-td {
+        width: 85%;
+        height: 13rem;
+        overflow-y: auto;
+    }
+
+    body.grid-view td.duration-td {
+        width: 100%;
+        margin-top: .5rem;
+        padding-right: 4rem;
+        opacity: .7;
+        margin-left: 8rem;
+    }
+
+    body.grid-view td.split-td {
+        position: absolute;
+        margin-left: 17.5rem;
+        margin-top: -10rem;
+    }
+
+    body.grid-view td.duplicate-td {
+        position: absolute;
+        margin-left: 21rem;
+        margin-top: -7.5rem;
+    }
+
+    body.grid-view td.remove-td {
+        position: absolute;
+        margin-left: 21rem;
+        margin-top: -3.5rem;
+    }
+
+    body.grid-view td.channel-options-td {
+        margin-top: -3rem;
+        position: absolute;
+        margin-left: 0rem;
+    }
+}
+
 @media (max-width: 40.0rem) {
     .container { margin-top: 2.5rem; }
     .min-width-20, .column-33, .column-33 .download-buttons, .column-33 .slice-group { width: 100%; }
@@ -289,6 +428,96 @@ body.shiftKey-down i.has-shift-mod-i {
     .left-buttons .button { width: 48.5%; margin-right: 0.1rem; }
     .left-buttons .row .button:first-child { margin-left: 0.25rem;}
     .info-panel-md, .split-panel-options { width: 95%; left: 2.5%; }
+    .all-options.hidden {
+        transform: translateY(-34rem);
+        margin-top: -31rem;
+    }
+}
+
+@media (max-width: 430px) {
+    .container {
+        display: block;
+        padding-left: 2.5rem;
+        margin: -2rem;
+    }
+    table {
+        overflow-x: hidden;
+        padding-top: 2.5rem;
+    }
+    tr {
+        display: none;
+    }
+    tr.file-row {
+        display: block;
+        width: 98%;
+        height: 20rem;
+        float: left;
+        border: 0.1rem solid #d79c4e30;
+        border-radius: 10px;
+        padding: .7rem 1rem;
+        margin: .5rem
+    }
+    td { border: none; display: inline-block;}
+
+
+    .move-up-td {
+        position: absolute;
+        margin-left: 24rem;
+        margin-top: -1rem;
+    }
+    .move-down-td {
+        position: absolute;
+        margin-left: 24rem;
+        margin-top: 2rem;
+    }
+    .waveform-td {
+        margin-left: 3rem;
+        border: 0.1rem solid #d79c4e30;
+        padding: 0 1rem;
+        border-radius: .5rem;
+    }
+    td.file-path-td {
+        width: 70%;
+        height: 5rem;
+        text-overflow: ellipsis;
+        margin-right: -13rem;
+        overflow: hidden;
+    }
+    td.file-path-td span, td.file-path-td a {
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    td.duration-td {
+        width: 100%;
+        margin-top: 3rem;
+        margin-left: 8rem;
+        opacity: .7;
+    }
+    td.split-td {
+        position: absolute;
+        margin-left: 27rem;
+        margin-top: -9rem;
+    }
+
+    td.duplicate-td {
+        position: absolute;
+        margin-left: 30.5rem;
+        margin-top: -7rem;
+    }
+
+    td.remove-td {
+        position: absolute;
+        margin-left: 30.5rem;
+        margin-top: -3rem;
+    }
+
+    td.channel-options-td {
+        margin-top: -3rem;
+        position: absolute;
+        margin-left: 0rem;
+    }
+
 }
 
 /*@media (hover: none) and (pointer: coarse) {*/

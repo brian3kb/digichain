@@ -12,15 +12,26 @@
   <meta name="google-site-verification" content="W97nmMeI8CcybxJA7gLG-CFeJmztv03Jh9_bTExYJLY" />
   <title>DigiChain</title>
   <link rel="stylesheet" href="main.css">
+  <style>
+    tr.file-row:has(.toggle-check:not(.button-outline)):nth-of-type(0) { outline: red solid 3px; border-color: rgb(187, 0, 0); }
+  </style>
   <script type="module" src="./main.js"></script>
 </head>
 
 <body>
+<div class="header-menu">
+  <div class="file-num">
+    <label for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</label>
+    <output class="float-left" id="fileNum">0/0</output>
+  </div>
+  <div id="toggleOptionsButton" onclick="digichain.toggleOptionsPanel()"><i class="gg-select-r"></i></div>
+</div>
+
 <div class="loading-message">
   <div><i class="gg-spinner"></i><span id="loadingText" class="gradient-text">Loading samples</span></div>
 </div>
 <div class="container">
-  <div class="row">
+  <div id="allOptionsPanel" class="row all-options">
     <div class="column left-buttons">
 
       <div class="row">
@@ -74,7 +85,10 @@
           <th class="w-0"></th>
           <th></th>
           <th style="width: 180px;"></th>
-          <th><a title="Click to sort." onclick="digichain.sort('name')">Filename / Download</a></th>
+          <th>
+            <a title="Click to sort." onclick="digichain.sort('name')">Filename / Download</a>
+            <a title="Click to sort." onclick="digichain.sort('sliceNumber')"> - slice # - </a>
+          </th>
           <th><a title="Click to sort." id="lengthHeaderLink" onclick="digichain.sort('length')">Length (s)</a></th>
           <th class="w-0"></th>
           <th class="w-0"></th>
@@ -100,24 +114,20 @@
   <div class="content"></div>
 </div>
 
-<div class="file-num">
-  <label for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</label>
-  <output class="float-left" id="fileNum">0/0</output>
-</div>
-
 <div id="splitOptions" class="split-panel-options pop-up">
   <a class="float-right" onclick="document.getElementById('splitOptions').style.display = 'none'"><i class="gg-close"></i></a>
   <p>
     Choose how many slices to make from '<span id="splitFileName"></span>'
   </p>
   <div class="slice-group">
-    <button onclick="digichain.splitAction(event, false, 2)" class="button-outline check sel-0" data-sel="1">2</button>
-    <button onclick="digichain.splitAction(event, false, 4)" class="button-outline check sel-1" data-sel="1">4</button>
-    <button onclick="digichain.splitAction(event, false, 8)" class="button-outline check sel-2" data-sel="2">8</button>
-    <button onclick="digichain.splitAction(event, false, 16)" class="button-outline check sel-3" data-sel="3">16</button>
-    <button onclick="digichain.splitAction(event, false, 32)" class="button-outline check sel-4" data-sel="4">32</button>
-    <button onclick="digichain.splitAction(event, false, 64)" class="button-outline check sel-5" data-sel="5">64</button>
-    <button onclick="digichain.splitAction(event, false, 128)" class="button-outline check sel-6" data-sel="6">128</button>
+    <button onclick="digichain.splitAction(event, false, 2)" class="button-outline has-shift-mod check sel-0" data-sel="1">2</button>
+    <button onclick="digichain.splitAction(event, false, 4)" class="button-outline has-shift-mod check sel-1" data-sel="1">4</button>
+    <button onclick="digichain.splitAction(event, false, 8)" class="button-outline has-shift-mod check sel-2" data-sel="2">8</button>
+    <button onclick="digichain.splitAction(event, false, 16)" class="button-outline has-shift-mod check sel-3" data-sel="3">16</button>
+    <button onclick="digichain.splitAction(event, false, 32)" class="button-outline has-shift-mod check sel-4" data-sel="4">32</button>
+    <button onclick="digichain.splitAction(event, false, 64)" class="button-outline has-shift-mod check sel-5" data-sel="5">64</button>
+    <button onclick="digichain.splitAction(event, false, 128)" class="button-outline has-shift-mod check sel-6" data-sel="6">128</button>
+    <button id="sliceByOtButton" onclick="digichain.splitAction(event, false, 'ot')" class="button-outline has-shift-mod check sel-7 sel-ot" data-sel="7">OT</button>
   </div>
 </div>
 

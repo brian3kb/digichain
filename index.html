@@ -3,28 +3,74 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name = "viewport" content = "width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
-  <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]" />
-  <meta name="version" content="v 1.3.0" />
+  <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]">
+  <meta name="version" content="v 1.3.0">
   <meta
           name="description"
           content="DigiChain loads uncompressed wav files or syx samples for/from the Machinedrum and converts them to wav files for transfer via the Transfer app. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size."
-  />
-  <meta name="google-site-verification" content="W97nmMeI8CcybxJA7gLG-CFeJmztv03Jh9_bTExYJLY" />
+  >
+  <meta name="google-site-verification" content="W97nmMeI8CcybxJA7gLG-CFeJmztv03Jh9_bTExYJLY">
   <title>DigiChain</title>
   <link rel="stylesheet" href="main.css">
-  <style>
-    tr.file-row:has(.toggle-check:not(.button-outline)):nth-of-type(0) { outline: red solid 3px; border-color: rgb(187, 0, 0); }
-  </style>
   <script type="module" src="./main.js"></script>
 </head>
 
 <body>
+
+<div id="alertNotServed" class="not-served-md pop-up">
+  <div class="content" style="text-align: center;">
+    <h2>DigiChain needs to be served from a web-server to function.</h2>
+  </div>
+</div>
+
+<div id="infoPanelMd" class="info-panel-md pop-up">
+  <a class="float-right" onclick="document.getElementById('infoPanelMd').classList.remove('show')"><i class="gg-close"></i></a>
+  <div class="content"></div>
+</div>
+
+<div id="splitOptions" class="split-panel-options pop-up">
+  <a class="float-right" onclick="document.getElementById('splitOptions').classList.remove('show')"><i class="gg-close"></i></a>
+  <p>
+    Choose how many slices to make from<br>'<span id="splitFileName"></span>'
+  </p>
+  <div class="waveform-container" data-waveform-width="1024">
+    <div><canvas id="splitPanelWaveform"></canvas>
+      <div id="sliceLines"></div></div>
+
+  </div>
+  <div class="slice-group" data-slice-count="0">
+    <button onclick="digichain.splitSizeAction(event, 2)" class="button-outline check sel-0" data-sel="2">2</button>
+    <button onclick="digichain.splitSizeAction(event, 4)" class="button-outline check sel-1" data-sel="4">4</button>
+    <button onclick="digichain.splitSizeAction(event, 8)" class="button-outline check sel-2" data-sel="8">8</button>
+    <button onclick="digichain.splitSizeAction(event, 16)" class="button-outline check sel-3" data-sel="16">16</button>
+    <button onclick="digichain.splitSizeAction(event, 32)" class="button-outline check sel-4" data-sel="32">32</button>
+    <button onclick="digichain.splitSizeAction(event, 64)" class="button-outline check sel-5" data-sel="64">64</button>
+    <button onclick="digichain.splitSizeAction(event, 128)" class="button-outline check sel-6" data-sel="128">128</button>
+    <button id="sliceByOtButton" onclick="digichain.splitSizeAction(event, 'ot')" class="button-outline check sel-7 sel-ot is-ot-file" data-sel="ot">OT</button>
+  </div>
+  <button onclick="digichain.splitAction(event, false, true)" class="float-right button-outline has-shift-mod" style="margin-top: 1rem;">Slice to samples</button>
+</div>
+
+<div id="editPanel" class="edit-panel-options pop-up" data-id="">
+  <a class="float-right" onclick="document.getElementById('editPanel').classList.remove('show'); digichain.renderList();"><i class="gg-close"></i></a>
+  <fieldset id="editableItems"></fieldset>
+  <div class="waveform-container" data-waveform-width="1024">
+    <div><canvas id="editPanelWaveform"></canvas>
+      <div id="editLines"></div></div>
+  </div>
+  <button class="normalize hidden" onclick="digichain.normalize(event)">Normalize</button>
+  <button onclick="digichain.editWaveformAction(event, false, true)" class="float-right button-outline has-shift-mod" style="margin-top: 1rem;">Add to samples</button>
+</div>
+
+<div class="pop-up-blind"></div>
+
 <div class="header-menu">
   <div class="file-num">
     <label for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</label>
     <output class="float-left" id="fileNum">0/0</output>
   </div>
   <div id="toggleOptionsButton" onclick="digichain.toggleOptionsPanel()"><i class="gg-select-r"></i></div>
+  <div id="progressIndicator"></div>
 </div>
 
 <div class="loading-message">
@@ -94,6 +140,7 @@
           <th class="w-0"></th>
           <th class="w-0"></th>
           <th class="w-0"></th>
+          <th class="w-0"></th>
         </tr>
         </thead>
         <tbody id="fileList">
@@ -109,32 +156,16 @@
   </div>
 </div>
 
-<div id="infoPanelMd" class="info-panel-md pop-up">
-  <a class="float-right" onclick="document.getElementById('infoPanelMd').style.display = 'none'"><i class="gg-close"></i></a>
-  <div class="content"></div>
-</div>
-
-<div id="splitOptions" class="split-panel-options pop-up">
-  <a class="float-right" onclick="document.getElementById('splitOptions').style.display = 'none'"><i class="gg-close"></i></a>
-  <p>
-    Choose how many slices to make from '<span id="splitFileName"></span>'
-  </p>
-  <div class="slice-group">
-    <button onclick="digichain.splitAction(event, false, 2)" class="button-outline has-shift-mod check sel-0" data-sel="1">2</button>
-    <button onclick="digichain.splitAction(event, false, 4)" class="button-outline has-shift-mod check sel-1" data-sel="1">4</button>
-    <button onclick="digichain.splitAction(event, false, 8)" class="button-outline has-shift-mod check sel-2" data-sel="2">8</button>
-    <button onclick="digichain.splitAction(event, false, 16)" class="button-outline has-shift-mod check sel-3" data-sel="3">16</button>
-    <button onclick="digichain.splitAction(event, false, 32)" class="button-outline has-shift-mod check sel-4" data-sel="4">32</button>
-    <button onclick="digichain.splitAction(event, false, 64)" class="button-outline has-shift-mod check sel-5" data-sel="5">64</button>
-    <button onclick="digichain.splitAction(event, false, 128)" class="button-outline has-shift-mod check sel-6" data-sel="6">128</button>
-    <button id="sliceByOtButton" onclick="digichain.splitAction(event, false, 'ot')" class="button-outline has-shift-mod check sel-7 sel-ot" data-sel="7">OT</button>
-  </div>
-</div>
-
 <div class="touch-buttons">
   <button id="modifierKeyshiftKey" title="Locks the shift key (useful for touch users with no keyboard access)." onclick="digichain.toggleModifier('shiftKey')" class="button-outline">SHIFT</button>
   <button id="modifierKeyctrlKey" title="Locks the ctrl key (useful for touch users with no keyboard access)." onclick="digichain.toggleModifier('ctrlKey')" class="button-outline">CTRL</button>
 </div>
+
+<script>
+  if (location.origin.startsWith('file:')) {
+    document.getElementById('alertNotServed').classList.add('show');
+  }
+</script>
 
 </body>
 </html>

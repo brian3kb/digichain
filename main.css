@@ -3,11 +3,22 @@ body {
     background-color: #202124;
 }
 * { user-select: none; }
+.show { display: block !important; }
 .logo {
     position: fixed;
     bottom: 0;
     right: 1rem;
     opacity: 0.35;
+}
+.pop-up.show ~ .pop-up-blind {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgb(32 33 36 / 76%);
+    z-index: 99;
 }
 #toggleOptionsButton {
     position: absolute;
@@ -58,7 +69,34 @@ body {
     top: 0;
     z-index: 3;
 }
-#getJoined, .wav-link-hidden { visibility: hidden; }
+input { color: #a8a8a8; }
+.input-set input {
+    width: 65%;
+    float: left;
+    padding: 0 0.5rem;
+    border: 1px solid #8a5d2e;
+    padding-left: 7.5rem;
+}
+.input-set[readonly] {
+    border: 1px solid #312b25;
+}
+.input-set button {
+    padding: 0 2.5rem;
+}
+.input-set .before-input {
+    position: absolute;
+    color: #815e36;
+    line-height: 4rem;
+    margin-left: 0.75rem;
+    font-size: 1.2rem;
+}
+.input-set {
+    margin-top: -1.5rem;
+}
+.input-set:first-child {
+    margin-top: 0;
+}
+#getJoined, .wav-link-hidden, .hidden { visibility: hidden; }
 #getJoined, #uploadInput { display: none; }
 #fileNum { padding-left: 1rem; }
 table { padding-bottom: 12rem; padding-top: 1rem; }
@@ -68,6 +106,18 @@ th a:first-of-type { margin-left: -15px; color: #d79c4e; }
     width: 4.5rem;
     display: inline-block;
     margin-left: -2.5rem;
+}
+.end-of-grid td {
+    border-bottom: 2px solid #4ed75f40;
+}
+tr.file-row.end-of-grid::after {
+    content: 'end joined file';
+    position: absolute;
+    margin-left: -50%;
+    margin-top: 5.7rem;
+    font-size: 0.8rem;
+    text-align: center;
+    opacity: .75;
 }
 tr.selected {
     /*background-color: #cb9d5b0d;*/
@@ -82,6 +132,33 @@ canvas.waveform {
     transform: scaleY(0.95) translateY(-0.1rem);
 }
 canvas.waveform:hover { opacity: .98; }
+.waveform-container {
+    width: auto;
+    height: 14rem;
+    border-left: 1px solid #d79c4e30;
+    border-right: 1px solid #d79c4e30;
+    padding-top: 2rem;
+    margin-bottom: 1rem;
+    overflow: scroll;
+}
+.waveform-container::-webkit-scrollbar,
+.file-path-td::-webkit-scrollbar {
+    display: none;
+}
+#sliceLines { margin-top: -150px; }
+.waveform-container .line {
+    /*height: 150px;*/
+    /*width: 1px;*/
+    /*background-color: #e18603;*/
+    /*margin-top: -150px;*/
+    height: 150px;
+    width: 1px;
+    border-left: 1px solid #e18603;
+    border-right: 1px solid #9f4141;
+    margin-top: -150px;
+    background-color: #99794b1a;
+    opacity: .85;
+}
 td { padding: 0; }
 td .gg-more-vertical { opacity: .25; }
 td button { margin: 0.5rem; }
@@ -112,7 +189,7 @@ td button { margin: 0.5rem; }
 .sort-check {
     margin-left: -1rem;
 }
-.move-up, .move-down, .duplicate, .remove { padding: 0; }
+.move-up, .move-down, .duplicate, .remove, .toggle-edit { padding: 0; }
 .gg-info {
     margin: 0.25rem;
     transform: scale(.6);
@@ -143,17 +220,21 @@ td button { margin: 0.5rem; }
 /*.channel-options-stereo i.stereo-circle {*/
 /*    margin-left: -1.35rem;*/
 /*}*/
-.info-panel-md, .split-panel-options {
+.info-panel-md, .split-panel-options, .edit-panel-options, .not-served-md {
     position: fixed;
-    width: 50vw;
+    width: 512px;
     top: 16vh;
-    left: 25vw;
+    left: 50%;
+    margin: 0 -256px;
     z-index: 1000;
     background-color: #202124;
     border: 1px solid orange;
     padding: 2rem;
     border-radius: 5px;
-    box-shadow: 0 0px 4px #cf8600;
+    box-shadow: 0 0 4px #cf8600;
+    display: none;
+    box-sizing: content-box;
+    max-width: 512px;
     display: none;
 }
 a {
@@ -183,6 +264,9 @@ tr:has(.check.button-outline) {
     width: 29rem;
     background-color: #202124;
     transition: transform .2s ease-in;
+}
+.waveform-container .slice-group {
+    padding-bottom: 2rem;
 }
 .all-options.hidden .slice-group.float-down {
     transform: translateY(14rem);
@@ -393,6 +477,12 @@ body.shiftKey-down i.has-shift-mod-i {
         margin-left: 8rem;
     }
 
+    body.grid-view td.toggle-edit-td {
+        position: absolute;
+        margin-left: 21rem;
+        margin-top: -14.5rem;
+    }
+
     body.grid-view td.split-td {
         position: absolute;
         margin-left: 17.5rem;
@@ -416,6 +506,15 @@ body.shiftKey-down i.has-shift-mod-i {
         position: absolute;
         margin-left: 0rem;
     }
+
+    body.grid-view tr.end-of-grid {
+        border-bottom: 2px solid #4ed75f40;
+        border-right: 2px solid #4ed75f40;
+    }
+    body.grid-view tr.end-of-grid::after {
+        margin-left: 9rem;
+        margin-top: 0.7rem;
+    }
 }
 
 @media (max-width: 40.0rem) {
@@ -427,7 +526,12 @@ body.shiftKey-down i.has-shift-mod-i {
     .left-buttons .row { display: block; }
     .left-buttons .button { width: 48.5%; margin-right: 0.1rem; }
     .left-buttons .row .button:first-child { margin-left: 0.25rem;}
-    .info-panel-md, .split-panel-options { width: 95%; left: 2.5%; }
+    .info-panel-md, .split-panel-options {
+        width: 90%;
+        left: 4.5%;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
     .all-options.hidden {
         transform: translateY(-34rem);
         margin-top: -31rem;
@@ -440,9 +544,21 @@ body.shiftKey-down i.has-shift-mod-i {
         padding-left: 2.5rem;
         margin: -2rem;
     }
+    .end-of-grid td {
+        border-bottom: none;
+    }
+    .end-of-grid .waveform-td {
+        border-bottom: 0.1rem solid #d79c4e30;
+    }
     table {
         overflow-x: hidden;
         padding-top: 2.5rem;
+    }
+    #toggleOptionsButton {
+        margin-top: 29rem;
+    }
+    .waveform-container {
+        display: none;
     }
     tr {
         display: none;
@@ -494,16 +610,23 @@ body.shiftKey-down i.has-shift-mod-i {
         margin-left: 8rem;
         opacity: .7;
     }
+
+    td.toggle-edit-td {
+        position: absolute;
+        margin-left: 30.25rem;
+        margin-top: -12.25rem;
+    }
+
     td.split-td {
         position: absolute;
         margin-left: 27rem;
-        margin-top: -9rem;
+        margin-top: -8rem;
     }
 
     td.duplicate-td {
         position: absolute;
         margin-left: 30.5rem;
-        margin-top: -7rem;
+        margin-top: -6rem;
     }
 
     td.remove-td {
@@ -516,6 +639,19 @@ body.shiftKey-down i.has-shift-mod-i {
         margin-top: -3rem;
         position: absolute;
         margin-left: 0rem;
+    }
+    body.grid-view tr.end-of-grid {
+        border-bottom: 2px solid #4ed75f40;
+    }
+
+    tr.file-row.end-of-grid::after {
+        content: 'end joined file';
+        position: absolute;
+        margin-left: 15rem;
+        margin-top: 0.7rem;
+        font-size: 0.8rem;
+        text-align: center;
+        opacity: .75;
     }
 
 }

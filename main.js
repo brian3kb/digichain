@@ -2,6 +2,7 @@ import { Resampler, audioBufferToWav } from './resources.js';
 
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
+const progressEl = document.getElementById('progressIndicator');
 const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
 const audioConfigOptions = {
   m4410016: { sr: 44100, bd: 16, c: 1 },
@@ -83,11 +84,81 @@ const toggleModifier = (key) => {
   }
 };
 
+const closePopUps = () => {
+  return document.querySelectorAll('.pop-up').forEach(w => w.classList.remove('show'));
+};
+
 const toggleOptionsPanel = () => {
   const buttonsEl = document.getElementById('allOptionsPanel');
   const toggleButtonEl = document.getElementById('toggleOptionsButton');
   buttonsEl.classList.contains('hidden') ? buttonsEl.classList.remove('hidden') : buttonsEl.classList.add('hidden');
   buttonsEl.classList.contains('hidden') ? toggleButtonEl.classList.add('collapsed') : toggleButtonEl.classList.remove('collapsed');
+};
+
+function normalize(event, id) {
+  const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
+  const editPanelEl = document.getElementById('editPanel');
+  const dataset = editPanelEl.dataset;
+  dataset.start = dataset.start > -1 ? dataset.start : 0;
+  dataset.end = dataset.end || item.buffer.length;
+
+  let maxSample = 1;
+  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+    let data = item.buffer.getChannelData(channel);
+    for (let i = dataset.start; i < dataset.end; i++) {
+      const max = Math.abs(Math.max(data[i]));
+      maxSample = max > maxSample ? max : maxSample;
+    }
+  }
+  console.warn(maxSample);
+}
+
+const toggleReadOnlyInput = (inputId) => {
+  const input = document.getElementById(inputId);
+  input.readOnly ? input.removeAttribute('readonly') : input.setAttribute('readonly', true);
+};
+
+function updateFile(event) {
+  const target = event.target;
+  const item = getFileById(lastSelectedRow.dataset.id);
+  if (!target) { return ; }
+  if (target.id === 'editFileName') {
+    item.file.name = target.value;
+  }
+  if (target.id === 'editFilePath') {
+    item.file.path = target.value;
+  }
+}
+
+const showEditPanel = (event, id) => {
+  const editPanelEl = document.getElementById('editPanel');
+  const editPanelWaveformContainerEl = document.querySelector(`#editPanel .waveform-container`);
+  const editPanelWaveformEl = document.getElementById('editPanelWaveform');
+  const editableItemsEl = document.getElementById('editableItems');
+  let item;
+  if (id) {
+    lastSelectedRow = getRowElementById(id);
+    editPanelEl.dataset.id = id;
+  }
+  item = getFileById(id || lastSelectedRow.dataset.id);
+  editableItemsEl.innerHTML = `
+      <div class="input-set">
+      <label for="editFileName" class="before-input">File Name</label>
+      <input type="text" onchange="digichain.updateFile(event)" placeholder="Sample file name" id="editFileName" value="${getNiceFileName('', item, true)}" readonly>
+      <button class="button-clear" onclick="digichain.toggleReadOnlyInput('editFileName')"><i class="gg-pen"></i></button>
+    </div><br>
+    <div class="input-set">
+    <label for="editFilePath" class="before-input">File Path</label>
+      <input type="text" placeholder="File path of the sample (if known)" id="editFilePath" value="${item.file.path}" id="editFilePath" readonly>
+      <button class="button-clear" onclick="digichain.toggleReadOnlyInput('editFilePath')"><i class="gg-pen"></i></button>
+    </div>
+  `;
+
+  editPanelEl.classList.add('show');
+  drawWaveform(item, editPanelWaveformEl, item.meta.channel, {
+    width: +editPanelWaveformContainerEl.dataset.waveformWidth, height: 128
+  });
+
 };
 
 function setWavLink(file, linkEl) {
@@ -149,7 +220,7 @@ function showInfo() {
     <p class="float-right"><a href="https://brianbar.net/" target="_blank">Brian Barnett</a>
     (<a href="https://www.youtube.com/c/sfxBrian" target="_blank">sfxBrian</a> / <a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>
 `;
-  document.querySelector('.info-panel-md').style.display = 'block';
+  document.querySelector('.info-panel-md').classList.add('show');
 }
 
 function getMonoFloat32ArrayFromBuffer(buffer, channel, getAudioBuffer = false) {
@@ -233,7 +304,7 @@ function mixDown(_files) {
 
 function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInternal = false) {
   if (files.length === 0) { return; }
-  if ((event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
+  if (toInternal || (event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
   let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(f => f.meta.checked);
   let tempFiles = _files.splice(0, (sliceGrid > 0 ? sliceGrid : _files.length));
   filesRemaining = Array.from(_files);
@@ -298,6 +369,18 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
   }
 }
 
+function joinAllByPath(event, pad = false) { //TODO: test and hook into UI
+  const filesByPath = {};
+  files.filter(f => f.meta.checked).forEach(file => {
+    const path = file.file.path.replace(/\//gi, '-');
+    filesByPath[path] = filesByPath[path] || [];
+    filesByPath[path].push(file);
+  });
+  for (const fBP of filesByPath) {
+    joinAll(event, pad, fBP,fBP.length);
+  }
+}
+
 const playFile = (event, id, loop) => {
   const file = getFileById(id);
   loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
@@ -316,6 +399,7 @@ const playFile = (event, id, loop) => {
 
 const toggleCheck = (event, id) => {
   try {
+    const rowEl = getRowElementById(id);
     const el = getRowElementById(id).querySelector('.toggle-check');
     const file = getFileById(id);
     event.preventDefault();
@@ -323,6 +407,9 @@ const toggleCheck = (event, id) => {
     file.meta.checked
         ? el.classList.remove('button-outline')
         : el.classList.add('button-outline');
+    file.meta.checked
+        ? rowEl.classList.add('checked')
+        : rowEl.classList.remove('checked');
     if (!file.meta.checked) {
       file.source?.stop();
     }
@@ -425,7 +512,7 @@ const splitByOtSlices = (event, id, pushInPlace = false) => {
     const audioArrayBuffer = audioCtx.createBuffer(
         file.buffer.numberOfChannels,
         (otMeta.slices[i].endPoint - otMeta.slices[i].startPoint),
-        file.buffer.sampleRate
+        masterSR
     );
     const slice = {};
     const uuid = crypto.randomUUID();
@@ -497,6 +584,24 @@ const splitEvenly = (event, id, slices, pushInPlace = false) => {
   renderList();
 }
 
+const splitSizeAction = (event, slices) => {
+  let file, otMeta;
+  const sliceGroupEl = document.querySelector(`.split-panel-options .slice-group`);
+  const optionsEl = document.querySelectorAll(`.split-panel-options .slice-group button`);
+  if (slices === 'ot' && sliceGroupEl.dataset.id) {
+    file = getFileById(sliceGroupEl.dataset.id);
+    otMeta = metaFiles.getByFile(file);
+    slices = otMeta.slices;
+  }
+  sliceGroupEl.dataset.sliceCount = typeof slices === 'number' ? slices : otMeta.sliceCount;
+  optionsEl.forEach((option, index) => {
+    (+option.dataset.sel === +sliceGroupEl.dataset.sliceCount) || (option.dataset.sel === 'ot' && otMeta) ?
+        option.classList.remove('button-outline') :
+        option.classList.add('button-outline');
+  });
+  drawSliceLines(slices, file, otMeta);
+};
+
 const remove = (id) => {
   const fileIdx = getFileIndexById(id);
   const removed = files.splice(fileIdx, 1);
@@ -541,10 +646,13 @@ const sort = (by) => {
 
 const handleRowClick = (event, id) => {
   const row = getRowElementById(id);
+  if (document.querySelector('.pop-up.show')) { return ; }
   if (lastSelectedRow) { lastSelectedRow.classList.remove('selected'); }
   row.classList.add('selected');
   lastSelectedRow = row;
   lastSelectedRow.scrollIntoViewIfNeeded();
+  setCountValues();
+
 };
 
 const rowDragStart = (event) => {
@@ -553,33 +661,62 @@ const rowDragStart = (event) => {
   }
 };
 
+const drawSliceLines = (slices, file, otMeta) => {
+  const _slices = typeof slices === 'number' ? Array.from('.'.repeat(slices)) : slices;
+  const sliceLinesEl = document.getElementById('sliceLines');
+  const splitPanelWaveformContainerEl = document.querySelector(`#splitOptions .waveform-container`);
+  const waveformWidth = splitPanelWaveformContainerEl.dataset.waveformWidth;
+  let lines = [];
+  if (file && otMeta) {
+    let scaleSize = file.buffer.length/waveformWidth;
+    lines = otMeta.slices.map((slice, idx) => `
+        <div class="line" style="margin-left:${(slice.startPoint/scaleSize)}px; width:${(slice.endPoint/scaleSize) - (slice.startPoint/scaleSize)}px;"></div>
+    `);
+  } else {
+    lines = _slices.map((slice, idx) => `
+      <div class="line" style="margin-left:${(waveformWidth/_slices.length) * idx}px; width:${(waveformWidth/_slices.length)}px;"></div> 
+  `);
+  }
+  sliceLinesEl.innerHTML = lines.join('');
+};
+
 const splitAction = (event, id, slices) => {
   const el = document.getElementById('splitOptions');
   const fileNameEl = document.getElementById('splitFileName');
+  const sliceGroupEl = document.querySelector(`.split-panel-options .slice-group`);
   const sliceByOtButtonEl = document.getElementById('sliceByOtButton');
+  const splitPanelWaveformContainerEl = document.querySelector(`#splitOptions .waveform-container`);
+  const splitPanelWaveformEl = document.getElementById('splitPanelWaveform');
   let item;
   let otMeta;
   let pushInPlace = (event.shiftKey || modifierKeys.shiftKey);
   if (id) {
     lastSelectedRow = getRowElementById(id);
+    sliceGroupEl.dataset.id = id;
   }
+  if (slices === true) { slices = sliceGroupEl.dataset.sliceCount; }
   item = getFileById(id || lastSelectedRow.dataset.id);
   if (slices) {
     id = id || item.meta.id;
-    if (slices === 'ot') {
+    if (slices === 'ot' || !sliceByOtButtonEl.classList.contains('button-outline')) {
       splitByOtSlices(event, id, pushInPlace);
     } else {
       splitEvenly(event, id, slices, pushInPlace);
     }
-    return el.style.display = 'none';
+    return el.classList.remove('show');
   }
   otMeta = metaFiles.getByFile(item);
   fileNameEl.textContent = getNiceFileName('', item, true);
   sliceByOtButtonEl.style.display = otMeta ? 'inline-block' : 'none';
-  el.style.display = 'block';
+  sliceByOtButtonEl.textContent = otMeta ? `${otMeta.sliceCount}` : 'OT';
+  splitSizeAction(false,0);
+  el.classList.add('show');
+  drawWaveform(item, splitPanelWaveformEl, item.meta.channel, {
+    width: +splitPanelWaveformContainerEl.dataset.waveformWidth, height: 128
+  });
 };
 
-const draw = (normalizedData, id, canvas) => {
+const draw = (normalizedData, id, canvas, dimensions) => {
   const drawLineSegment = (ctx, x, height, width, isEven) => {
     ctx.lineWidth = 1; // how thick the line is
     ctx.strokeStyle = '#a8a8a8'; // what color our line is
@@ -594,8 +731,8 @@ const draw = (normalizedData, id, canvas) => {
   // set up the canvas
   const dpr = window.devicePixelRatio || 1;
   const padding = 0;
-  canvas.width = 150; //canvas.offsetWidth * dpr;
-  canvas.height = 60;// (canvas.offsetHeight + padding * 2) * dpr;
+  canvas.width = dimensions?.width || 150; //canvas.offsetWidth * dpr;
+  canvas.height = dimensions?.height || 60;// (canvas.offsetHeight + padding * 2) * dpr;
   const ctx = canvas.getContext('2d');
   //ctx.scale(dpr, dpr);
   ctx.translate(0, canvas.offsetHeight / 2 + padding); // set Y = 0 to be in the middle of the canvas
@@ -631,10 +768,10 @@ const setCountValues = () => {
   document.querySelectorAll('.join-count').forEach(el => el.textContent = ` ${joinCount === 0 ? '-' : joinCount} `);
   document.getElementById('lengthHeaderLink').textContent = `Length (${secondsToMinutes(filesSelectedDuration)}/${secondsToMinutes(filesDuration)})`;
   try {
-    const sliceRule = document.styleSheets[1].cssRules[0].cssText;
-    const replaceRule = `type(${sliceGrid}${sliceGrid > 0 ? 'n' : ''}`;
-    document.styleSheets[1].deleteRule(0);
-    document.styleSheets[1].insertRule(sliceRule.replace(/child\(\d+[n]|type\(0/g, replaceRule));
+    document.querySelectorAll('tr').forEach(row => row.classList.remove('end-of-grid'));
+    document.querySelectorAll('tr.checked').forEach(
+        (row, i) => (i+1)%sliceGrid === 0 ? row.classList.add('end-of-grid') : row.classList.remove('end-of-grid'));
+
   } catch(e) {}
 };
 
@@ -646,7 +783,7 @@ const getNiceFileName = (name, file, excludeExtension, includePath) => {
   return excludeExtension ? fname.replace(/\.[^.]*$/,'') : fname;
 };
 
-const drawWaveform = (file, el, channel) => {
+const drawWaveform = (file, el, channel, dimensions) => {
   let drawData = [];
   let drawResolution = Math.floor(file.buffer.length / 20);
   if (masterChannels === 2 && file.buffer.numberOfChannels > 1) { channel = 'S'; }
@@ -660,12 +797,12 @@ const drawWaveform = (file, el, channel) => {
       drawData.push(file.buffer.getChannelData((channel === 'R' ? 1 : 0))[y]);
     }
   }
-  draw(drawData, file.meta.id, el);
+  draw(drawData, file.meta.id, el, dimensions);
 };
 
 const renderList = () => {
   listEl.innerHTML = files.map( f => `
-      <tr class="file-row" data-id="${f.meta.id}"
+      <tr class="file-row ${f.meta.checked ? 'checked' : ''}" data-id="${f.meta.id}"
           onclick="digichain.handleRowClick(event, '${f.meta.id}')"
           onmousedown="digichain.handleRowClick(event, '${f.meta.id}')"  
           ondragstart="digichain.rowDragStart(event)" draggable="true">
@@ -711,6 +848,9 @@ const renderList = () => {
         <td class="duplicate-td">
             <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
         </td>
+        <td class="toggle-edit-td">
+            <button title="Edit" onclick="digichain.showEditPanel(event, '${f.meta.id}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
+        </td>
         <td class="remove-td">
             <button title="Remove sample (double-click)." ondblclick="digichain.remove('${f.meta.id}')" class="button-clear remove"><i class="gg-trash"></i></button>
         </td>
@@ -725,7 +865,7 @@ const renderList = () => {
       el.replaceWith(files[i].waveform);
     } else {
       //draw([...files[i].buffer.getChannelData(0)].filter((x, i) => !(i /50 % 1)), files[i].meta.id);
-      drawWaveform(files[i], el, files[i].buffer.numberOfChannels);
+      drawWaveform(files[i], el, files[i].meta.channel);
       files[i].waveform = el;
     }
   });
@@ -922,13 +1062,13 @@ const consumeFileInput = (inputFiles) => {
 
   const checkCount = (idx) => {
     //count = count.filter(c => c !== false);
-    if (idx === _files.length - 1) {
+    //if (idx === _files.length - 1) {
       if (count.every(c => unsorted.includes(c))) {
-        renderList();
+        setTimeout(() => renderListWhenReady(count), 1000);
       } else {
-        setTimeout(() => renderListWhenReady(count), 500);
+       // setTimeout(() => renderListWhenReady(count), 1000);
       }
-    }
+    //}
   };
   let count = [];
 
@@ -1060,7 +1200,7 @@ document.body.addEventListener('keydown', (event) => {
     if (files.length && !(event.shiftKey || modifierKeys.shiftKey)) {
       files.forEach(f => f.source?.stop());
     }
-    return document.querySelectorAll('.pop-up').forEach(w => w.style.display = 'none');
+    return closePopUps();
   }
   if (files.length && (event.code === 'KeyI')) {
     return invertFileSelection();
@@ -1079,6 +1219,7 @@ document.body.addEventListener('keydown', (event) => {
       files.splice(idx + 1, 0, item);
       lastSelectedRow.nextElementSibling.after(lastSelectedRow);
       lastSelectedRow.scrollIntoViewIfNeeded();
+      setCountValues();
     } else if (event.code === 'ArrowUp' && lastSelectedRow.previousElementSibling) {
       if (!(event.shiftKey || modifierKeys.shiftKey)) { return handleRowClick(event, lastSelectedRow.previousElementSibling.dataset.id); }
       let idx = getFileIndexById(lastSelectedRow.dataset.id);
@@ -1086,6 +1227,7 @@ document.body.addEventListener('keydown', (event) => {
       files.splice(idx - 1, 0, item);
       lastSelectedRow.previousElementSibling.before(lastSelectedRow);
       lastSelectedRow.scrollIntoViewIfNeeded();
+      setCountValues();
     } else if (event.code === 'Enter') {
       toggleCheck(event, lastSelectedRow.dataset.id);
     } else if (event.code === 'KeyP') {
@@ -1104,6 +1246,7 @@ window.digichain = {
   changeAudioConfig,
   removeSelected,
   sort,
+  renderList,
   joinAll,
   selectSliceAmount,
   showInfo,
@@ -1119,8 +1262,13 @@ window.digichain = {
   rowDragStart,
   splitAction,
   splitEvenly,
+  splitSizeAction,
   toggleModifier,
-  toggleOptionsPanel
+  toggleOptionsPanel,
+  showEditPanel,
+  normalize,
+  toggleReadOnlyInput,
+  updateFile
 };
 
 

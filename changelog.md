@@ -3,15 +3,15 @@
 - OT slices import from accompanying .ot file.
 - Show source folder path on list, filenames will now include this path in their name if present - joined files with have the path of the first item in the chain in its name.
 - Moved the UI around again, added ability to hide the top buttons panel.
-- Grid-view mode for those who dislike tables.
+- Grid-view mode for those who dislike tables. (Shift+G)
 - Swapped Shift/Ctrl coloring, added css transition on toggle.
 - Added slice-count to end of chain filenames.
 - Changed 'sort by selected icon' to a text value.
-- Fixed bug where a benign error would result when trying to select a grid-size larger than the number of samples loaded.
 - Added sort by slice# to make building mega-break chains easier.
 - Indicator on row/grid of end of joined chain based on slice-grid selection.
 - Waveform and slice marker visual preview before slicing a file from the list into new samples.
 - Edit panel with file name/path editing.
+- Normalize, trim right, and reverse sample operations.
 
 2023-03-27 1.2.0 
 - Added support for slicing files in the list into new items.

@@ -23,6 +23,7 @@ let unsorted = [];
 let metaFiles = [];
 let lastSort = '';
 let lastSelectedRow;
+let workBuffer;
 let sliceGrid = 0;
 let sliceOptions = Array.from(DefaultSliceOptions);
 let keyboardShortcutsDisabled = false;
@@ -95,22 +96,101 @@ const toggleOptionsPanel = () => {
   buttonsEl.classList.contains('hidden') ? toggleButtonEl.classList.add('collapsed') : toggleButtonEl.classList.remove('collapsed');
 };
 
+const renderEditPanelWaveform = (item) => {
+  const editPanelWaveformContainerEl = document.querySelector(`#editPanel .waveform-container`);
+  const editPanelWaveformEl = document.getElementById('editPanelWaveform');
+  drawWaveform(item, editPanelWaveformEl, item.meta.channel, {
+    width: +editPanelWaveformContainerEl.dataset.waveformWidth, height: 128
+  });
+};
+
 function normalize(event, id) {
   const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
   const editPanelEl = document.getElementById('editPanel');
+
   const dataset = editPanelEl.dataset;
   dataset.start = dataset.start > -1 ? dataset.start : 0;
-  dataset.end = dataset.end || item.buffer.length;
+  dataset.end = dataset.end > -1 ? dataset.end : item.buffer.length;
 
-  let maxSample = 1;
+  let maxSample = 0;
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel);
-    for (let i = dataset.start; i < dataset.end; i++) {
-      const max = Math.abs(Math.max(data[i]));
-      maxSample = max > maxSample ? max : maxSample;
+    for (let i = +dataset.start; i < +dataset.end; i++) {
+      maxSample = Math.max(Math.abs(data[i]), maxSample);
     }
   }
-  console.warn(maxSample);
+  maxSample = !maxSample ? 1 : maxSample;
+  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+    let data = item.buffer.getChannelData(channel);
+    for (let i = +dataset.start; i < +dataset.end; i++) {
+      if (item.buffer.getChannelData(channel)[i] && item.buffer.getChannelData(channel)[i] / maxSample !== 0) {
+        item.buffer.getChannelData(channel)[i] = item.buffer.getChannelData(channel)[i] / maxSample;
+      }
+    }
+  }
+  renderEditPanelWaveform(item);
+  item.waveform = false;
+}
+
+function reverse(event, id) {
+  const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
+  const editPanelEl = document.getElementById('editPanel');
+
+  const dataset = editPanelEl.dataset;
+  dataset.start = dataset.start > -1 ? dataset.start : 0;
+  dataset.end = dataset.end > -1 ? dataset.end : item.buffer.length;
+
+  let maxSample = 0;
+  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+    let data = item.buffer.getChannelData(channel).reverse();
+    for (let i = +dataset.start; i < +dataset.end; i++) {
+      item.buffer.getChannelData(channel)[i] = data[i];
+    }
+  }
+  renderEditPanelWaveform(item);
+  item.waveform = false;
+}
+
+function trimRight(event, id) {
+  const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
+  const editPanelEl = document.getElementById('editPanel');
+
+  const dataset = editPanelEl.dataset;
+  dataset.start = dataset.start > -1 ? dataset.start : 0;
+  dataset.end = dataset.end > -1 ? dataset.end : item.buffer.length;
+
+  let trimIndex = [];
+  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+    trimIndex.push(dataset.end);
+    let data = item.buffer.getChannelData(channel);
+    for (let i = dataset.end; i > dataset.start; i--) {
+      if (data[i] !== 0 && data[i] !== undefined && data[i] !== null) {
+        trimIndex[channel] = i + 1;
+        break;
+      }
+    }
+  }
+  const audioArrayBuffer = audioCtx.createBuffer(
+      item.buffer.numberOfChannels,
+      +Math.max(...trimIndex),
+      masterSR
+  );
+  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+    for (let i = 0; i < audioArrayBuffer.length; i++) {
+      audioArrayBuffer.getChannelData(channel)[i] = item.buffer.getChannelData(channel)[i];
+    }
+  }
+  item.buffer = audioArrayBuffer;
+  item.meta = {
+    ...item.meta,
+    length: audioArrayBuffer.length,
+    duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
+    startFrame: 0, endFrame: audioArrayBuffer.length
+  };
+  dataset.start = '0';
+  dataset.end = `${audioArrayBuffer.length}`;
+  renderEditPanelWaveform(item);
+  item.waveform = false;
 }
 
 const toggleReadOnlyInput = (inputId) => {
@@ -132,8 +212,6 @@ function updateFile(event) {
 
 const showEditPanel = (event, id) => {
   const editPanelEl = document.getElementById('editPanel');
-  const editPanelWaveformContainerEl = document.querySelector(`#editPanel .waveform-container`);
-  const editPanelWaveformEl = document.getElementById('editPanelWaveform');
   const editableItemsEl = document.getElementById('editableItems');
   let item;
   if (id) {
@@ -141,6 +219,8 @@ const showEditPanel = (event, id) => {
     editPanelEl.dataset.id = id;
   }
   item = getFileById(id || lastSelectedRow.dataset.id);
+  editPanelEl.dataset.start = '-1';
+  editPanelEl.dataset.end = '-1';
   editableItemsEl.innerHTML = `
       <div class="input-set">
       <label for="editFileName" class="before-input">File Name</label>
@@ -155,9 +235,7 @@ const showEditPanel = (event, id) => {
   `;
 
   editPanelEl.classList.add('show');
-  drawWaveform(item, editPanelWaveformEl, item.meta.channel, {
-    width: +editPanelWaveformContainerEl.dataset.waveformWidth, height: 128
-  });
+  renderEditPanelWaveform(item);
 
 };
 
@@ -857,14 +935,13 @@ const renderList = () => {
       </tr>
     `).join('');
   if (files.length === 0) {
-    listEl.innerHTML = `<tr><td colspan="9" class="no-files"><h4>Load/Drag in some samples to get started...</h4></td></tr>`;
+    listEl.innerHTML = '';
   }
 
   document.querySelectorAll('.waveform').forEach((el, i) => {
     if (files[i].waveform) {
       el.replaceWith(files[i].waveform);
     } else {
-      //draw([...files[i].buffer.getChannelData(0)].filter((x, i) => !(i /50 % 1)), files[i].meta.id);
       drawWaveform(files[i], el, files[i].meta.channel);
       files[i].waveform = el;
     }
@@ -1267,6 +1344,8 @@ window.digichain = {
   toggleOptionsPanel,
   showEditPanel,
   normalize,
+  trimRight,
+  reverse,
   toggleReadOnlyInput,
   updateFile
 };

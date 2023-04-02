@@ -58,8 +58,11 @@
     <div><canvas id="editPanelWaveform"></canvas>
       <div id="editLines"></div></div>
   </div>
-  <button class="normalize hidden" onclick="digichain.normalize(event)">Normalize</button>
-  <button onclick="digichain.editWaveformAction(event, false, true)" class="float-right button-outline has-shift-mod" style="margin-top: 1rem;">Add to samples</button>
+  <button title="Normalize the volume of the sample." class="normalize button-outline" onclick="digichain.normalize(event)">Normalize</button>
+  <button title="Trims any zero valued audio from the end of the sample." class="trim-right button-outline" onclick="digichain.trimRight(event)">Trim Right</button>
+  <button title="Reverses the sample playback" class="reverse button-outline" onclick="digichain.reverse(event)">Reverse</button>
+  <p>Note: sample operations are destructive, and are applied immediately, there is no undo.</p>
+<!--  <button onclick="digichain.editWaveformAction(event, false, true)" class="float-right button-outline has-shift-mod" style="margin-top: 1rem;">Add to samples</button>-->
 </div>
 
 <div class="pop-up-blind"></div>
@@ -143,9 +146,7 @@
           <th class="w-0"></th>
         </tr>
         </thead>
-        <tbody id="fileList">
-        <tr><td class="no-files" colspan="9"><h4>Load/Drag in some samples to get started...</h4></td></tr>
-        </tbody>
+        <tbody id="fileList"></tbody>
       </table>
     </div>
   </div>

@@ -100,6 +100,16 @@ input { color: #a8a8a8; }
 #getJoined, #uploadInput { display: none; }
 #fileNum { padding-left: 1rem; }
 table { padding-bottom: 12rem; padding-top: 1rem; }
+#fileList:empty::after {
+    content: 'Load/Drag in some samples to get started...';
+    text-align: center;
+    padding-top: 7rem;
+    padding-bottom: 5rem;
+    opacity: .25;
+    position: absolute;
+    width: 100%;
+    font-size: 2rem;
+}
 th a { color: #606c76; }
 th a:first-of-type { margin-left: -15px; color: #d79c4e; }
 .sort-by-selected {
@@ -118,6 +128,7 @@ tr.file-row.end-of-grid::after {
     font-size: 0.8rem;
     text-align: center;
     opacity: .75;
+    overflow: hidden;
 }
 tr.selected {
     /*background-color: #cb9d5b0d;*/
@@ -203,12 +214,14 @@ td button { margin: 0.5rem; }
     border: 1px solid #40392e;
     border-radius: 5px;
     margin-right: 1.5rem;
-    padding: 0.5rem;
+    padding: 0.75rem 0.5rem 0.25rem 0.5rem;
     width: 6rem;
     text-align: center;
 }
 .channel-options a, .pan-options a {
     color: #40392e;
+    margin-bottom: 0.2rem;
+    display: inline-block;
 }
 .channel-options a.selected, .pan-options a.selected {
     color: #d79c4e;
@@ -307,12 +320,6 @@ tr:has(.check.button-outline) {
 }
 .btn-audio-config * { color: #7a6241; }
 .btn-audio-config:hover * { color: #d79c4e;; }
-.no-files {
-    text-align: center;
-    padding-top: 7rem;
-    padding-bottom: 5rem;
-    opacity: .25;
-}
 .loading-message {
     display: none;
     top: 40vh;

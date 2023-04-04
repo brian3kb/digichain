@@ -17,6 +17,7 @@ const audioConfigOptions = {
 let masterSR = 48000;
 let masterBitDepth = 16;
 let masterChannels = 1;
+let pitchModifier = 1;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
 let unsorted = [];
@@ -291,14 +292,34 @@ function removeSelected() {
 
 function showInfo() {
   const description = document.querySelector('meta[name=description]').content;
-  const infoPanelContent = document.querySelector('.info-panel-md .content');
-  infoPanelContent.innerHTML = `
+  const infoPanelContentEl = document.querySelector('.info-panel-md .content');
+  infoPanelContentEl.innerHTML = `
     <h3>DigiChain</h3>
     <p>${description}</p>
     <p class="float-right"><a href="https://brianbar.net/" target="_blank">Brian Barnett</a>
     (<a href="https://www.youtube.com/c/sfxBrian" target="_blank">sfxBrian</a> / <a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>
 `;
   document.querySelector('.info-panel-md').classList.add('show');
+}
+
+function pitchExports(value) {
+  if ([.25,.5,1,2,4,8].includes(+value)) {
+    pitchModifier = +value;
+    showExportSettingsPanel();
+  }
+}
+
+function showExportSettingsPanel() {
+  const panelContentEl = document.querySelector('.export-settings-panel-md .content');
+  panelContentEl.innerHTML = `
+    <h4>Settings</h4>
+    <span>Pitch up joined exported files by octave &nbsp;&nbsp;&nbsp;</span>
+    <button onclick="digichain.pitchExports(1)" class="check ${pitchModifier === 1 ? 'button' : 'button-outline'}">No</button>
+    <button onclick="digichain.pitchExports(2)" class="check ${pitchModifier === 2 ? 'button' : 'button-outline'}">1</button>
+    <button onclick="digichain.pitchExports(4)" class="check ${pitchModifier === 4 ? 'button' : 'button-outline'}">2</button>
+    <button onclick="digichain.pitchExports(8)" class="check ${pitchModifier === 8 ? 'button' : 'button-outline'}">3</button>
+  `;
+  document.querySelector('.export-settings-panel-md').classList.add('show');
 }
 
 function getMonoFloat32ArrayFromBuffer(buffer, channel, getAudioBuffer = false) {
@@ -411,33 +432,63 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
   const path = _files[0].file.path ? `${(_files[0].file.path || '').replace(/\//gi, '-')}` : '';
   const fileData = {file: {name: `${path}joined_${pad ? 'spaced_' : ''}${fileCount+1}--[${_files.length}].wav`}, buffer: audioArrayBuffer, meta: {}};
   if (toInternal) {
-    // parseWav(audioArrayBuffer, {
-    //   lastModified: new Date().getTime(), name: `resample_${pad ? 'spaced_' : ''}${fileCount+1}.wav`,
-    //   size: ((masterBitDepth * masterSR * (audioArrayBuffer.length / masterSR)) / 8) * audioArrayBuffer.numberOfChannels /1024,
-    //   type: 'audio/wav'
-    // });
-    setWavLink(fileData, joinedEl);
-    const wav = audioBufferToWav(fileData.buffer, fileData.meta, masterSR, masterBitDepth, masterChannels);
-    const blob = new window.Blob([new DataView(wav)], {
-      type: 'audio/wav',
-    });
-    const fileReader = new FileReader();
-    fileReader.readAsArrayBuffer(blob);
-    fileReader.fileCount = fileCount;
+    if (pitchModifier !== 1) {
+      const pitchedWav = audioBufferToWav(fileData.buffer, fileData.meta, (masterSR * pitchModifier), masterBitDepth, masterChannels);
+      const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
+        type: 'audio/wav',
+      });
+      (async () => {
+        let linkedFile = await fetch(URL.createObjectURL(pitchedBlob));
+        let arrBuffer = await linkedFile.arrayBuffer();
+        await audioCtx.decodeAudioData(arrBuffer, buffer => {
+          parseWav(buffer, {
+            lastModified: new Date().getTime(), name: `${path}resample_${pad ? 'spaced_' : ''}${fileCount+1}--[${_files.length}].wav`,
+            size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
+            type: 'audio/wav'
+          }, '', true);
+          renderList();
+        });
+      })();
+    } else {
 
-    fileReader.onload = (e) => {
-      audioCtx.decodeAudioData(e.target.result, function(buffer) {
-        parseWav(buffer, {
-          lastModified: new Date().getTime(), name: `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}--[${_files.length}].wav`,
-          size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
-          type: 'audio/wav'
-        }, '', true);
-        renderList();
-      })
-    };
+      setWavLink(fileData, joinedEl);
+      const wav = audioBufferToWav(fileData.buffer, fileData.meta, masterSR, masterBitDepth, masterChannels);
+      const blob = new window.Blob([new DataView(wav)], {
+        type: 'audio/wav',
+      });
+      const fileReader = new FileReader();
+      fileReader.readAsArrayBuffer(blob);
+      fileReader.fileCount = fileCount;
+
+      fileReader.onload = (e) => {
+        audioCtx.decodeAudioData(e.target.result, function(buffer) {
+          parseWav(buffer, {
+            lastModified: new Date().getTime(), name: `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}--[${_files.length}].wav`,
+            size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
+            type: 'audio/wav'
+          }, '', true);
+          renderList();
+        })
+      };
+
+    }
 
   } else {
-    setWavLink(fileData, joinedEl).click();
+    if (pitchModifier !== 1) {
+      const pitchedWav = audioBufferToWav(fileData.buffer, fileData.meta, (masterSR * pitchModifier), masterBitDepth, masterChannels);
+      const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
+        type: 'audio/wav',
+      });
+      (async () => {
+        let linkedFile = await fetch(URL.createObjectURL(pitchedBlob));
+        let arrBuffer = await linkedFile.arrayBuffer();
+        await audioCtx.decodeAudioData(arrBuffer, buffer => {
+          setWavLink({...fileData, buffer: buffer}, joinedEl).click();
+        });
+      })();
+    } else {
+      setWavLink(fileData, joinedEl).click();
+    }
   }
   if (filesRemaining.length > 0) {
     fileCount++;
@@ -576,7 +627,7 @@ const duplicate = (event, id) => {
   item.meta.dupeOf = id;
   item.waveform = false;
   item.meta.id = crypto.randomUUID();
-  files.splice(((event.shiftKey || modifierKeys.shiftKey) ? files.length : fileIdx + 1), 0, item);
+  files.splice(((event.shiftKey || modifierKeys.shiftKey) ? files.length : fileIdx), 0, item);
   unsorted.push(item.meta.id);
   renderList();
 };
@@ -1203,6 +1254,22 @@ document.body.addEventListener(
     'drop',
     (event) => {
       event.preventDefault();
+      if (event?.dataTransfer?.items?.length && event?.dataTransfer?.items[0].kind === 'string') {
+        try {
+          event?.dataTransfer?.items[0].getAsString(async link => {
+            let linkedFile = await fetch(link);
+            if (!linkedFile.url.includes('.wav')) { return ; } // probably not a wav file
+            let buffer = await linkedFile.arrayBuffer();
+            await audioCtx.decodeAudioData(buffer, data => parseWav(data, {
+              lastModified: new Date().getTime(), name: linkedFile.url.split('/').reverse()[0],
+              size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
+              type: 'audio/wav'
+            }, '', true));
+            renderList();
+          });
+          return;
+        } catch (e) {}
+      }
       if (event?.dataTransfer?.items?.length) {
         let toConsume = [];
         let total = event.dataTransfer.items.length;
@@ -1342,7 +1409,9 @@ window.digichain = {
   splitSizeAction,
   toggleModifier,
   toggleOptionsPanel,
+  showExportSettingsPanel,
   showEditPanel,
+  pitchExports,
   normalize,
   trimRight,
   reverse,

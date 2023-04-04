@@ -179,6 +179,7 @@ td button { margin: 0.5rem; }
     padding: 0;
     width: 4rem;
 }
+.waveform-td { padding: 0 1rem; }
 .is-ot-file::after {
     text-align: center;
     content: 'OT';
@@ -233,7 +234,7 @@ td button { margin: 0.5rem; }
 /*.channel-options-stereo i.stereo-circle {*/
 /*    margin-left: -1.35rem;*/
 /*}*/
-.info-panel-md, .split-panel-options, .edit-panel-options, .not-served-md {
+.info-panel-md, .split-panel-options, .edit-panel-options, .not-served-md, .export-settings-panel-md {
     position: fixed;
     width: 512px;
     top: 16vh;
@@ -258,15 +259,22 @@ tr:has(.check.button-outline) {
     opacity: 0.55;
 }
 .download-buttons {
-    width: 29rem;
+    width: 33rem;
 }
 .btn-download {
     padding: 0;
-    width: 14.25rem;
+    width: 16.25rem;
 }
+.dl-single-files { width: 10rem; }
 .dl-spaced{
     width: 22rem;
     padding: 0;
+    float: left;
+}
+.toggle-export-settings {
+    padding: 0 1rem;
+    float: right;
+    transform: translateY(-0.75rem);
 }
 .slice-group {
     border: 1px solid orange;
@@ -274,7 +282,8 @@ tr:has(.check.button-outline) {
     border-radius: 5px;
     text-align: center;
     padding-bottom: 0.25rem;
-    width: 29rem;
+    width: 33rem;
+    height: 10.75rem;
     background-color: #202124;
     transition: transform .2s ease-in;
 }
@@ -528,7 +537,7 @@ body.shiftKey-down i.has-shift-mod-i {
     .container { margin-top: 2.5rem; }
     .min-width-20, .column-33, .column-33 .download-buttons, .column-33 .slice-group { width: 100%; }
     .column-33 .btn-download { width: 49.3%;}
-    .column-33 .check { width: 15.4%; }
+    .column-33 .check { width: 13.1%; }
     .column-33 .dl-spaced { width: 81.5%;}
     .left-buttons .row { display: block; }
     .left-buttons .button { width: 48.5%; margin-right: 0.1rem; }
@@ -542,6 +551,9 @@ body.shiftKey-down i.has-shift-mod-i {
     .all-options.hidden {
         transform: translateY(-34rem);
         margin-top: -31rem;
+    }
+    #toggleOptionsButton {
+        margin-top: 30.5rem;
     }
 }
 

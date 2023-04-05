@@ -18,6 +18,7 @@ let masterSR = 48000;
 let masterBitDepth = 16;
 let masterChannels = 1;
 let pitchModifier = 1;
+let zipDownloads = true;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
 let unsorted = [];
@@ -90,6 +91,10 @@ const closePopUps = () => {
   return document.querySelectorAll('.pop-up').forEach(w => w.classList.remove('show'));
 };
 
+const arePopUpsOpen = () => {
+  return [...document.querySelectorAll('.pop-up')].some(w => w.classList.contains('show'));
+};
+
 const toggleOptionsPanel = () => {
   const buttonsEl = document.getElementById('allOptionsPanel');
   const toggleButtonEl = document.getElementById('toggleOptionsButton');
@@ -104,6 +109,38 @@ const renderEditPanelWaveform = (item) => {
     width: +editPanelWaveformContainerEl.dataset.waveformWidth, height: 128
   });
 };
+
+function perSamplePitch(event, pitchValue, id) {
+  const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
+  const editPanelEl = document.getElementById('editPanel');
+
+  const dataset = editPanelEl.dataset;
+  dataset.start = dataset.start > -1 ? dataset.start : 0;
+  dataset.end = dataset.end > -1 ? dataset.end : item.buffer.length;
+
+  const pitchedWav = audioBufferToWav(item.buffer, item.meta, (masterSR * pitchValue), masterBitDepth, item.buffer.numberOfChannels);
+  const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
+    type: 'audio/wav',
+  });
+  (async () => {
+    let linkedFile = await fetch(URL.createObjectURL(pitchedBlob));
+    let arrBuffer = await linkedFile.arrayBuffer();
+    await audioCtx.decodeAudioData(arrBuffer, buffer => {
+      item.buffer = buffer;
+      item.meta = {
+        ...item.meta,
+        length: buffer.length,
+        duration: Number(buffer.length / masterSR).toFixed(3),
+        startFrame: 0, endFrame: buffer.length
+      };
+      dataset.start = '0';
+      dataset.end = `${buffer.length}`;
+      renderEditPanelWaveform(item);
+      item.waveform = false;
+      renderList();
+    });
+  })();
+}
 
 function normalize(event, id) {
   const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
@@ -240,24 +277,48 @@ const showEditPanel = (event, id) => {
 
 };
 
-function setWavLink(file, linkEl) {
+function setWavLink(file, linkEl, returnBlob = false) {
   const fileName = getNiceFileName('', file, false, true);
   const wav = audioBufferToWav(file.buffer, file.meta, masterSR, masterBitDepth, masterChannels);
   const blob = new window.Blob([new DataView(wav)], {
     type: 'audio/wav',
   });
 
+  if (returnBlob) {
+    return blob;
+  }
+
   linkEl.href = URL.createObjectURL(blob);
   linkEl.setAttribute('download', fileName);
   return linkEl;
 }
 
-async function downloadAll() {
+async function downloadAll(event) {
   const _files = files.filter(f => f.meta.checked);
+  const flattenFolderStructure = (event.shiftKey || modifierKeys.shiftKey);
   const links = [];
-  if (_files.length > 5) {
+  if (_files.length > 5 && !zipDownloads) {
     const userReadyForTheCommitment = confirm(`You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`);
     if (!userReadyForTheCommitment) { return; }
+  }
+
+  if (zipDownloads && _files.length > 1) {
+    const zip = new JSZip();
+    for (const file of _files) {
+      const blob = await downloadFile(file.meta.id, true);
+      if (flattenFolderStructure) {
+        zip.file(getNiceFileName('', file, false, true), blob, { binary: true });
+      } else {
+        zip.file(file.file.path + getNiceFileName('', file, false), blob, { binary: true });
+      }
+    }
+    zip.generateAsync({type: 'blob'}).then(blob => {
+      const el = document.getElementById('getJoined');
+      el.href = URL.createObjectURL(blob);
+      el.setAttribute('download', 'digichain_files.zip');
+      el.click();
+    });
+    return;
   }
 
   for (const file of _files) {
@@ -275,10 +336,10 @@ async function downloadAll() {
 
 }
 
-function downloadFile(id) {
+function downloadFile(id, returnBlob = false) {
   const el = getRowElementById(id).querySelector('.wav-link-hidden');
   const file = getFileById(id);
-  const link = setWavLink(file, el);
+  const link = setWavLink(file, el, returnBlob);
   return link;
 }
 
@@ -309,15 +370,38 @@ function pitchExports(value) {
   }
 }
 
+function toggleSetting(param) {
+  if (param === 'zipDl' ) {
+    zipDownloads = !zipDownloads;
+    showExportSettingsPanel();
+  }
+}
+
 function showExportSettingsPanel() {
   const panelContentEl = document.querySelector('.export-settings-panel-md .content');
   panelContentEl.innerHTML = `
     <h4>Settings</h4>
-    <span>Pitch up joined exported files by octave &nbsp;&nbsp;&nbsp;</span>
-    <button onclick="digichain.pitchExports(1)" class="check ${pitchModifier === 1 ? 'button' : 'button-outline'}">No</button>
+    <table style="padding-top:0;">
+    <thead>
+    <tr>
+    <th width="55%"></th>
+    <th></th>
+</tr>
+</thead>
+    <tbody>
+    <tr>
+    <td><span>Pitch up joined exported files by octave &nbsp;&nbsp;&nbsp;</span></td>
+    <td>    <button onclick="digichain.pitchExports(1)" class="check ${pitchModifier === 1 ? 'button' : 'button-outline'}">OFF</button>
     <button onclick="digichain.pitchExports(2)" class="check ${pitchModifier === 2 ? 'button' : 'button-outline'}">1</button>
     <button onclick="digichain.pitchExports(4)" class="check ${pitchModifier === 4 ? 'button' : 'button-outline'}">2</button>
-    <button onclick="digichain.pitchExports(8)" class="check ${pitchModifier === 8 ? 'button' : 'button-outline'}">3</button>
+    <button onclick="digichain.pitchExports(8)" class="check ${pitchModifier === 8 ? 'button' : 'button-outline'}">3</button><br></td>
+</tr>
+<tr>
+<td><span>Download multi-file/joined downloads as one zip file? &nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('zipDl')" class="check ${zipDownloads ? 'button' : 'button-outline'}">${ zipDownloads ? 'YES' : 'NO'}</button></td>
+</tr>
+</tbody>
+</table>
   `;
   document.querySelector('.export-settings-panel-md').classList.add('show');
 }
@@ -401,9 +485,17 @@ function mixDown(_files) {
   });
 }
 
-function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInternal = false) {
+function joinAllUICall(event, pad) {
+  if (files.length === 0) { return; }
+  document.getElementById('loadingText').innerText = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => joinAll(event, pad), 500);
+}
+
+function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInternal = false, zip = false) {
   if (files.length === 0) { return; }
   if (toInternal || (event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
+  if (zipDownloads && !toInternal) { zip = zip || new JSZip(); }
   let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(f => f.meta.checked);
   let tempFiles = _files.splice(0, (sliceGrid > 0 ? sliceGrid : _files.length));
   filesRemaining = Array.from(_files);
@@ -445,7 +537,7 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
             lastModified: new Date().getTime(), name: `${path}resample_${pad ? 'spaced_' : ''}${fileCount+1}--[${_files.length}].wav`,
             size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
             type: 'audio/wav'
-          }, '', true);
+          }, '', true, false);
           renderList();
         });
       })();
@@ -466,7 +558,7 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
             lastModified: new Date().getTime(), name: `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}--[${_files.length}].wav`,
             size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
             type: 'audio/wav'
-          }, '', true);
+          }, '', true, false);
           renderList();
         })
       };
@@ -483,17 +575,34 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
         let linkedFile = await fetch(URL.createObjectURL(pitchedBlob));
         let arrBuffer = await linkedFile.arrayBuffer();
         await audioCtx.decodeAudioData(arrBuffer, buffer => {
-          setWavLink({...fileData, buffer: buffer}, joinedEl).click();
+          if (zip) {
+            const blob = setWavLink({...fileData, buffer: buffer}, joinedEl, true);
+            zip.file(fileData.file.name, blob, { binary: true });
+          } else {
+            setWavLink({...fileData, buffer: buffer}, joinedEl).click();
+          }
         });
       })();
     } else {
-      setWavLink(fileData, joinedEl).click();
+      if (zip) {
+        const blob = setWavLink(fileData, joinedEl, true);
+        zip.file(fileData.file.name, blob, { binary: true });
+      } else {
+        setWavLink(fileData, joinedEl).click();
+      }
     }
   }
   if (filesRemaining.length > 0) {
     fileCount++;
-    joinAll(event, pad, filesRemaining, fileCount, toInternal);
+    joinAll(event, pad, filesRemaining, fileCount, toInternal, zip);
   } else {
+    if (zip) {
+      zip.generateAsync({type: 'blob'}).then(blob => {
+        joinedEl.href = URL.createObjectURL(blob);
+        joinedEl.setAttribute('download', 'digichain_files.zip');
+        joinedEl.click();
+      });
+    }
     renderList();
   }
 }
@@ -510,8 +619,15 @@ function joinAllByPath(event, pad = false) { //TODO: test and hook into UI
   }
 }
 
+const stopPlayFile = (event, id) => {
+  const file = getFileById(id || lastSelectedRow.dataset.id);
+  if (file.source) {
+    file.source.stop();
+  }
+};
+
 const playFile = (event, id, loop) => {
-  const file = getFileById(id);
+  const file = getFileById(id || lastSelectedRow.dataset.id);
   loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
   if (file.source) {
     file.source.stop();
@@ -632,15 +748,24 @@ const duplicate = (event, id) => {
   renderList();
 };
 
-const splitByOtSlices = (event, id, pushInPlace = false) => {
+const splitByOtSlices = (event, id, pushInPlace = false, sliceSource = 'ot') => {
   const file = getFileById(id);
-  const otMeta = metaFiles.getByFile(file);
   const pushInPlaceItems = [];
+  let otMeta;
+  if (sliceSource === 'transient') {
+    otMeta = metaFiles.getByFileName('---sliceToTransientCached---');
+  } else if (sliceSource === 'ot') {
+    otMeta = metaFiles.getByFile(file);
+  } else {
+    otMeta = file.meta.customSlices ? file.meta.customSlices : false;
+  }
   if (!otMeta) { return ; }
   for (let i = 0; i < otMeta.sliceCount; i++) {
+    const newLength = (otMeta.slices[i].endPoint - otMeta.slices[i].startPoint);
+    if (newLength < 5) { continue; }
     const audioArrayBuffer = audioCtx.createBuffer(
         file.buffer.numberOfChannels,
-        (otMeta.slices[i].endPoint - otMeta.slices[i].startPoint),
+        newLength,
         masterSR
     );
     const slice = {};
@@ -713,18 +838,109 @@ const splitEvenly = (event, id, slices, pushInPlace = false) => {
   renderList();
 }
 
-const splitSizeAction = (event, slices) => {
+const splitByTransient = (file, threshold = .8) => {
+  const analyser = audioCtx.createAnalyser();
+  const source = audioCtx.createBufferSource();
+  const transientPositions = [];
+  source.buffer = file.buffer;
+  source.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  analyser.fftSize = 256;
+  const timeDomainData = new Float32Array(analyser.frequencyBinCount);
+  analyser.getFloatTimeDomainData(timeDomainData);
+  const chunkSize = audioCtx.sampleRate * 0.1; // 100 ms
+// Calculate number of chunks in the audio buffer
+  const numChunks = Math.ceil(file.buffer.length / chunkSize);
+  // Loop through each chunk
+  for (let i = 0; i < numChunks; i++) {
+    // Calculate start and end positions of the chunk
+    const start = i * chunkSize;
+    const end = Math.min(start + chunkSize, file.buffer.length);
+    // Create a typed array to hold the time-domain data for the chunk
+    const timeDomainData = new Float32Array(end - start);
+    // Copy the time-domain data for the chunk into the typed array
+    file.buffer.copyFromChannel(timeDomainData, 0, start);
+    // Find the peak amplitude value in the time-domain data
+    let peak = 0;
+    for (let j = 0; j < timeDomainData.length; j++) {
+      const value = Math.abs(timeDomainData[j]);
+      if (value > peak) {
+        peak = value;
+      }
+    }
+    // Compare the peak amplitude to a threshold value
+    if (peak > threshold) {
+      // Calculate the position of the transient event within the entire audio buffer
+      const transientPosition = start + findPeakIndex(timeDomainData);
+      // Add the transient position to the array
+      transientPositions.push(transientPosition);
+    }
+  }
+// Function to find the index of the peak value in a typed array
+  function findPeakIndex(array) {
+    let index = 0;
+    let value = 0;
+    for (let i = 0; i < array.length; i++) {
+      const absValue = Math.abs(array[i]);
+      if (absValue > value) {
+        index = i;
+        value = absValue;
+      }
+    }
+    return index;
+  }
+// map transient positions into slice object.
+  let metaTransient = metaFiles.getByFileName('---sliceToTransientCached---');
+  if (!metaTransient) {
+    metaTransient = {
+      uuid: crypto.randomUUID(),
+      name: '---sliceToTransientCached---',
+      sliceCount: 0,
+      slices: []
+    };
+    metaFiles.push(metaTransient);
+  }
+  const findZero = (position) => {
+    let zeroIndex = position;
+    for (let i = position; i > 0; i--) {
+      if (file.buffer.getChannelData(0)[i] === 0) {
+        zeroIndex = i;
+        break;
+      }
+    }
+    return zeroIndex;
+  };
+  metaTransient.slices = transientPositions.map((position, idx) => ({
+    startPoint: findZero(position),
+    loopPoint: position,
+    endPoint: idx === transientPositions.length - 1 ? file.buffer.length : findZero(transientPositions[idx + 1])
+  }));
+  metaTransient.sliceCount = metaTransient.slices.length;
+  return metaTransient;
+};
+
+const splitSizeAction = (event, slices, threshold) => {
   let file, otMeta;
   const sliceGroupEl = document.querySelector(`.split-panel-options .slice-group`);
   const optionsEl = document.querySelectorAll(`.split-panel-options .slice-group button`);
+
   if (slices === 'ot' && sliceGroupEl.dataset.id) {
     file = getFileById(sliceGroupEl.dataset.id);
     otMeta = metaFiles.getByFile(file);
     slices = otMeta.slices;
   }
+  if (slices === 'transient' && sliceGroupEl.dataset.id) {
+    file = getFileById(sliceGroupEl.dataset.id);
+    otMeta = splitByTransient(file, (+threshold)/100);
+    slices = otMeta.slices;
+  } else {
+    metaFiles.removeByName('---sliceToTransientCached---');
+  }
+
+  optionsEl.forEach(option => option.classList.add('button-outline'));
   sliceGroupEl.dataset.sliceCount = typeof slices === 'number' ? slices : otMeta.sliceCount;
   optionsEl.forEach((option, index) => {
-    (+option.dataset.sel === +sliceGroupEl.dataset.sliceCount) || (option.dataset.sel === 'ot' && otMeta) ?
+    (+option.dataset.sel === +sliceGroupEl.dataset.sliceCount && !otMeta) || (option.dataset.sel === 'ot' && otMeta && otMeta.name !== '---sliceToTransientCached---') || (option.dataset.sel === 'transient' && otMeta && otMeta.name === '---sliceToTransientCached---') ?
         option.classList.remove('button-outline') :
         option.classList.add('button-outline');
   });
@@ -814,6 +1030,8 @@ const splitAction = (event, id, slices) => {
   const fileNameEl = document.getElementById('splitFileName');
   const sliceGroupEl = document.querySelector(`.split-panel-options .slice-group`);
   const sliceByOtButtonEl = document.getElementById('sliceByOtButton');
+  const sliceByTransientButtonEl = document.getElementById('sliceByTransientButton');
+  const sliceByTransientThresholdEl = document.getElementById('transientThreshold');
   const splitPanelWaveformContainerEl = document.querySelector(`#splitOptions .waveform-container`);
   const splitPanelWaveformEl = document.getElementById('splitPanelWaveform');
   let item;
@@ -825,12 +1043,28 @@ const splitAction = (event, id, slices) => {
   }
   if (slices === true) { slices = sliceGroupEl.dataset.sliceCount; }
   item = getFileById(id || lastSelectedRow.dataset.id);
+  if (item.buffer.length > 6144000) {
+    sliceByTransientButtonEl.classList.add('disabled');
+    sliceByTransientButtonEl.disabled = true;
+    sliceByTransientButtonEl.title = 'Sample too long for transient detection.';
+    sliceByTransientThresholdEl.classList.add('disabled');
+  } else {
+    sliceByTransientButtonEl.classList.remove('disabled');
+    sliceByTransientButtonEl.title = 'Slice by transient detection.';
+    sliceByTransientButtonEl.disabled = false;
+    sliceByTransientThresholdEl.classList.remove('disabled');
+  }
   if (slices) {
     id = id || item.meta.id;
-    if (slices === 'ot' || !sliceByOtButtonEl.classList.contains('button-outline')) {
-      splitByOtSlices(event, id, pushInPlace);
+    if (slices === 'ot' || !sliceByTransientButtonEl.classList.contains('button-outline') || !sliceByOtButtonEl.classList.contains('button-outline')) {
+      const sliceSource = sliceByTransientButtonEl.classList.contains('button-outline') ? 'ot' : 'transient';
+      splitByOtSlices(event, id, pushInPlace, sliceSource);
     } else {
-      splitEvenly(event, id, slices, pushInPlace);
+      if (item.meta.customSlices) {
+        splitByOtSlices(event, id, pushInPlace, 'custom');
+      } else {
+        splitEvenly(event, id, slices, pushInPlace);
+      }
     }
     return el.classList.remove('show');
   }
@@ -1118,7 +1352,7 @@ const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
   }
 };
 
-const parseWav = (audioArrayBuffer, file, fullPath = '', pushToTop = false) => {
+const parseWav = (audioArrayBuffer, file, fullPath = '', pushToTop = false, checked = true) => {
   const uuid = file.uuid || crypto.randomUUID();
   try {
     /*duration, length, numberOfChannels, sampleRate*/
@@ -1134,7 +1368,7 @@ const parseWav = (audioArrayBuffer, file, fullPath = '', pushToTop = false) => {
         length: audioArrayBuffer.length,
         duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
         startFrame: 0, endFrame: audioArrayBuffer.length,
-        checked: true, id: uuid,
+        checked: checked, id: uuid,
         channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : ''
       }
     });
@@ -1161,6 +1395,7 @@ const setLoadingProgress = (count, total) => {
 };
 
 const consumeFileInput = (inputFiles) => {
+  document.getElementById('loadingText').innerText = 'Loading samples';
   document.body.classList.add('loading');
   const _files = [...inputFiles].filter(
       f => ['syx', 'wav', 'flac'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
@@ -1346,7 +1581,11 @@ document.body.addEventListener('keydown', (event) => {
     }
     return closePopUps();
   }
-  if (files.length && (event.code === 'KeyI')) {
+  if (arePopUpsOpen()) {
+    // Don't listen for keyboard commands when popups are open.
+    return ;
+  }
+  if (files.length &&  (event.code === 'KeyI')) {
     return invertFileSelection();
   }
   if (event.code === 'KeyH' && (event.shiftKey || modifierKeys.shiftKey)) {
@@ -1391,12 +1630,13 @@ window.digichain = {
   removeSelected,
   sort,
   renderList,
-  joinAll,
+  joinAll: joinAllUICall,
   selectSliceAmount,
   showInfo,
   toggleCheck,
   move,
   playFile,
+  stopPlayFile,
   downloadFile,
   downloadAll,
   changeChannel,
@@ -1414,9 +1654,9 @@ window.digichain = {
   pitchExports,
   normalize,
   trimRight,
+  perSamplePitch,
   reverse,
   toggleReadOnlyInput,
+  toggleSetting,
   updateFile
 };
-
-

@@ -7,7 +7,7 @@
   <meta name="version" content="v 1.3.0">
   <meta
           name="description"
-          content="DigiChain loads uncompressed wav files or syx samples for/from the Machinedrum and converts them to wav files for transfer via the Transfer app. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size."
+          content="DigiChain aims to make the creation of sample chains as easy as possible; it loads uncompressed wav files (or syx samples for/from the Machinedrum) and converts them to wav files for transfer via the Transfer app. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size. All processing is done in the browser, on *your* computer, no data is sent to a server, and there is no, and never will be any user tracking. The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
   >
   <meta name="google-site-verification" content="W97nmMeI8CcybxJA7gLG-CFeJmztv03Jh9_bTExYJLY">
   <title>DigiChain</title>
@@ -44,14 +44,17 @@
 
   </div>
   <div class="slice-group" data-slice-count="0">
-    <button onclick="digichain.splitSizeAction(event, 2)" class="button-outline check sel-0" data-sel="2">2</button>
-    <button onclick="digichain.splitSizeAction(event, 4)" class="button-outline check sel-1" data-sel="4">4</button>
-    <button onclick="digichain.splitSizeAction(event, 8)" class="button-outline check sel-2" data-sel="8">8</button>
-    <button onclick="digichain.splitSizeAction(event, 16)" class="button-outline check sel-3" data-sel="16">16</button>
-    <button onclick="digichain.splitSizeAction(event, 32)" class="button-outline check sel-4" data-sel="32">32</button>
-    <button onclick="digichain.splitSizeAction(event, 64)" class="button-outline check sel-5" data-sel="64">64</button>
-    <button onclick="digichain.splitSizeAction(event, 128)" class="button-outline check sel-6" data-sel="128">128</button>
-    <button id="sliceByOtButton" onclick="digichain.splitSizeAction(event, 'ot')" class="button-outline check sel-7 sel-ot is-ot-file" data-sel="ot">OT</button>
+    <button title="Slice evenly into 2." onclick="digichain.splitSizeAction(event, 2)" class="button-outline check sel-0" data-sel="2">2</button>
+    <button title="Slice evenly into 4." onclick="digichain.splitSizeAction(event, 4)" class="button-outline check sel-1" data-sel="4">4</button>
+    <button title="Slice evenly into 8." onclick="digichain.splitSizeAction(event, 8)" class="button-outline check sel-2" data-sel="8">8</button>
+    <button title="Slice evenly into 16." onclick="digichain.splitSizeAction(event, 16)" class="button-outline check sel-3" data-sel="16">16</button>
+    <button title="Slice evenly into 32." onclick="digichain.splitSizeAction(event, 32)" class="button-outline check sel-4" data-sel="32">32</button>
+    <button title="Slice evenly into 64." onclick="digichain.splitSizeAction(event, 64)" class="button-outline check sel-5" data-sel="64">64</button>
+    <button title="Slice evenly into 128." onclick="digichain.splitSizeAction(event, 128)" class="button-outline check sel-6" data-sel="128">128</button>
+    <button title="Slice based on the contents of a .ot file" id="sliceByOtButton" onclick="digichain.splitSizeAction(event, 'ot')" class="button-outline check sel-7 sel-ot is-ot-file" data-sel="ot">OT</button>
+    <button title="Slice by transient detection." id="sliceByTransientButton" onclick="digichain.splitSizeAction(event, 'transient', document.getElementById('transientThreshold').value)" class="button-outline check sel-transient" data-sel="transient">T</button>
+    <input title="Transient detection percentage threshold." type="number" id="transientThreshold" name="transientThreshold"
+           min="1" max="100" value="80">
   </div>
   <button onclick="digichain.splitAction(event, false, true)" class="float-right button-outline has-shift-mod" style="margin-top: 1rem;">Slice to samples</button>
 </div>
@@ -59,14 +62,20 @@
 <div id="editPanel" class="edit-panel-options pop-up" data-id="">
   <a class="float-right" onclick="document.getElementById('editPanel').classList.remove('show'); digichain.renderList();"><i class="gg-close"></i></a>
   <fieldset id="editableItems"></fieldset>
+  <button onclick="digichain.playFile(event);" class="button-outline check">Play</button>
+  <button onclick="digichain.stopPlayFile(event);" class="button-outline check">Stop</button>
   <div class="waveform-container" data-waveform-width="1024">
     <div><canvas id="editPanelWaveform"></canvas>
       <div id="editLines"></div></div>
   </div>
+  <div class="sample-op-buttons">
   <button title="Normalize the volume of the sample." class="normalize button-outline" onclick="digichain.normalize(event)">Normalize</button>
   <button title="Trims any zero valued audio from the end of the sample." class="trim-right button-outline" onclick="digichain.trimRight(event)">Trim Right</button>
   <button title="Reverses the sample playback" class="reverse button-outline" onclick="digichain.reverse(event)">Reverse</button>
-  <p>Note: sample operations are destructive, and are applied immediately, there is no undo.</p>
+  <button title="Half the speed of the sample" class="pitch button-outline" onclick="digichain.perSamplePitch(event, .5)">Half-speed</button>
+  <button title="Double the speed of the sample" class="pitch button-outline" onclick="digichain.perSamplePitch(event, 2)">Double-speed</button>
+  </div>
+  <span>Note: sample operations are destructive, applied immediately, no undo.</span>
 <!--  <button onclick="digichain.editWaveformAction(event, false, true)" class="float-right button-outline has-shift-mod" style="margin-top: 1rem;">Add to samples</button>-->
 </div>
 
@@ -113,7 +122,7 @@
     </div>
     <div class="column-33 align-right right-buttons">
       <div class="download-buttons">
-        <button class="btn-download" onclick="digichain.downloadAll()"><i class="gg-software-download"></i><span class="selection-count"> - </span></button>
+        <button class="btn-download has-shift-mod" onclick="digichain.downloadAll(event)"><i class="gg-software-download"></i><span class="selection-count"> - </span></button>
         <button title="Download the selected samples joined. Shift+click will resample back to the list." class="btn-download has-shift-mod" onclick="digichain.joinAll(event)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined</button>
 
       </div>

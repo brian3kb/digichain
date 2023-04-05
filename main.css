@@ -4,6 +4,10 @@ body {
 }
 * { user-select: none; }
 .show { display: block !important; }
+.no-display { display: none !important; }
+.disabled {
+    opacity: .5;
+}
 .logo {
     position: fixed;
     bottom: 0;
@@ -207,6 +211,15 @@ td button { margin: 0.5rem; }
     transform: scale(.6);
     margin-top: -0.15rem;
 }
+.sample-op-buttons button {
+    width: 14rem;
+    padding: 0;
+}
+.sample-op-buttons {
+    padding-bottom: 1rem;
+    text-align: center;
+}
+
 /*.select.split {*/
 /*    background: url('data:image/svg+xml;utf8,<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" > <path d="M4 4H8V8H4V4Z" fill="currentColor" /> <path d="M4 10H8V14H4V10Z" fill="currentColor" /> <path d="M8 16H4V20H8V16Z" fill="currentColor" /> <path d="M10 4H14V8H10V4Z" fill="currentColor" /> <path d="M14 10H10V14H14V10Z" fill="currentColor" /> <path d="M10 16H14V20H10V16Z" fill="currentColor" /> <path d="M20 4H16V8H20V4Z" fill="currentColor" /><path d="M16 10H20V14H16V10Z" fill="currentColor" /> <path d="M20 16H16V20H20V16Z" fill="currentColor" /> </svg>') center right no-repeat !important;*/
 /*    padding-right: 3.0rem;*/
@@ -255,7 +268,7 @@ a {
     cursor: pointer;
 }
 .w-0 { width: 0; }
-tr:has(.check.button-outline) {
+#fileList tr:has(.check.button-outline) {
     opacity: 0.55;
 }
 .download-buttons {
@@ -300,6 +313,14 @@ tr:has(.check.button-outline) {
 .button-clear.remove:hover {
     color: #5e1a1a;
 }
+button.sel-transient { margin-left: .5rem; }
+button.sel-transient:is(.button-outline) ~ #transientThreshold {
+    display: none !important;
+}
+#transientThreshold {
+    width: 4.5rem;
+    height: 2.5rem;
+}
 .file-num {
     /*position: fixed;*/
     /*bottom: 1.5rem;*/
@@ -328,7 +349,7 @@ tr:has(.check.button-outline) {
     top: 0.35rem;
 }
 .btn-audio-config * { color: #7a6241; }
-.btn-audio-config:hover * { color: #d79c4e;; }
+.btn-audio-config:hover * { color: #d79c4e; }
 .loading-message {
     display: none;
     top: 40vh;
@@ -673,6 +694,28 @@ body.shiftKey-down i.has-shift-mod-i {
         opacity: .75;
     }
 
+}
+
+@media (min-width: 1100px) {
+    .info-panel-md, .split-panel-options, .edit-panel-options, .not-served-md, .export-settings-panel-md {
+        width: 1030px;
+        top: 16vh;
+        left: 50%;
+        margin: 0px -535px;
+        z-index: 1000;
+        background-color: #202124;
+        border: 1px solid orange;
+        padding: 2rem;
+        border-radius: 5px;
+        box-shadow: 0 0 4px #cf8600;
+        box-sizing: content-box;
+        max-width: 1030px;
+    }
+    #exportSettingsPanel {
+        width: 512px;
+        margin: 0 -256px;
+        max-width: 512px;
+    }
 }
 
 /*@media (hover: none) and (pointer: coarse) {*/

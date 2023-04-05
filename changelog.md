@@ -3,6 +3,7 @@
 - OT slices import from accompanying .ot file.
 - Show source folder path on list, filenames will now include this path in their name if present - joined files with have the path of the first item in the chain in its name.
 - Moved the UI around again, added ability to hide the top buttons panel.
+- Multi-file/joined downloads will now be downloaded as a single zip file (can be put back to multi-single file prompts in the settings panel).
 - Grid-view mode for those who dislike tables. (Shift+G)
 - Swapped Shift/Ctrl coloring, added css transition on toggle.
 - Added slice-count to end of chain filenames.
@@ -10,8 +11,11 @@
 - Added sort by slice# to make building mega-break chains easier.
 - Indicator on row/grid of end of joined chain based on slice-grid selection.
 - Waveform and slice marker visual preview before slicing a file from the list into new samples.
-- Edit panel with file name/path editing.
-- Normalize, trim right, and reverse sample operations.
+- Basic transient detection on the slice grid panel (for samples less than ~128 seconds).
+- Edit panel with file name/path editing, waveform view, play/stop controls.
+- Normalize, trim right, reverse, half-speed, and double-speed (destructive) sample edit operations.
+- Allow dropping of wav url links to be fetched (works with domains that allow CORS).
+- Export settings panel with pitch up export setting (1, 2, or 3 octaves - applies only to joined file exports/resamples), and the zip file on/off toggle.
 
 2023-03-27 1.2.0 
 - Added support for slicing files in the list into new items.
@@ -20,7 +24,7 @@
 - Support for drag drop reordering of the list.
 - Show selected/total length times in the length header.
 - Added a bunch more keyboard shortcuts.
-- Allow changes to stereo/mono and bit depth, as it's only the sample-rate that makes things wonky. [Only sample rate changes will trigger the list to clear.]
+- Allow changes to stereo/mono and bit-depth, as it's only the sample-rate that makes things wonky. [Only sample rate changes will trigger the list to clear.]
 - Show selected/total length times in the length header.
 - Fixed waveform double first render bug.
 - Tweaked height of waveform views.

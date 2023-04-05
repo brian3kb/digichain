@@ -16,6 +16,7 @@
  - Move Up Icon : moves directly to the top of the sample list.
  - Move Down Icon : moved directly to the end of the sample list.
  - L S R Options : sets all stereo samples method for mono conversion (take left, right, or sum to mono).
+ - Download All : processed files will be have the imported folder structure flattened into their file names (all files will be at the root level of the zip file).
  - Joined / Joined Spaced : audio will be resampled internally back to the list instead of prompting to save as a file (clicking the filename in the list will still allow the wav download).
  - H : Toggles showing/hiding the top buttons panel, to give more space for the grid.
  - Slice Sample Options: Will put the slices in the list directly below the source sample. 

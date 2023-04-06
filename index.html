@@ -92,11 +92,11 @@
 
 <div class="header-menu">
   <div class="file-num">
-    <label for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</label>
+    <div for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</div>
     <output class="float-left" id="fileNum">0/0</output>
   </div>
   <div id="toggleOptionsButton" onclick="digichain.toggleOptionsPanel()"><i class="gg-select-r"></i></div>
-  <div id="progressIndicator"></div>
+  <div id="infoIndicator"></div>
 </div>
 
 <div class="loading-message">
@@ -199,9 +199,8 @@
           reg = await navigator.serviceWorker.register('sw.js', {
             type: 'module',
           });
-        console.log('Service worker registered! 😎', reg);
       } catch (err) {
-        console.log('😥 Service worker registration failed: ', err);
+        console.log('Service worker registration failed: ', err);
       }
     });
   }

@@ -2,7 +2,7 @@ import { Resampler, audioBufferToWav } from './resources.js';
 
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
-const progressEl = document.getElementById('progressIndicator');
+const infoEl = document.getElementById('infoIndicator');
 const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
 const audioConfigOptions = {
   m4410016: { sr: 44100, bd: 16, c: 1 },
@@ -377,8 +377,14 @@ function showInfo() {
 }
 
 function pitchExports(value) {
+  const octaves = {
+    2: 1,
+    4: 2,
+    8: 3
+  };
   if ([.25,.5,1,2,4,8].includes(+value)) {
     pitchModifier = +value;
+    infoEl.textContent = pitchModifier === 1 ? '' : `All exported samples will be pitched up ${octaves[pitchModifier]} octave${pitchModifier > 2 ? 's' : ''}`;
     showExportSettingsPanel();
   }
 }
@@ -500,7 +506,7 @@ function mixDown(_files) {
 
 function joinAllUICall(event, pad) {
   if (files.length === 0) { return; }
-  document.getElementById('loadingText').innerText = 'Processing';
+  document.getElementById('loadingText').textContent = 'Processing';
   document.body.classList.add('loading');
   setTimeout(() => joinAll(event, pad), 500);
 }
@@ -1373,7 +1379,7 @@ const setLoadingProgress = (count, total) => {
 };
 
 const consumeFileInput = (inputFiles) => {
-  document.getElementById('loadingText').innerText = 'Loading samples';
+  document.getElementById('loadingText').textContent = 'Loading samples';
   document.body.classList.add('loading');
   const _files = [...inputFiles].filter(
       f => ['syx', 'wav', 'flac'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())

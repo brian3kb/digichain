@@ -16,6 +16,7 @@
 - Normalize, trim right, reverse, half-speed, and double-speed (destructive) sample edit operations.
 - Allow dropping of wav url links to be fetched (works with domains that allow CORS).
 - Export settings panel with pitch up export setting (1, 2, or 3 octaves - applies only to joined file exports/resamples), and the zip file on/off toggle.
+- Added offline support and install as app from the browser.
 
 2023-03-27 1.2.0 
 - Added support for slicing files in the list into new items.

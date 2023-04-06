@@ -73,6 +73,16 @@ body {
     top: 0;
     z-index: 3;
 }
+#infoIndicator, .file-num {
+    float: right;
+    font-size: 1.3rem;
+    margin-right: 5rem;
+    margin-left: 5rem;
+    opacity: .7;
+}
+.file-num {
+    float: left;
+}
 input { color: #a8a8a8; }
 .input-set input {
     width: 65%;
@@ -320,19 +330,6 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
 #transientThreshold {
     width: 4.5rem;
     height: 2.5rem;
-}
-.file-num {
-    /*position: fixed;*/
-    /*bottom: 1.5rem;*/
-    margin-left: 1rem;
-    opacity: .45;
-    background: #202124;
-    border-radius: 5px;
-    text-align: center;
-    line-height: 1.5rem;
-    vertical-align: middle;
-    padding: 0.5rem 0.7rem 0.1rem 0;
-    transform: scale(0.9);
 }
 .left-buttons .button, .left-buttons .btn-audio-config {
     padding: 0 1.5rem;

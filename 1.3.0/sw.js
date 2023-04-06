@@ -1,5 +1,6 @@
 const cacheName = 'cache-v130';
 const precacheResources = [
+  './',
   'index.html',
   'lib.css',
   'main.css',

@@ -9,6 +9,15 @@
           name="description"
           content="DigiChain aims to make the creation of sample chains as easy as possible; it loads uncompressed wav files (or syx samples for/from the Machinedrum) and converts them to wav files for transfer via the Transfer app. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size. All processing is done in the browser, on *your* computer, no data is sent to a server, and there is no, and never will be any user tracking. The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
   >
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="mask-icon" href="safari-pinned-tab.svg" color="#202124">
+  <meta name="apple-mobile-web-app-title" content="DigiChain">
+  <meta name="application-name" content="DigiChain">
+  <meta name="msapplication-TileColor" content="#202124">
+  <meta name="theme-color" content="#202124">
   <meta name="google-site-verification" content="W97nmMeI8CcybxJA7gLG-CFeJmztv03Jh9_bTExYJLY">
   <title>DigiChain</title>
   <link rel="stylesheet" href="main.css">
@@ -181,6 +190,20 @@
 <script>
   if (location.origin.startsWith('file:')) {
     document.getElementById('alertNotServed').classList.add('show');
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+      try {
+        let reg;
+          reg = await navigator.serviceWorker.register('sw.js', {
+            type: 'module',
+          });
+        console.log('Service worker registered! 😎', reg);
+      } catch (err) {
+        console.log('😥 Service worker registration failed: ', err);
+      }
+    });
   }
 </script>
 

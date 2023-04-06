@@ -277,26 +277,36 @@ const showEditPanel = (event, id) => {
 
 };
 
-function setWavLink(file, linkEl, returnBlob = false) {
+async function setWavLink(file, linkEl) {
   const fileName = getNiceFileName('', file, false, true);
-  const wav = audioBufferToWav(file.buffer, file.meta, masterSR, masterBitDepth, masterChannels);
-  const blob = new window.Blob([new DataView(wav)], {
+  let wav = audioBufferToWav(
+      file.buffer, file.meta, (masterSR * pitchModifier), masterBitDepth, masterChannels
+  );
+  let blob = new window.Blob([new DataView(wav)], {
     type: 'audio/wav',
   });
-
-  if (returnBlob) {
-    return blob;
+  if (pitchModifier !== 1) {
+    let linkedFile = await fetch(URL.createObjectURL(blob));
+    let arrBuffer = await linkedFile.arrayBuffer();
+    let pitchedBuffer = await audioCtx.decodeAudioData(arrBuffer);
+    wav = audioBufferToWav(
+        pitchedBuffer, file.meta, masterSR, masterBitDepth, masterChannels
+    );
+    blob = new window.Blob([new DataView(wav)], {
+      type: 'audio/wav',
+    });
   }
 
   linkEl.href = URL.createObjectURL(blob);
   linkEl.setAttribute('download', fileName);
-  return linkEl;
+  return blob;
 }
 
 async function downloadAll(event) {
   const _files = files.filter(f => f.meta.checked);
   const flattenFolderStructure = (event.shiftKey || modifierKeys.shiftKey);
   const links = [];
+  const el = document.getElementById('getJoined');
   if (_files.length > 5 && !zipDownloads) {
     const userReadyForTheCommitment = confirm(`You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`);
     if (!userReadyForTheCommitment) { return; }
@@ -305,7 +315,7 @@ async function downloadAll(event) {
   if (zipDownloads && _files.length > 1) {
     const zip = new JSZip();
     for (const file of _files) {
-      const blob = await downloadFile(file.meta.id, true);
+      const blob = await setWavLink(file, el);
       if (flattenFolderStructure) {
         zip.file(getNiceFileName('', file, false, true), blob, { binary: true });
       } else {
@@ -336,11 +346,14 @@ async function downloadAll(event) {
 
 }
 
-function downloadFile(id, returnBlob = false) {
+async function downloadFile(id, fireLink = false) {
   const el = getRowElementById(id).querySelector('.wav-link-hidden');
   const file = getFileById(id);
-  const link = setWavLink(file, el, returnBlob);
-  return link;
+  await setWavLink(file, el);
+  if (fireLink) {
+    el.click();
+  }
+  return el;
 }
 
 function removeSelected() {
@@ -390,7 +403,7 @@ function showExportSettingsPanel() {
 </thead>
     <tbody>
     <tr>
-    <td><span>Pitch up joined exported files by octave &nbsp;&nbsp;&nbsp;</span></td>
+    <td><span>Pitch up exported files by octave &nbsp;&nbsp;&nbsp;</span></td>
     <td>    <button onclick="digichain.pitchExports(1)" class="check ${pitchModifier === 1 ? 'button' : 'button-outline'}">OFF</button>
     <button onclick="digichain.pitchExports(2)" class="check ${pitchModifier === 2 ? 'button' : 'button-outline'}">1</button>
     <button onclick="digichain.pitchExports(4)" class="check ${pitchModifier === 4 ? 'button' : 'button-outline'}">2</button>
@@ -492,7 +505,7 @@ function joinAllUICall(event, pad) {
   setTimeout(() => joinAll(event, pad), 500);
 }
 
-function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInternal = false, zip = false) {
+async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInternal = false, zip = false) {
   if (files.length === 0) { return; }
   if (toInternal || (event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
   if (zipDownloads && !toInternal) { zip = zip || new JSZip(); }
@@ -522,32 +535,14 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
 
   const joinedEl = document.getElementById('getJoined');
   const path = _files[0].file.path ? `${(_files[0].file.path || '').replace(/\//gi, '-')}` : '';
-  const fileData = {file: {name: `${path}joined_${pad ? 'spaced_' : ''}${fileCount+1}--[${_files.length}].wav`}, buffer: audioArrayBuffer, meta: {}};
+  const fileData = {file: {
+    name: _files.length === 1 ?
+        `${path}joined_${pad ? 'spaced_' : ''}${getNiceFileName('', _files[0], true)}_${fileCount+1}--[${_files.length}].wav` :
+        `${path}joined_${pad ? 'spaced_' : ''}${fileCount+1}--[${_files.length}].wav`
+    }, buffer: audioArrayBuffer, meta: {}};
   if (toInternal) {
-    if (pitchModifier !== 1) {
-      const pitchedWav = audioBufferToWav(fileData.buffer, fileData.meta, (masterSR * pitchModifier), masterBitDepth, masterChannels);
-      const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
-        type: 'audio/wav',
-      });
-      (async () => {
-        let linkedFile = await fetch(URL.createObjectURL(pitchedBlob));
-        let arrBuffer = await linkedFile.arrayBuffer();
-        await audioCtx.decodeAudioData(arrBuffer, buffer => {
-          parseWav(buffer, {
-            lastModified: new Date().getTime(), name: `${path}resample_${pad ? 'spaced_' : ''}${fileCount+1}--[${_files.length}].wav`,
-            size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
-            type: 'audio/wav'
-          }, '', true, false);
-          renderList();
-        });
-      })();
-    } else {
 
-      setWavLink(fileData, joinedEl);
-      const wav = audioBufferToWav(fileData.buffer, fileData.meta, masterSR, masterBitDepth, masterChannels);
-      const blob = new window.Blob([new DataView(wav)], {
-        type: 'audio/wav',
-      });
+      const blob = await setWavLink(fileData, joinedEl);
       const fileReader = new FileReader();
       fileReader.readAsArrayBuffer(blob);
       fileReader.fileCount = fileCount;
@@ -555,7 +550,10 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
       fileReader.onload = (e) => {
         audioCtx.decodeAudioData(e.target.result, function(buffer) {
           parseWav(buffer, {
-            lastModified: new Date().getTime(), name: `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}--[${_files.length}].wav`,
+            lastModified: new Date().getTime(),
+            name: _files.length === 1 ?
+                `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('', _files[0], true)}_${fileReader.fileCount+1}--[${_files.length}].wav`:
+                `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}--[${_files.length}].wav`,
             size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
             type: 'audio/wav'
           }, '', true, false);
@@ -563,34 +561,14 @@ function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, toInter
         })
       };
 
-    }
-
   } else {
-    if (pitchModifier !== 1) {
-      const pitchedWav = audioBufferToWav(fileData.buffer, fileData.meta, (masterSR * pitchModifier), masterBitDepth, masterChannels);
-      const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
-        type: 'audio/wav',
-      });
-      (async () => {
-        let linkedFile = await fetch(URL.createObjectURL(pitchedBlob));
-        let arrBuffer = await linkedFile.arrayBuffer();
-        await audioCtx.decodeAudioData(arrBuffer, buffer => {
-          if (zip) {
-            const blob = setWavLink({...fileData, buffer: buffer}, joinedEl, true);
-            zip.file(fileData.file.name, blob, { binary: true });
-          } else {
-            setWavLink({...fileData, buffer: buffer}, joinedEl).click();
-          }
-        });
-      })();
-    } else {
       if (zip) {
-        const blob = setWavLink(fileData, joinedEl, true);
+        const blob = setWavLink(fileData, joinedEl);
         zip.file(fileData.file.name, blob, { binary: true });
       } else {
-        setWavLink(fileData, joinedEl).click();
+        await setWavLink(fileData, joinedEl);
+        joinedEl.click();
       }
-    }
   }
   if (filesRemaining.length > 0) {
     fileCount++;
@@ -1186,7 +1164,7 @@ const renderList = () => {
         </td>
         <td class="file-path-td">
             <span class="file-path">${f.file.path}</span>
-            <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}').click()">${getNiceFileName(f.file.name)}</a>
+            <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true)">${getNiceFileName(f.file.name)}</a>
             ${f.meta.dupeOf ? ' d' : ''}
             ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
             <a class="wav-link-hidden" target="_blank"></a>

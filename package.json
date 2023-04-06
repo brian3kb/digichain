@@ -7,10 +7,10 @@
     "url": "https://brianbar.net/"
   },
   "scripts": {
-    "minjs": "terser main.js --compress ecma=2020 --output 1.3.0/main.min.js",
-    "minjsres": "terser resources.js --compress ecma=2020 --output 1.3.0/resources.min.js",
-    "mincss": "csso main.css --output 1.3.0/main.min.css",
-    "mincsslib": "csso lib.css --output 1.3.0/lib.min.css"
+    "minjs": "terser main.js --compress ecma=2020 --output 1.3.0/main.js",
+    "minjsres": "terser resources.js --compress ecma=2020 --output 1.3.0/resources.js",
+    "mincss": "csso main.css --output 1.3.0/main.css",
+    "mincsslib": "csso lib.css --output 1.3.0/lib.css"
   },
   "dependencies": {
   }

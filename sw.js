@@ -2,10 +2,10 @@ const cacheName = 'cache-v131';
 const precacheResources = [
   './',
   'index.html',
-  'lib.css?v=131',
-  'main.css?v=131',
-  'resources.js?v=131',
-  'main.js?v=131',
+  'lib.css',
+  'main.css',
+  'resources.js',
+  'main.js',
   'apple-touch-icon.png',
   'favicon-32x32.png',
   'favicon-16x16.png',
@@ -21,6 +21,19 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  const cachesToKeep = ['cache-v131'];
+
+  event.waitUntil(
+      caches.keys().then((keyList) =>
+          Promise.all(
+              keyList.map((key) => {
+                if (!cachesToKeep.includes(key)) {
+                  return caches.delete(key);
+                }
+              })
+          )
+      )
+  );
 });
 
 self.addEventListener('fetch', (event) => {

@@ -1,4 +1,4 @@
-import { Resampler, audioBufferToWav } from './resources.js?v=131';
+import { Resampler, audioBufferToWav } from './resources.js';
 
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
@@ -125,11 +125,6 @@ const renderEditPanelWaveform = (item) => {
 
 function perSamplePitch(event, pitchValue, id) {
   const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
-  const editPanelEl = document.getElementById('editPanel');
-
-  const dataset = editPanelEl.dataset;
-  dataset.start = dataset.start > -1 ? dataset.start : 0;
-  dataset.end = dataset.end > -1 ? dataset.end : item.buffer.length;
 
   const pitchedWav = audioBufferToWav(item.buffer, item.meta, (masterSR * pitchValue), masterBitDepth, item.buffer.numberOfChannels);
   const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
@@ -146,8 +141,6 @@ function perSamplePitch(event, pitchValue, id) {
         duration: Number(buffer.length / masterSR).toFixed(3),
         startFrame: 0, endFrame: buffer.length
       };
-      dataset.start = '0';
-      dataset.end = `${buffer.length}`;
       renderEditPanelWaveform(item);
       item.waveform = false;
       renderList();
@@ -157,26 +150,18 @@ function perSamplePitch(event, pitchValue, id) {
 
 function normalize(event, id) {
   const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
-  const editPanelEl = document.getElementById('editPanel');
-  const editPanelWaveformContainerEl = document.querySelector('#editPanel .waveform-container');
-  const waveformWidth = +editPanelWaveformContainerEl.dataset.waveformWidth;
-  let scaleSize = item.buffer.length/waveformWidth;
-
-  const dataset = editPanelEl.dataset;
-  dataset.start = +dataset.start > -1 ? dataset.start : 0;
-  dataset.end = +dataset.end > -1 ? dataset.end : item.buffer.length;
 
   let maxSample = 0;
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel);
-    for (let i = Math.floor(+dataset.start * scaleSize); i < Math.floor(+dataset.end * scaleSize); i++) {
+    for (let i = 0; i < item.buffer.length; i++) {
       maxSample = Math.max(Math.abs(data[i]), maxSample);
     }
   }
   maxSample = !maxSample ? 1 : maxSample;
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel);
-    for (let i = Math.floor(+dataset.start * scaleSize); i < Math.floor(+dataset.end * scaleSize); i++) {
+    for (let i = 0; i < item.buffer.length; i++) {
       if (item.buffer.getChannelData(channel)[i] && item.buffer.getChannelData(channel)[i] / maxSample !== 0) {
         item.buffer.getChannelData(channel)[i] = item.buffer.getChannelData(channel)[i] / maxSample;
       }
@@ -188,16 +173,11 @@ function normalize(event, id) {
 
 function reverse(event, id) {
   const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
-  const editPanelEl = document.getElementById('editPanel');
-
-  const dataset = editPanelEl.dataset;
-  dataset.start = dataset.start > -1 ? dataset.start : 0;
-  dataset.end = dataset.end > -1 ? dataset.end : item.buffer.length;
 
   let maxSample = 0;
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel).reverse();
-    for (let i = +dataset.start; i < +dataset.end; i++) {
+    for (let i = 0; i < item.buffer.length; i++) {
       item.buffer.getChannelData(channel)[i] = data[i];
     }
   }
@@ -207,8 +187,6 @@ function reverse(event, id) {
 
 function trimRight(event, id, ampFloor = 0.003) {
   const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
-  const editPanelEl = document.getElementById('editPanel');
-  const dataset = editPanelEl.dataset;
 
   let trimIndex = [];
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
@@ -238,8 +216,6 @@ function trimRight(event, id, ampFloor = 0.003) {
     duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
     startFrame: 0, endFrame: audioArrayBuffer.length
   };
-  dataset.start = '0';
-  dataset.end = `${audioArrayBuffer.length}`;
   renderEditPanelWaveform(item);
   item.waveform = false;
 }

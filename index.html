@@ -20,8 +20,8 @@
   <meta name="theme-color" content="#202124">
   <meta name="google-site-verification" content="W97nmMeI8CcybxJA7gLG-CFeJmztv03Jh9_bTExYJLY">
   <title>DigiChain</title>
-  <link rel="stylesheet" href="main.css?v=131">
-  <script type="module" src="./main.js?v=131"></script>
+  <link rel="stylesheet" href="main.css">
+  <script type="module" src="./main.js"></script>
 </head>
 
 <body>
@@ -74,11 +74,9 @@
   <button onclick="digichain.playFile(event);" class="button-outline check">Play</button>
   <button onclick="digichain.stopPlayFile(event);" class="button-outline check">Stop</button>
   <div class="waveform-container" data-waveform-width="1024">
-    <input class="slice-range edit-start" onchange="digichain.changeEditPoint(event, 'start')" type="range" min="0" max="1024" value="0">
     <div><canvas id="editPanelWaveform"></canvas>
       <div id="editLines"><div class="line" style="margin-left:0px; width:1024px;"></div></div>
     </div>
-    <input class="slice-range edit-end" onchange="digichain.changeEditPoint(event, 'end')" type="range" min="0" max="1024" value="1024">
   </div>
   <div class="sample-op-buttons">
   <button title="Normalize the volume of the sample." class="normalize button-outline" onclick="digichain.normalize(event)">Normalize</button>

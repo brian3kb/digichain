@@ -1,4 +1,4 @@
-import { Resampler, audioBufferToWav } from './resources.js';
+import { Resampler, audioBufferToWav } from './resources.js?v=131';
 
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
@@ -102,6 +102,19 @@ const toggleOptionsPanel = () => {
   buttonsEl.classList.contains('hidden') ? toggleButtonEl.classList.add('collapsed') : toggleButtonEl.classList.remove('collapsed');
 };
 
+function changeEditPoint(event, range) {
+  const handle = document.querySelector('.slice-range.edit-' + range);
+  const line = document.querySelector('#editLines .line');
+  const editPanelEl = document.getElementById('editPanel');
+  editPanelEl.dataset[range] = event.target.value;
+  if (range === 'start') {
+    line.style.marginLeft = `${+editPanelEl.dataset.start}px`;
+    line.style.width = `${+editPanelEl.dataset.end - +editPanelEl.dataset.start}px`;
+  } else {
+    line.style.width = `${+editPanelEl.dataset.end - +editPanelEl.dataset.start}px`;
+  }
+}
+
 const renderEditPanelWaveform = (item) => {
   const editPanelWaveformContainerEl = document.querySelector(`#editPanel .waveform-container`);
   const editPanelWaveformEl = document.getElementById('editPanelWaveform');
@@ -145,22 +158,25 @@ function perSamplePitch(event, pitchValue, id) {
 function normalize(event, id) {
   const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
   const editPanelEl = document.getElementById('editPanel');
+  const editPanelWaveformContainerEl = document.querySelector('#editPanel .waveform-container');
+  const waveformWidth = +editPanelWaveformContainerEl.dataset.waveformWidth;
+  let scaleSize = item.buffer.length/waveformWidth;
 
   const dataset = editPanelEl.dataset;
-  dataset.start = dataset.start > -1 ? dataset.start : 0;
-  dataset.end = dataset.end > -1 ? dataset.end : item.buffer.length;
+  dataset.start = +dataset.start > -1 ? dataset.start : 0;
+  dataset.end = +dataset.end > -1 ? dataset.end : item.buffer.length;
 
   let maxSample = 0;
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel);
-    for (let i = +dataset.start; i < +dataset.end; i++) {
+    for (let i = Math.floor(+dataset.start * scaleSize); i < Math.floor(+dataset.end * scaleSize); i++) {
       maxSample = Math.max(Math.abs(data[i]), maxSample);
     }
   }
   maxSample = !maxSample ? 1 : maxSample;
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel);
-    for (let i = +dataset.start; i < +dataset.end; i++) {
+    for (let i = Math.floor(+dataset.start * scaleSize); i < Math.floor(+dataset.end * scaleSize); i++) {
       if (item.buffer.getChannelData(channel)[i] && item.buffer.getChannelData(channel)[i] / maxSample !== 0) {
         item.buffer.getChannelData(channel)[i] = item.buffer.getChannelData(channel)[i] / maxSample;
       }
@@ -189,20 +205,17 @@ function reverse(event, id) {
   item.waveform = false;
 }
 
-function trimRight(event, id) {
+function trimRight(event, id, ampFloor = 0.003) {
   const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
   const editPanelEl = document.getElementById('editPanel');
-
   const dataset = editPanelEl.dataset;
-  dataset.start = dataset.start > -1 ? dataset.start : 0;
-  dataset.end = dataset.end > -1 ? dataset.end : item.buffer.length;
 
   let trimIndex = [];
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-    trimIndex.push(dataset.end);
+    trimIndex.push(item.buffer.length);
     let data = item.buffer.getChannelData(channel);
-    for (let i = dataset.end; i > dataset.start; i--) {
-      if (data[i] !== 0 && data[i] !== undefined && data[i] !== null) {
+    for (let i = item.buffer.length; i > 0; i--) {
+      if (Math.abs(data[i]) > ampFloor && data[i] !== undefined && data[i] !== null) {
         trimIndex[channel] = i + 1;
         break;
       }
@@ -722,8 +735,18 @@ const selectSliceAmount = (event, size) => {
 const duplicate = (event, id) => {
   const file = getFileById(id);
   const fileIdx = getFileIndexById(id) + 1;
-  const item = Object.assign({}, file);
-  item.meta = Object.assign({}, file.meta);
+  const item = {file: {...file.file}};
+  item.buffer = new AudioBuffer({
+    numberOfChannels: file.buffer.numberOfChannels,
+    length: file.buffer.length,
+    sampleRate: file.buffer.sampleRate
+  });
+  for (let channel = 0; channel < file.buffer.numberOfChannels; channel++) {
+    const ogChannelData = file.buffer.getChannelData(channel);
+    const newChannelData = item.buffer.getChannelData(channel);
+    newChannelData.set(ogChannelData);
+  }
+  item.meta = JSON.parse(JSON.stringify(file.meta)); // meta sometimes contains a customSlices object.
   item.meta.dupeOf = id;
   item.waveform = false;
   item.meta.id = crypto.randomUUID();
@@ -823,56 +846,36 @@ const splitEvenly = (event, id, slices, pushInPlace = false) => {
 }
 
 const splitByTransient = (file, threshold = .8) => {
-  const analyser = audioCtx.createAnalyser();
-  const source = audioCtx.createBufferSource();
   const transientPositions = [];
-  source.buffer = file.buffer;
-  source.connect(analyser);
-  analyser.connect(audioCtx.destination);
-  analyser.fftSize = 256;
-  const timeDomainData = new Float32Array(analyser.frequencyBinCount);
-  analyser.getFloatTimeDomainData(timeDomainData);
-  const chunkSize = audioCtx.sampleRate * 0.1; // 100 ms
-// Calculate number of chunks in the audio buffer
-  const numChunks = Math.ceil(file.buffer.length / chunkSize);
-  // Loop through each chunk
-  for (let i = 0; i < numChunks; i++) {
-    // Calculate start and end positions of the chunk
-    const start = i * chunkSize;
-    const end = Math.min(start + chunkSize, file.buffer.length);
-    // Create a typed array to hold the time-domain data for the chunk
-    const timeDomainData = new Float32Array(end - start);
-    // Copy the time-domain data for the chunk into the typed array
-    file.buffer.copyFromChannel(timeDomainData, 0, start);
-    // Find the peak amplitude value in the time-domain data
-    let peak = 0;
-    for (let j = 0; j < timeDomainData.length; j++) {
-      const value = Math.abs(timeDomainData[j]);
-      if (value > peak) {
-        peak = value;
+  const frameSize = file.buffer.length / 64;
+  let lastStart = undefined;
+  let lastEnd = undefined;
+  for (let i = 0; i < file.buffer.length; i++) {
+    if (lastStart === undefined) {
+      if (Math.abs(file.buffer.getChannelData(0)[i]) > threshold) {
+        lastStart = i;
+        i = i + frameSize;
+      }
+    } else {
+      if (lastEnd === undefined) {
+        // I want loose equality here as I want 0.000 to be true against 0
+        if (Math.abs(file.buffer.getChannelData(0)[i]).toFixed(3) == 0 || i + frameSize > file.buffer.length) {
+          lastEnd =  i + frameSize > file.buffer.length ? i : i + frameSize;
+        }
       }
     }
-    // Compare the peak amplitude to a threshold value
-    if (peak > threshold) {
-      // Calculate the position of the transient event within the entire audio buffer
-      const transientPosition = start + findPeakIndex(timeDomainData);
-      // Add the transient position to the array
-      transientPositions.push(transientPosition);
+
+    if (lastStart !== undefined && lastEnd !== undefined) {
+      transientPositions.push({
+        startPoint: lastStart,
+        loopPoint: lastStart,
+        endPoint: lastEnd
+      });
+      lastStart = undefined;
+      lastEnd = undefined;
     }
   }
-// Function to find the index of the peak value in a typed array
-  function findPeakIndex(array) {
-    let index = 0;
-    let value = 0;
-    for (let i = 0; i < array.length; i++) {
-      const absValue = Math.abs(array[i]);
-      if (absValue > value) {
-        index = i;
-        value = absValue;
-      }
-    }
-    return index;
-  }
+
 // map transient positions into slice object.
   let metaTransient = metaFiles.getByFileName('---sliceToTransientCached---');
   if (!metaTransient) {
@@ -884,21 +887,8 @@ const splitByTransient = (file, threshold = .8) => {
     };
     metaFiles.push(metaTransient);
   }
-  const findZero = (position) => {
-    let zeroIndex = position;
-    for (let i = position; i > 0; i--) {
-      if (file.buffer.getChannelData(0)[i] === 0) {
-        zeroIndex = i;
-        break;
-      }
-    }
-    return zeroIndex;
-  };
-  metaTransient.slices = transientPositions.map((position, idx) => ({
-    startPoint: findZero(position),
-    loopPoint: position,
-    endPoint: idx === transientPositions.length - 1 ? file.buffer.length : findZero(transientPositions[idx + 1])
-  }));
+
+  metaTransient.slices = transientPositions;
   metaTransient.sliceCount = metaTransient.slices.length;
   return metaTransient;
 };
@@ -1003,11 +993,16 @@ const drawSliceLines = (slices, file, otMeta) => {
     `);
   } else {
     lines = _slices.map((slice, idx) => `
-      <div class="line" style="margin-left:${(waveformWidth/_slices.length) * idx}px; width:${(waveformWidth/_slices.length)}px;"></div> 
+      <div class="line" style="margin-left:${(waveformWidth/_slices.length) * idx}px; width:${(waveformWidth/_slices.length)}px;"></div>
   `);
+    //
+    // lines = _slices.map((slice, idx) => `
+    //   <div class="line" onclick="digichain.selectSlice(event)" style="margin-left:${(waveformWidth/_slices.length) * idx}px; width:${(waveformWidth/_slices.length)}px;"></div>
+    // `);
   }
   sliceLinesEl.innerHTML = lines.join('');
 };
+
 
 const splitAction = (event, id, slices) => {
   const el = document.getElementById('splitOptions');
@@ -1027,17 +1022,6 @@ const splitAction = (event, id, slices) => {
   }
   if (slices === true) { slices = sliceGroupEl.dataset.sliceCount; }
   item = getFileById(id || lastSelectedRow.dataset.id);
-  if (item.buffer.length > 6144000) {
-    sliceByTransientButtonEl.classList.add('disabled');
-    sliceByTransientButtonEl.disabled = true;
-    sliceByTransientButtonEl.title = 'Sample too long for transient detection.';
-    sliceByTransientThresholdEl.classList.add('disabled');
-  } else {
-    sliceByTransientButtonEl.classList.remove('disabled');
-    sliceByTransientButtonEl.title = 'Slice by transient detection.';
-    sliceByTransientButtonEl.disabled = false;
-    sliceByTransientThresholdEl.classList.remove('disabled');
-  }
   if (slices) {
     id = id || item.meta.id;
     if (slices === 'ot' || !sliceByTransientButtonEl.classList.contains('button-outline') || !sliceByOtButtonEl.classList.contains('button-outline')) {
@@ -1438,7 +1422,7 @@ const consumeFileInput = (inputFiles) => {
         checkCount(idx, _files.length);
       }
 
-      if (file.name.toLowerCase().endsWith('.wav') || file.name.toLowerCase().endsWith('.flac')) {
+      if ((file.name.toLowerCase().endsWith('.wav') || file.type === 'audio/wav') || file.name.toLowerCase().endsWith('.flac')) {
         count.push(file.uuid);
         audioCtx.decodeAudioData(e.target.result, data => {
           let result = parseWav(data, file, file.fullPath);
@@ -1642,5 +1626,6 @@ window.digichain = {
   reverse,
   toggleReadOnlyInput,
   toggleSetting,
-  updateFile
+  updateFile,
+  changeEditPoint
 };

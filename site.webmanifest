@@ -23,5 +23,12 @@
     "/main.css",
     "/resources.js",
     "/main.js"
-  ]
+  ],
+    "dir": "auto",
+    "lang": "en",
+    "orientation": "landscape",
+    "categories": [
+      "music",
+      "utilities"
+    ]
 }

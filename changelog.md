@@ -1,4 +1,7 @@
-1.3.0
+2023-04-07 1.3.1
+ - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)
+
+2023-04-05 1.3.0
 - Importing of folders - recursive search for wav/syx files (be careful with filesize/depth of folders with this!).
 - OT slices import from accompanying .ot file.
 - Show source folder path on list, filenames will now include this path in their name if present - joined files with have the path of the first item in the chain in its name.
@@ -15,7 +18,7 @@
 - Edit panel with file name/path editing, waveform view, play/stop controls.
 - Normalize, trim right, reverse, half-speed, and double-speed (destructive) sample edit operations.
 - Allow dropping of wav url links to be fetched (works with domains that allow CORS).
-- Export settings panel with pitch up export setting (1, 2, or 3 octaves - applies only to joined file exports/resamples), and the zip file on/off toggle.
+- Export settings panel with pitch up export setting (1, 2, or 3 octaves), and the zip file on/off toggle.
 - Added offline support and install as app from the browser.
 
 2023-03-27 1.2.0 

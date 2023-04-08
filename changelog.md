@@ -1,5 +1,7 @@
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)
+ - Simplified the transient detection method, enabled it for longer sample lengths as this approach is better suited to longer samples.
+ - Trim right is more aggressive with what it trims (to 0.003 amplitude).
 
 2023-04-05 1.3.0
 - Importing of folders - recursive search for wav/syx files (be careful with filesize/depth of folders with this!).

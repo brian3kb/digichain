@@ -1,10 +1,11 @@
-const cacheName = 'cache-v131';
+const cacheName = 'cache-v140';
 const precacheResources = [
   './',
   'index.html',
   'lib.css',
   'main.css',
   'resources.js',
+  'editor.js',
   'main.js',
   'apple-touch-icon.png',
   'favicon-32x32.png',
@@ -21,7 +22,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  const cachesToKeep = ['cache-v131'];
+  const cachesToKeep = ['cache-v140'];
 
   event.waitUntil(
       caches.keys().then((keyList) =>

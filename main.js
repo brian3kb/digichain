@@ -1,4 +1,11 @@
 import { Resampler, audioBufferToWav } from './resources.js';
+import {
+  editor,
+  showEditor,
+  drawWaveform,
+  getNiceFileName,
+  setEditorConf,
+} from './editor.js';
 
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
@@ -102,168 +109,19 @@ const toggleOptionsPanel = () => {
   buttonsEl.classList.contains('hidden') ? toggleButtonEl.classList.add('collapsed') : toggleButtonEl.classList.remove('collapsed');
 };
 
-function changeEditPoint(event, range) {
-  const handle = document.querySelector('.slice-range.edit-' + range);
-  const line = document.querySelector('#editLines .line');
-  const editPanelEl = document.getElementById('editPanel');
-  editPanelEl.dataset[range] = event.target.value;
-  if (range === 'start') {
-    line.style.marginLeft = `${+editPanelEl.dataset.start}px`;
-    line.style.width = `${+editPanelEl.dataset.end - +editPanelEl.dataset.start}px`;
-  } else {
-    line.style.width = `${+editPanelEl.dataset.end - +editPanelEl.dataset.start}px`;
-  }
-}
-
-const renderEditPanelWaveform = (item) => {
-  const editPanelWaveformContainerEl = document.querySelector(`#editPanel .waveform-container`);
-  const editPanelWaveformEl = document.getElementById('editPanelWaveform');
-  drawWaveform(item, editPanelWaveformEl, item.meta.channel, {
-    width: +editPanelWaveformContainerEl.dataset.waveformWidth, height: 128
-  });
-};
-
-function perSamplePitch(event, pitchValue, id) {
-  const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
-
-  const pitchedWav = audioBufferToWav(item.buffer, item.meta, (masterSR * pitchValue), masterBitDepth, item.buffer.numberOfChannels);
-  const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
-    type: 'audio/wav',
-  });
-  (async () => {
-    let linkedFile = await fetch(URL.createObjectURL(pitchedBlob));
-    let arrBuffer = await linkedFile.arrayBuffer();
-    await audioCtx.decodeAudioData(arrBuffer, buffer => {
-      item.buffer = buffer;
-      item.meta = {
-        ...item.meta,
-        length: buffer.length,
-        duration: Number(buffer.length / masterSR).toFixed(3),
-        startFrame: 0, endFrame: buffer.length
-      };
-      renderEditPanelWaveform(item);
-      item.waveform = false;
-      renderList();
-    });
-  })();
-}
-
-function normalize(event, id) {
-  const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
-
-  let maxSample = 0;
-  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-    let data = item.buffer.getChannelData(channel);
-    for (let i = 0; i < item.buffer.length; i++) {
-      maxSample = Math.max(Math.abs(data[i]), maxSample);
-    }
-  }
-  maxSample = !maxSample ? 1 : maxSample;
-  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-    let data = item.buffer.getChannelData(channel);
-    for (let i = 0; i < item.buffer.length; i++) {
-      if (item.buffer.getChannelData(channel)[i] && item.buffer.getChannelData(channel)[i] / maxSample !== 0) {
-        item.buffer.getChannelData(channel)[i] = item.buffer.getChannelData(channel)[i] / maxSample;
-      }
-    }
-  }
-  renderEditPanelWaveform(item);
-  item.waveform = false;
-}
-
-function reverse(event, id) {
-  const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
-
-  let maxSample = 0;
-  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-    let data = item.buffer.getChannelData(channel).reverse();
-    for (let i = 0; i < item.buffer.length; i++) {
-      item.buffer.getChannelData(channel)[i] = data[i];
-    }
-  }
-  renderEditPanelWaveform(item);
-  item.waveform = false;
-}
-
-function trimRight(event, id, ampFloor = 0.003) {
-  const item = id ? getFileById(id) : getFileById(lastSelectedRow.dataset.id);
-
-  let trimIndex = [];
-  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-    trimIndex.push(item.buffer.length);
-    let data = item.buffer.getChannelData(channel);
-    for (let i = item.buffer.length; i > 0; i--) {
-      if (Math.abs(data[i]) > ampFloor && data[i] !== undefined && data[i] !== null) {
-        trimIndex[channel] = i + 1;
-        break;
-      }
-    }
-  }
-  const audioArrayBuffer = audioCtx.createBuffer(
-      item.buffer.numberOfChannels,
-      +Math.max(...trimIndex),
-      masterSR
-  );
-  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-    for (let i = 0; i < audioArrayBuffer.length; i++) {
-      audioArrayBuffer.getChannelData(channel)[i] = item.buffer.getChannelData(channel)[i];
-    }
-  }
-  item.buffer = audioArrayBuffer;
-  item.meta = {
-    ...item.meta,
-    length: audioArrayBuffer.length,
-    duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
-    startFrame: 0, endFrame: audioArrayBuffer.length
-  };
-  renderEditPanelWaveform(item);
-  item.waveform = false;
-}
-
-const toggleReadOnlyInput = (inputId) => {
-  const input = document.getElementById(inputId);
-  input.readOnly ? input.removeAttribute('readonly') : input.setAttribute('readonly', true);
-};
-
-function updateFile(event) {
-  const target = event.target;
-  const item = getFileById(lastSelectedRow.dataset.id);
-  if (!target) { return ; }
-  if (target.id === 'editFileName') {
-    item.file.name = target.value;
-  }
-  if (target.id === 'editFilePath') {
-    item.file.path = target.value;
-  }
-}
-
 const showEditPanel = (event, id) => {
-  const editPanelEl = document.getElementById('editPanel');
-  const editableItemsEl = document.getElementById('editableItems');
-  let item;
   if (id) {
     lastSelectedRow = getRowElementById(id);
-    editPanelEl.dataset.id = id;
   }
-  item = getFileById(id || lastSelectedRow.dataset.id);
-  editPanelEl.dataset.start = '-1';
-  editPanelEl.dataset.end = '-1';
-  editableItemsEl.innerHTML = `
-      <div class="input-set">
-      <label for="editFileName" class="before-input">File Name</label>
-      <input type="text" onchange="digichain.updateFile(event)" placeholder="Sample file name" id="editFileName" value="${getNiceFileName('', item, true)}" readonly>
-      <button class="button-clear" onclick="digichain.toggleReadOnlyInput('editFileName')"><i class="gg-pen"></i></button>
-    </div><br>
-    <div class="input-set">
-    <label for="editFilePath" class="before-input">File Path</label>
-      <input type="text" placeholder="File path of the sample (if known)" id="editFilePath" value="${item.file.path}" id="editFilePath" readonly>
-      <button class="button-clear" onclick="digichain.toggleReadOnlyInput('editFilePath')"><i class="gg-pen"></i></button>
-    </div>
-  `;
-
-  editPanelEl.classList.add('show');
-  renderEditPanelWaveform(item);
-
+  showEditor(
+      getFileById(id || lastSelectedRow.dataset.id),
+      {
+        audioCtx,
+        masterSR,
+        masterChannels,
+        masterBitDepth
+      }
+  );
 };
 
 async function setWavLink(file, linkEl) {
@@ -708,7 +566,7 @@ const selectSliceAmount = (event, size) => {
   renderList();
 }
 
-const duplicate = (event, id) => {
+const duplicate = (event, id, prepForEdit = false) => {
   const file = getFileById(id);
   const fileIdx = getFileIndexById(id) + 1;
   const item = {file: {...file.file}};
@@ -723,9 +581,21 @@ const duplicate = (event, id) => {
     newChannelData.set(ogChannelData);
   }
   item.meta = JSON.parse(JSON.stringify(file.meta)); // meta sometimes contains a customSlices object.
-  item.meta.dupeOf = id;
   item.waveform = false;
   item.meta.id = crypto.randomUUID();
+  if (prepForEdit) {
+    item.meta.editOf = id;
+    return {
+      item,
+      fileIdx,
+      callback: (_item, _fileIdx) => {
+        files.splice(((event.shiftKey || modifierKeys.shiftKey) ? files.length : _fileIdx), 0, _item);
+        unsorted.push(_item.meta.id);
+        renderList();
+      }
+    };
+  }
+  item.meta.dupeOf = id;
   files.splice(((event.shiftKey || modifierKeys.shiftKey) ? files.length : fileIdx), 0, item);
   unsorted.push(item.meta.id);
   renderList();
@@ -979,7 +849,6 @@ const drawSliceLines = (slices, file, otMeta) => {
   sliceLinesEl.innerHTML = lines.join('');
 };
 
-
 const splitAction = (event, id, slices) => {
   const el = document.getElementById('splitOptions');
   const fileNameEl = document.getElementById('splitFileName');
@@ -1023,41 +892,6 @@ const splitAction = (event, id, slices) => {
   });
 };
 
-const draw = (normalizedData, id, canvas, dimensions) => {
-  const drawLineSegment = (ctx, x, height, width, isEven) => {
-    ctx.lineWidth = 1; // how thick the line is
-    ctx.strokeStyle = '#a8a8a8'; // what color our line is
-    ctx.beginPath();
-    height = isEven ? height : -height;
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-    ctx.arc(x + width / 2, height, width / 2, Math.PI, 0, isEven);
-    ctx.lineTo(x + width, 0);
-    ctx.stroke();
-  };
-  // set up the canvas
-  const dpr = window.devicePixelRatio || 1;
-  const padding = 0;
-  canvas.width = dimensions?.width || 150; //canvas.offsetWidth * dpr;
-  canvas.height = dimensions?.height || 60;// (canvas.offsetHeight + padding * 2) * dpr;
-  const ctx = canvas.getContext('2d');
-  //ctx.scale(dpr, dpr);
-  ctx.translate(0, canvas.offsetHeight / 2 + padding); // set Y = 0 to be in the middle of the canvas
-
-  // draw the line segments
-  const width = canvas.offsetWidth / normalizedData.length;
-  for (let i = 0; i < normalizedData.length; i++) {
-    const x = width * i;
-    let height = (normalizedData[i] / 2) * canvas.offsetHeight - padding;
-    if (height < 0) {
-      height = 0;
-    } else if (height > canvas.offsetHeight / 2) {
-      height = height > canvas.offsetHeight / 2;
-    }
-    drawLineSegment(ctx, x, height, width, (i + 1) % 2);
-  }
-};
-
 const secondsToMinutes = (time) => {
   const mins =  Math.floor(time / 60);
   const seconds = Number(time % 60).toFixed(2);
@@ -1080,31 +914,6 @@ const setCountValues = () => {
         (row, i) => (i+1)%sliceGrid === 0 ? row.classList.add('end-of-grid') : row.classList.remove('end-of-grid'));
 
   } catch(e) {}
-};
-
-const getNiceFileName = (name, file, excludeExtension, includePath) => {
-  let fname = file ? `${file.file.name.replace(/\.[^.]*$/,'')}${file.meta?.dupeOf ? '-d' : ''}${file.meta?.sliceNumber ? '-s' + file.meta.sliceNumber : ''}.wav`:
-      name.replace(
-      /\.syx$|\.wav$/, '');
-  fname = (includePath && file.file.path) ? `${file.file.path.replace(/\//gi, '-')}` + fname : fname;
-  return excludeExtension ? fname.replace(/\.[^.]*$/,'') : fname;
-};
-
-const drawWaveform = (file, el, channel, dimensions) => {
-  let drawData = [];
-  let drawResolution = Math.floor(file.buffer.length / 20);
-  if (masterChannels === 2 && file.buffer.numberOfChannels > 1) { channel = 'S'; }
-  drawResolution = drawResolution > 4096 ? 4096: drawResolution;
-  for (let y = 0; y < file.buffer.length; y += Math.floor(file.buffer.length / drawResolution)) {
-    if (channel === 'S') {
-      drawData.push(
-          (file.buffer.getChannelData(0)[y] + file.buffer.getChannelData(1)[y]) / 2
-      );
-    } else  {
-      drawData.push(file.buffer.getChannelData((channel === 'R' ? 1 : 0))[y]);
-    }
-  }
-  draw(drawData, file.meta.id, el, dimensions);
 };
 
 const renderList = () => {
@@ -1567,6 +1376,14 @@ document.body.addEventListener('keydown', (event) => {
     }
   }
 });
+
+setEditorConf({
+  audioCtx,
+  masterSR,
+  masterChannels,
+  masterBitDepth
+});
+
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {
   sliceOptions,
@@ -1596,12 +1413,6 @@ window.digichain = {
   showExportSettingsPanel,
   showEditPanel,
   pitchExports,
-  normalize,
-  trimRight,
-  perSamplePitch,
-  reverse,
-  toggleReadOnlyInput,
   toggleSetting,
-  updateFile,
-  changeEditPoint
+  editor
 };

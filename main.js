@@ -211,6 +211,51 @@ function removeSelected() {
   renderList();
 }
 
+function trimRightSelected(event) {
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '' );
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked);
+    selected.forEach((f, idx) => {
+      editor.trimRight(event, f, false);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
+}
+
+function mergeSelected(event) {
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '' );
+  const selected = files.filter(f => f.meta.checked);
+  if (selected.length === 0) { return ; }
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    let longest = selected[0];
+    selected.forEach(f => longest = longest.buffer.length > f.buffer.length ? longest : f);
+    let newItem = duplicate(event, longest.meta.id, true);
+    newItem.item.waveform = false;
+    selected.forEach((item, idx) => {
+      if (item === longest) { return; }
+      for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        let data = newItem.item.buffer.getChannelData(channel);
+        for (let i = 0; i < item.buffer.length; i++) {
+          if (Math.abs(item.buffer.getChannelData(channel)[i])) {
+            newItem.item.buffer.getChannelData(channel)[i] = (data[i] + item.buffer.getChannelData(channel)[i]) / 2;
+          }
+        }
+      }
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    newItem.callback(newItem.item, 0);
+  }, 250);
+}
+
 function showInfo() {
   const description = document.querySelector('meta[name=description]').content;
   const infoPanelContentEl = document.querySelector('.info-panel-md .content');
@@ -958,6 +1003,7 @@ const renderList = () => {
             <span class="file-path">${f.file.path}</span>
             <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true)">${getNiceFileName(f.file.name)}</a>
             ${f.meta.dupeOf ? ' d' : ''}
+            ${f.meta.editOf ? ' e' : ''}
             ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
             <a class="wav-link-hidden" target="_blank"></a>
         </td>
@@ -1407,6 +1453,8 @@ window.digichain = {
   sliceOptions,
   changeAudioConfig,
   removeSelected,
+  trimRightSelected,
+  mergeSelected,
   sort,
   renderList,
   joinAll: joinAllUICall,

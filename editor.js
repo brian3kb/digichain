@@ -267,7 +267,6 @@ function normalize(event, id) {
 function reverse(event, id) {
   const item = editing;
 
-  let maxSample = 0;
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel).slice(selection.start, selection.end).reverse();
     let dataCount = 0;
@@ -280,8 +279,8 @@ function reverse(event, id) {
   item.waveform = false;
 }
 
-function trimRight(event, id, ampFloor = 0.003) {
-  const item = editing;
+function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
+  item = item || editing;
 
   let trimIndex = [];
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
@@ -311,7 +310,9 @@ function trimRight(event, id, ampFloor = 0.003) {
     duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
     startFrame: 0, endFrame: audioArrayBuffer.length
   };
-  renderEditPanelWaveform(multiplier);
+  if (renderEditPanel) {
+    renderEditPanelWaveform(multiplier);
+  }
   item.waveform = false;
 }
 export const editor = {

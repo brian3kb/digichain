@@ -4,7 +4,7 @@ import {
   showEditor,
   drawWaveform,
   getNiceFileName,
-  setEditorConf,
+  setEditorConf
 } from './editor.js';
 
 const uploadInput = document.getElementById('uploadInput');
@@ -284,6 +284,10 @@ function getMonoFloat32ArrayFromBuffer(buffer, channel, getAudioBuffer = false) 
     for (let i = 0; i < buffer.length; i++) {
       (getAudioBuffer ? result.getChannelData(0) : result)[i] = (buffer.getChannelData(0)[i] + buffer.getChannelData(1)[i]) / 2;
     }
+  } else if(channel === 'D') {
+    for (let i = 0; i < buffer.length; i++) {
+      (getAudioBuffer ? result.getChannelData(0) : result)[i] = (buffer.getChannelData(0)[i] - buffer.getChannelData(1)[i]) / 2;
+    }
   } else {
     const _channel = channel === 'R' ? 1 : 0;
     for (let i = 0; i < buffer.length; i++) {
@@ -503,7 +507,8 @@ const changeChannel = (event, id, channel) => {
     const opts = {
       L: 'audio from the Left channel',
       R: 'audio from the Right channel',
-      S: 'Sum both channels of audio to mono'
+      S: 'Sum both channels of audio to mono',
+      D: 'Difference between Left and Right channels'
     };
     const confirmSetAllSelected = confirm(`Confirm setting all selected samples that are stereo to ${opts[channel]}?`);
     if (confirmSetAllSelected) {
@@ -792,19 +797,31 @@ const move = (event, id, direction) => {
   }
   renderList();
 };
-const sort = (by) => {
+const sort = (event, by) => {
+  const groupByChecked = (event.shiftKey || modifierKeys.shiftKey);
   if (by === 'id') {
-    files = unsorted.map(key => files.find(f => f.meta.id === key));
-    lastSort = '';
+    if (groupByChecked === true) {
+      files.sort(() => crypto.randomUUID().localeCompare(crypto.randomUUID()));
+    } else {
+      files = unsorted.map(key => files.find(f => f.meta.id === key));
+      lastSort = '';
+    }
   } else {
     if (lastSort === by) {
-      files.reverse();
+      //files.reverse();
+      files = by === 'name' ?
+          files.sort((a, b) => b.file[by].localeCompare(a.file[by])) :
+          files.sort((a, b) => (b.meta[by] - a.meta[by]));
+      lastSort = '';
     } else {
       files = by === 'name' ?
           files.sort((a, b) => a.file[by].localeCompare(b.file[by])) :
           files.sort((a, b) => (a.meta[by] - b.meta[by]));
       lastSort = by;
     }
+  }
+  if (groupByChecked === true && by !== 'id') {
+    files.sort((a, b) => (b.meta.checked - a.meta.checked));
   }
   renderList();
 };
@@ -952,6 +969,7 @@ const renderList = () => {
             <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
             <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
             <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R')" class="${f.meta.channel === 'R' ? 'selected' : ''} channel-option-R">R</a>
+            <a title="Difference between Left and Right channels" onclick="digichain.changeChannel(event, '${f.meta.id}', 'D')" class="${f.meta.channel === 'D' ? 'selected' : ''} channel-option-D">D</a>
             </div>
             <div class="channel-options channel-options-stereo" title="${f.buffer.numberOfChannels === 1 ? 'Mono sample' : 'Stereo sample'}" style="display: ${masterChannels === 2 ? 'block' : 'none'}">
                 <i class="gg-shape-circle"></i>
@@ -1320,7 +1338,7 @@ document.body.addEventListener('keyup', (event) => {
 });
 
 document.body.addEventListener('keydown', (event) => {
-  const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyG', 'KeyH', 'KeyI', 'KeyL', 'KeyP', 'KeyR', 'KeyS', 'KeyX' ];
+  const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyD', 'KeyG', 'KeyH', 'KeyI', 'KeyL', 'KeyP', 'KeyR', 'KeyS', 'KeyX' ];
   if (keyboardShortcutsDisabled) { return ; }
   if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
   if (event.ctrlKey) { document.body.classList.add('ctrlKey-down'); }
@@ -1368,7 +1386,7 @@ document.body.addEventListener('keydown', (event) => {
       toggleCheck(event, lastSelectedRow.dataset.id);
     } else if (event.code === 'KeyP') {
       playFile(event, lastSelectedRow.dataset.id);
-    } else if (masterChannels === 1 && (event.code === 'KeyL' || event.code === 'KeyR' || event.code === 'KeyS')) {
+    } else if (masterChannels === 1 && (event.code === 'KeyL' || event.code === 'KeyR' || event.code === 'KeyS' || event.code === 'KeyD')) {
       const item = getFileById(lastSelectedRow.dataset.id);
       if (item.meta.channel) {
         changeChannel(event, lastSelectedRow.dataset.id, event.code.replace('Key', ''));

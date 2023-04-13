@@ -13,6 +13,12 @@ export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumCh
         result[i] = (buffer.getChannelData(0)[i] + buffer.getChannelData(1)[i]) / 2;
       }
     }
+    if (meta.channel === 'D') {
+      result = new Float32Array(buffer.length);
+      for (let i = 0; i < buffer.length; i++) {
+        result[i] = (buffer.getChannelData(0)[i] - buffer.getChannelData(1)[i]) / 2;
+      }
+    }
   } else {
     if (numChannels === 2) {
       result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));

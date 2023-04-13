@@ -110,7 +110,7 @@
         <button class="button" onclick="digichain.removeSelected()">Remove Selected</button>
 <!--      </div>-->
 <!--      <div class="row">-->
-        <button title="Reset list to the order in which files were added to the pool." class="button button-outline" onclick="digichain.sort('id')">Reset Sort/Order</button>
+        <button title="Reset list to the order in which files were added to the pool. Shift-click to randomize list." class="button button-outline has-shift-mod" onclick="digichain.sort(event, 'id')">Reset Sort/Order</button>
       </div>
     </div>
     <div class="column">
@@ -141,15 +141,15 @@
         <thead>
         <tr>
           <th class="w-0"></th>
-          <th class="w-0"><a title="Click to sort." onclick="digichain.sort('checked')" class="sort-by-selected">Selected</a></th>
+          <th class="w-0"><a title="Click to sort." onclick="digichain.sort(event, 'checked')" class="sort-by-selected">Selected</a></th>
           <th class="w-0"></th>
           <th></th>
           <th style="width: 180px;"></th>
           <th>
-            <a title="Click to sort." onclick="digichain.sort('name')">Filename / Download</a>
-            <a title="Click to sort." onclick="digichain.sort('sliceNumber')"> - slice # - </a>
+            <a title="Click to sort." onclick="digichain.sort(event, 'name')" class="has-shift-mod-i">Filename / Download</a>
+            <a title="Click to sort." onclick="digichain.sort(event, 'sliceNumber')" class="has-shift-mod-i"> - slice # - </a>
           </th>
-          <th><a title="Click to sort." id="lengthHeaderLink" onclick="digichain.sort('length')">Length (s)</a></th>
+          <th><a title="Click to sort." id="lengthHeaderLink" onclick="digichain.sort(event, 'length')" class="has-shift-mod-i">Length (s)</a></th>
           <th class="w-0"></th>
           <th class="w-0"></th>
           <th class="w-0"></th>

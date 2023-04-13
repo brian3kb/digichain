@@ -48,7 +48,7 @@ export function renderEditor(item) {
   </div>
   <div class="sample-op-buttons">
   <button title="Normalize the volume of the sample." class="normalize button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
-  <button title="Trims any zero valued audio from the end of the sample." class="trim-right button-outline" onclick="digichain.trimRight(event)">Trim Right</button>
+  <button title="Trims any zero valued audio from the end of the sample." class="trim-right button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
   <button title="Reverses the sample playback" class="reverse button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>
   <button title="Half the speed of the sample" class="pitch button-outline" onclick="digichain.editor.perSamplePitch(event, .5)">Half-speed</button>
   <button title="Double the speed of the sample" class="pitch button-outline" onclick="digichain.editor.perSamplePitch(event, 2)">Double-speed</button>
@@ -314,7 +314,6 @@ function trimRight(event, id, ampFloor = 0.003) {
   renderEditPanelWaveform(multiplier);
   item.waveform = false;
 }
-
 export const editor = {
   updateFile,
   toggleReadOnlyInput,

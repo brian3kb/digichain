@@ -105,10 +105,14 @@
             <option value="s4410016">44.1K/16BIT STEREO</option>
             <option value="m4410024">44.1K/24BIT MONO</option>
             <option value="s4410024">44.1K/24BIT STEREO</option>
+            <option value="m4410032">44.1K/32BIT MONO</option>
+            <option value="s4410032">44.1K/32BIT STEREO</option>
             <option value="m4800016" selected>48K/16BIT MONO</option>
             <option value="s4800016">48K/16BIT STEREO</option>
             <option value="m4800024">48K/24BIT MONO</option>
             <option value="s4800024">48K/24BIT STEREO</option>
+            <option value="m4800032">48K/32BIT MONO</option>
+            <option value="s4800032">48K/32BIT STEREO</option>
           </select>
       </div>
       <div class="row">
@@ -119,6 +123,7 @@
       </div>
       <div class="row">
         <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline check">TRS</button>&nbsp;
+        <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)" class="button-outline check">NMS</button>&nbsp;
         <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline check">RVS</button>&nbsp;
         <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)" class="button-outline check">MRG</button>
       </div>

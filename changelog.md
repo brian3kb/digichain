@@ -1,6 +1,6 @@
 1.4.0
  - Audio editor panel overhaul.
- - Affect selection with click for start, shift+click for end point.
+ - Affect selection with click for start, right-click or shift+click for end point.
  - Fixed bug where file path changes were not persisted.
  - Added 1x, 2x, 4x zoom levels for edit panel waveform.
  - TODO: Fold slice grid into the edit panel.
@@ -12,6 +12,7 @@
  - Trim All Selected action.
  - Reverse All Selected action.
  - Merge All Selected action - mixes down all the selected items into one sample.
+ - Enabled 32bit float wav exports.
 
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)

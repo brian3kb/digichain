@@ -40,7 +40,10 @@ export function renderEditor(item) {
   </div>
   <div class="waveform-container">
     <div>
-      <canvas class="edit-panel-waveform" onclick="digichain.editor.changeSelectionPoint(event)"></canvas>
+      <canvas class="edit-panel-waveform"
+        oncontextmenu="return false;"
+        onclick="digichain.editor.changeSelectionPoint(event)"
+        onauxclick="digichain.editor.changeSelectionPoint(event, true)"></canvas>
       <div id="editLines">
         <div class="line"></div>
       </div>
@@ -187,9 +190,10 @@ function zoomLevel(view, level) {
   }
 }
 
-function changeSelectionPoint(event) {
+function changeSelectionPoint(event, shiftKey = false) {
+  event.preventDefault();
   const max =  (1024 * multiplier);
-  if (event.shiftKey) { //set end point if shift key is down
+  if (event.shiftKey || shiftKey) { //set end point if shift key is down
     let end = 0;
     if (event.offsetX <= max && event.offsetX > -1) {
       end = Math.round(event.offsetX * selection.step);
@@ -241,8 +245,12 @@ function perSamplePitch(event, pitchValue, id) {
   })();
 }
 
-function normalize(event, id) {
-  const item = editing;
+function normalize(event, item, renderEditPanel = true) {
+  if (!renderEditPanel && item) {
+    selection.start = 0;
+    selection.end = item.buffer.length;
+  }
+  item = item || editing;
 
   let maxSample = 0;
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
@@ -260,7 +268,9 @@ function normalize(event, id) {
       }
     }
   }
-  renderEditPanelWaveform(multiplier);
+  if (renderEditPanel) {
+    renderEditPanelWaveform(multiplier);
+  }
   item.waveform = false;
 }
 
@@ -285,6 +295,10 @@ function reverse(event, item, renderEditPanel = true) {
 }
 
 function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
+  if (!renderEditPanel && item) {
+    selection.start = 0;
+    selection.end = item.buffer.length;
+  }
   item = item || editing;
 
   let trimIndex = [];

@@ -16,10 +16,14 @@ const audioConfigOptions = {
   s4410016: { sr: 44100, bd: 16, c: 2 },
   m4410024: { sr: 44100, bd: 24, c: 1 },
   s4410024: { sr: 44100, bd: 24, c: 2 },
+  m4410032: { sr: 44100, bd: 32, c: 1 },
+  s4410032: { sr: 44100, bd: 32, c: 2 },
   m4800016: { sr: 48000, bd: 16, c: 1 },
   s4800016: { sr: 48000, bd: 16, c: 2 },
   m4800024: { sr: 48000, bd: 24, c: 1 },
-  s4800024: { sr: 48000, bd: 24, c: 2 }
+  s4800024: { sr: 48000, bd: 24, c: 2 },
+  m4800032: { sr: 48000, bd: 32, c: 1 },
+  s4800032: { sr: 48000, bd: 32, c: 2 }
 };
 let masterSR = 48000;
 let masterBitDepth = 16;
@@ -160,6 +164,8 @@ async function downloadAll(event) {
     const userReadyForTheCommitment = confirm(`You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`);
     if (!userReadyForTheCommitment) { return; }
   }
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
 
   if (zipDownloads && _files.length > 1) {
     const zip = new JSZip();
@@ -176,6 +182,7 @@ async function downloadAll(event) {
       el.href = URL.createObjectURL(blob);
       el.setAttribute('download', 'digichain_files.zip');
       el.click();
+      document.body.classList.remove('loading');
     });
     return;
   }
@@ -190,6 +197,7 @@ async function downloadAll(event) {
     lnk?.click();
     if (links.length === 0 && lnk) {
       clearInterval(intervalId);
+      document.body.classList.add('loading');
     }
   }, 500);
 
@@ -211,6 +219,22 @@ function removeSelected() {
   files = files.filter(f => !f.meta.checked);
   unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
   renderList();
+}
+
+function normalizeSelected(event) {
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '' );
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked);
+    selected.forEach((f, idx) => {
+      editor.normalize(event, f, false);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
 }
 
 function trimRightSelected(event) {
@@ -1625,6 +1649,7 @@ window.digichain = {
   changeAudioConfig,
   removeSelected,
   trimRightSelected,
+  normalizeSelected,
   reverseSelected,
   showMergePanel,
   sort,

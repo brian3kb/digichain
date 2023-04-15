@@ -1,6 +1,6 @@
 export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels) {
   let numChannels = buffer.numberOfChannels;
-  let format = meta?.float32 ? 3 : 1;
+  let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
 
   let result;
   if (meta.channel && masterNumChannels === 1) {

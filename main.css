@@ -113,7 +113,7 @@ input { color: #a8a8a8; }
 #getJoined, .wav-link-hidden, .hidden { visibility: hidden; }
 #getJoined, #uploadInput { display: none; }
 #fileNum { padding-left: 1rem; }
-table { padding-bottom: 12rem; padding-top: 1rem; }
+table#masterList { padding-bottom: 12rem; padding-top: 1rem; }
 #fileList:empty::after {
     content: 'Load/Drag in some samples to get started...';
     text-align: center;
@@ -273,7 +273,7 @@ td button { margin: 0.5rem; }
 /*.channel-options-stereo i.stereo-circle {*/
 /*    margin-left: -1.35rem;*/
 /*}*/
-.info-panel-md, .split-panel-options, .edit-panel-options, .not-served-md, .export-settings-panel-md {
+.info-panel-md, .split-panel-options, .edit-panel-options, .merge-panel-options, .not-served-md, .export-settings-panel-md {
     position: fixed;
     width: 512px;
     top: 16vh;
@@ -473,6 +473,23 @@ body.shiftKey-down.ctrlKey-down .has-shift-mod.has-ctrl-mod {
 body.shiftKey-mod-down .has-shift-mod-i,
 body.shiftKey-down .has-shift-mod-i {
     color: #4E99D7A0  !important;
+}
+
+.mh-60vh {
+    max-height: 60vh;
+    overflow: auto;
+}
+.merge-info {
+    float: right;
+    width: 80%;
+    font-size: 1.25rem;
+}
+table#mergeList th {
+    padding-left: 0;
+}
+table#mergeList td.file-path-td {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
 }
 
 @media (min-width: 430px) {
@@ -710,7 +727,7 @@ body.shiftKey-down .has-shift-mod-i {
 }
 
 @media (min-width: 1100px) {
-    .info-panel-md, .split-panel-options, .edit-panel-options, .not-served-md, .export-settings-panel-md {
+    .info-panel-md, .split-panel-options, .edit-panel-options, .merge-panel-options, .not-served-md, .export-settings-panel-md {
         width: 1030px;
         top: 16vh;
         left: 50%;

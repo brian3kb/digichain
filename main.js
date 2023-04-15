@@ -30,6 +30,7 @@ let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
 let unsorted = [];
 let metaFiles = [];
+let mergeFiles = [];
 let lastSort = '';
 let lastSelectedRow;
 let workBuffer;
@@ -83,8 +84,8 @@ const getFileById = (id) => {
 const getFileIndexById = (id) => {
   return files.findIndex(f => f.meta.id === id);
 };
-const getRowElementById = (id) => {
-  return document.querySelector(`tr[data-id="${id}"]`);
+const getRowElementById = (id, tableId = '#masterList') => {
+  return document.querySelector(`${tableId} tr[data-id="${id}"]`);
 };
 const toggleModifier = (key) => {
   if (key === 'shiftKey' || key === 'ctrlKey') {
@@ -96,6 +97,7 @@ const toggleModifier = (key) => {
 
 const closePopUps = () => {
   return document.querySelectorAll('.pop-up').forEach(w => w.classList.remove('show'));
+  renderList();
 };
 
 const arePopUpsOpen = () => {
@@ -227,32 +229,19 @@ function trimRightSelected(event) {
   }, 250);
 }
 
-function mergeSelected(event) {
+function reverseSelected(event) {
   files.forEach(f => f.meta.checked ? f.source?.stop() : '' );
-  const selected = files.filter(f => f.meta.checked);
-  if (selected.length === 0) { return ; }
   document.getElementById('loadingText').textContent = 'Processing';
   document.body.classList.add('loading');
   setTimeout(() => {
-    let longest = selected[0];
-    selected.forEach(f => longest = longest.buffer.length > f.buffer.length ? longest : f);
-    let newItem = duplicate(event, longest.meta.id, true);
-    newItem.item.waveform = false;
-    selected.forEach((item, idx) => {
-      if (item === longest) { return; }
-      for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-        let data = newItem.item.buffer.getChannelData(channel);
-        for (let i = 0; i < item.buffer.length; i++) {
-          if (Math.abs(item.buffer.getChannelData(channel)[i])) {
-            newItem.item.buffer.getChannelData(channel)[i] = (data[i] + item.buffer.getChannelData(channel)[i]) / 2;
-          }
-        }
-      }
+    const selected = files.filter(f => f.meta.checked);
+    selected.forEach((f, idx) => {
+      editor.reverse(event, f, false);
       if (idx === selected.length - 1) {
         document.body.classList.remove('loading');
       }
     });
-    newItem.callback(newItem.item, 0);
+    renderList();
   }, 250);
 }
 
@@ -400,6 +389,96 @@ function mixDown(_files) {
   });
 }
 
+function showMergePanel() {
+  const mergePanelEl = document.getElementById('mergePanel');
+  const mergePanelContentEl = document.getElementById('mergePanelContent');
+  mergeFiles = files.filter(f => f.meta.checked).map(f => {
+    f.meta.pan = f.meta.pan || 'C';
+    return f;
+  });
+
+  mergePanelContentEl.innerHTML = `
+     <div class="row">
+     <div class="column mh-60vh">
+       <table id="mergeList">
+        <thead>
+          <tr>
+          <th>Filename</th>
+          <th>Duration</th>
+          <th>Mono Channel Choice</th>
+          <th>Panning</th>
+          </tr>
+        </thead>
+      <tbody>
+  ` + mergeFiles.map(mf => buildRowMarkupFromFile(mf, 'merge')).join('') +
+      `</tbody>
+     </table>
+   </div>
+  </div>
+  <button class="float-left" onclick="digichain.performMergeUiCall()">Merge Files</button>
+  <span class="merge-info">Merging flattens each source sample to mono based on the mixdown choice and pans that mono file hard left/right or centers. If you want to retain a stereo files stereo field in the merge, duplicate it first and choose its L/R mix.</span>
+  `;
+  mergePanelEl.classList.add('show');
+}
+
+function performMergeUiCall() {
+  const mergePanelEl = document.getElementById('mergePanel');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  if (files.filter(f => f.meta.checked).length === 0) {
+    return ;
+  }
+  mergePanelEl.classList.remove('show');
+  setTimeout(() => performMerge(mergeFiles), 100);
+}
+
+function performMerge(mFiles) {
+  let longest = mFiles[0];
+  mFiles.forEach(mf => longest = longest.buffer.length > mf.buffer.length ? longest : mf);
+  let newItem = {
+    file: {...longest.file},
+    buffer: audioCtx.createBuffer(
+        2,
+        longest.buffer.length,
+        masterSR
+    ),
+    meta: {...longest.meta, channel: 'L', isMerge: true, editOf: '', id: crypto.randomUUID() },
+    waveform: false
+  };
+  for (let i = 0; i < newItem.buffer.length; i++) {
+    newItem.buffer.getChannelData(0)[i] = 0;
+    newItem.buffer.getChannelData(1)[i] = 0;
+  }
+  mFiles.forEach((mf, idx) => {
+    const panChannel = mf.meta.pan === 'L' ? 0 : 1;
+    let data = mf.buffer.getChannelData(0);
+    if (mf.buffer.numberOfChannels === 2) {
+      data = getMonoFloat32ArrayFromBuffer(mf.buffer, mf.meta?.channel);
+    }
+    if (mf.meta.pan === 'C'){
+      for (let i = 0; i < mf.buffer.length; i++) {
+        newItem.buffer.getChannelData(0)[i] = (newItem.buffer.getChannelData(0)[i] + data[i]) / 2;
+        newItem.buffer.getChannelData(1)[i] = (newItem.buffer.getChannelData(1)[i] + data[i]) / 2;
+      }
+    } else {
+      const buffer = newItem.buffer.getChannelData(panChannel);
+      for (let i = 0; i < mf.buffer.length; i++) {
+        newItem.buffer.getChannelData(panChannel)[i] = buffer[i] === 0 ?
+            data[i] :
+            ((buffer[i] + data[i]) / 2);
+      }
+    }
+
+    if (idx === mFiles.length - 1) {
+      files.unshift(newItem);
+      unsorted.push(newItem.meta.id);
+      document.body.classList.remove('loading');
+      renderList();
+    }
+  });
+
+}
+
 function joinAllUICall(event, pad) {
   if (files.length === 0) { return; }
   document.getElementById('loadingText').textContent = 'Processing';
@@ -545,10 +624,10 @@ const toggleCheck = (event, id) => {
   }
 };
 
-const changeChannel = (event, id, channel) => {
-  const el = getRowElementById(id).querySelector('.channel-option-' + channel);
+const changeChannel = (event, id, channel, allowModKey = true, tableId = '#masterList') => {
+  const el = getRowElementById(id, tableId).querySelector('.channel-option-' + channel);
   const file = getFileById(id);
-  if ((event.shiftKey || modifierKeys.shiftKey)) {
+  if ((event.shiftKey || modifierKeys.shiftKey) && allowModKey) {
     const opts = {
       L: 'audio from the Left channel',
       R: 'audio from the Right channel',
@@ -557,14 +636,29 @@ const changeChannel = (event, id, channel) => {
     };
     const confirmSetAllSelected = confirm(`Confirm setting all selected samples that are stereo to ${opts[channel]}?`);
     if (confirmSetAllSelected) {
-      files.filter(f => f.meta.checked).forEach(f => f.meta.channel = channel);
+      files.filter(f => f.meta.checked).forEach(f => {
+        f.meta.channel = channel;
+      });
+    }
+    if (!modifierKeys.shiftKey && document.body.classList.contains('shiftKey-down')) {
+      document.body.classList.remove('shiftKey-down');
     }
     return renderList();
   }
   file.meta.channel = channel;
   //file.waveform.getContext('2d').clear();
   //drawWaveform(file, file.waveform, file.buffer.numberOfChannels);
-  getRowElementById(id).querySelectorAll('.channel-options a').forEach(opt => opt.classList.remove('selected'));
+  getRowElementById(id, tableId).querySelectorAll('.channel-options a').forEach(opt => opt.classList.remove('selected'));
+  el.classList.add('selected');
+};
+
+const changePan = (event, id, pan) => {
+  const el = getRowElementById(id, '#mergeList').querySelector('.pan-option-' + pan);
+  const file = getFileById(id);
+  file.meta.pan = pan;
+  //file.waveform.getContext('2d').clear();
+  //drawWaveform(file, file.waveform, file.buffer.numberOfChannels);
+  getRowElementById(id, '#mergeList').querySelectorAll('.pan-options a').forEach(opt => opt.classList.remove('selected'));
   el.classList.add('selected');
 };
 
@@ -978,38 +1072,66 @@ const setCountValues = () => {
   } catch(e) {}
 };
 
-const renderList = () => {
-  listEl.innerHTML = files.map( f => `
+const buildRowMarkupFromFile = (f, type = 'main') => {
+  const rowTypes = {
+    main: {
+      head:`
       <tr class="file-row ${f.meta.checked ? 'checked' : ''}" data-id="${f.meta.id}"
-          onclick="digichain.handleRowClick(event, '${f.meta.id}')"
-          onmousedown="digichain.handleRowClick(event, '${f.meta.id}')"  
-          ondragstart="digichain.rowDragStart(event)" draggable="true">
+            onclick="digichain.handleRowClick(event, '${f.meta.id}')"
+            onmousedown="digichain.handleRowClick(event, '${f.meta.id}')"  
+            ondragstart="digichain.rowDragStart(event)" draggable="true">
+      `,
+      parts: ['dragHandle', 'toggle', 'moveUp', 'moveDown', 'waveform', 'filePath', 'duration',
+        'channelOptions', 'split', 'duplicate', 'edit', 'remove']
+      },
+    merge: {
+      head: `<tr class="file-row" data-id="${f.meta.id}">`,
+      parts: ['filePath', 'duration', 'channelOptionsAll', 'panningOptionsAll']
+    }
+  };
+  const cols = {
+    dragHandle: `
         <td>
             <i class="gg-more-vertical"></i>
         </td>
+    `,
+    toggle: `
         <td class="toggle-td">
             <button onclick="digichain.toggleCheck(event, '${f.meta.id}')" class="${f.meta.checked ? '' : 'button-outline'} check toggle-check">&nbsp;</button>
         </td>
+    `,
+    moveUp: `
         <td class="move-up-td">
             <button title="Move up in sample list." onclick="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
         </td>
+    `,
+    moveDown: `
         <td class="move-down-td">
             <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
         </td>
+    `,
+    waveform: `
         <td class="waveform-td">
             <canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id}"></canvas>
         </td>
+    `,
+    filePath: `
         <td class="file-path-td">
             <span class="file-path">${f.file.path}</span>
             <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true)">${getNiceFileName(f.file.name)}</a>
             ${f.meta.dupeOf ? ' d' : ''}
             ${f.meta.editOf ? ' e' : ''}
+            ${f.meta.isMerge ? ' m' : ''}
             ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
             <a class="wav-link-hidden" target="_blank"></a>
         </td>
+    `,
+    duration: `
         <td class="duration-td">
             <span>${f.meta.duration} s</span>
         </td>
+    `,
+    channelOptions: `
         <td class="channel-options-td">
             <div class="channel-options has-shift-mod" style="display: ${f.buffer.numberOfChannels > 1 && masterChannels === 1 ? 'block' : 'none'}">
             <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
@@ -1022,33 +1144,82 @@ const renderList = () => {
                 <i class="gg-shape-circle stereo-circle" style="display: ${f.buffer.numberOfChannels === 2 ? 'inline-block' : 'none'}"></i>
             </div>
         </td>
+    `,
+    split: `
         <td class="split-td">
             <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(f) ?'is-ot-file' : ''}"><i class="gg-menu-grid-r"></i></button>
         </td>
+    `,
+    duplicate: `
         <td class="duplicate-td">
             <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
         </td>
+    `,
+    edit: `
         <td class="toggle-edit-td">
             <button title="Edit" onclick="digichain.showEditPanel(event, '${f.meta.id}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
         </td>
+    `,
+    remove: `
         <td class="remove-td">
             <button title="Remove sample (double-click)." ondblclick="digichain.remove('${f.meta.id}')" class="button-clear remove"><i class="gg-trash"></i></button>
         </td>
-      </tr>
-    `).join('');
-  if (files.length === 0) {
-    listEl.innerHTML = '';
-  }
+    `,
+    channelOptionsAll: `
+        <td class="channel-options-td"">
+            <div class="channel-options" style="display: ${f.buffer.numberOfChannels > 1 ? 'block' : 'none'}">
+            <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L', false, '#mergeList')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
+            <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S', false, '#mergeList')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
+            <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R', false, '#mergeList')" class="${f.meta.channel === 'R' ? 'selected' : ''} channel-option-R">R</a>
+            <a title="Difference between Left and Right channels" onclick="digichain.changeChannel(event, '${f.meta.id}', 'D', false, '#mergeList')" class="${f.meta.channel === 'D' ? 'selected' : ''} channel-option-D">D</a>
+            </div>
+            <div class="channel-options channel-options-stereo" title="Mono sample" style="display: ${f.buffer.numberOfChannels === 1 ? 'block' : 'none'}">
+                <i class="gg-shape-circle"></i>
+            </div>
+        </td>
+    `,
+    panningOptionsAll: `
+        <td class="pan-options-td">
+            <div class="pan-options" style="display: block;">
+            <a title="Hard Left" onclick="digichain.changePan(event, '${f.meta.id}', 'L')" class="${f.meta.pan === 'L' ? 'selected' : ''} pan-option-L">L</a>
+            <a title="Centre" onclick="digichain.changePan(event, '${f.meta.id}', 'C')" class="${f.meta.pan === 'C' ? 'selected' : ''} pan-option-C">C</a>
+            <a title="Hard Right" onclick="digichain.changePan(event, '${f.meta.id}', 'R')" class="${f.meta.pan === 'R' ? 'selected' : ''} pan-option-R">R</a>
+            </div>
+        </td>
+    `,
+  };
+  return rowTypes[type].head + rowTypes[type].parts.map(
+      p => cols[p]
+  ).join('') + `</tr>`;
+};
 
+const drawEmptyWaveforms = (_files) => {
   document.querySelectorAll('.waveform').forEach((el, i) => {
-    if (files[i].waveform) {
-      el.replaceWith(files[i].waveform);
+    if (!_files[i]) { return ; }
+    if (_files[i].waveform) {
+      el.replaceWith(_files[i].waveform);
     } else {
-      drawWaveform(files[i], el, files[i].meta.channel);
-      files[i].waveform = el;
+      drawWaveform(_files[i], el, _files[i].meta.channel);
+      _files[i].waveform = el;
     }
   });
   setCountValues();
+};
+
+const renderRow = (item, type) => {
+  const rowData = item || getFileById(lastSelectedRow.dataset.id);
+  const rowEl = item ? getRowElementById(item.meta.id) : lastSelectedRow;
+  rowEl.innerHTML = buildRowMarkupFromFile(rowData, type);
+  drawEmptyWaveforms(files);
+  document.body.classList.remove('loading');
+};
+
+const renderList = () => {
+  listEl.innerHTML = files.map( f => buildRowMarkupFromFile(f)).join('');
+  if (files.length === 0) {
+    listEl.innerHTML = '';
+  }
+  drawEmptyWaveforms(files);
   document.body.classList.remove('loading');
 };
 const bytesToInt = (bh, bm, bl) => {
@@ -1454,10 +1625,13 @@ window.digichain = {
   changeAudioConfig,
   removeSelected,
   trimRightSelected,
-  mergeSelected,
+  reverseSelected,
+  showMergePanel,
   sort,
   renderList,
+  renderRow,
   joinAll: joinAllUICall,
+  performMergeUiCall,
   selectSliceAmount,
   showInfo,
   toggleCheck,
@@ -1467,6 +1641,7 @@ window.digichain = {
   downloadFile,
   downloadAll,
   changeChannel,
+  changePan,
   duplicate,
   remove,
   handleRowClick,

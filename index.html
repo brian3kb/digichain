@@ -74,6 +74,11 @@
   <div id="editorPanelContent"></div>
 </div>
 
+<div id="mergePanel" class="merge-panel-options pop-up">
+  <a class="float-right" onclick="document.getElementById('mergePanel').classList.remove('show'); digichain.renderList();"><i class="gg-close"></i></a>
+  <div id="mergePanelContent"></div>
+</div>
+
 <div class="pop-up-blind"></div>
 
 <div class="header-menu">
@@ -114,14 +119,15 @@
       </div>
       <div class="row">
         <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline check">TRS</button>&nbsp;
-        <button title="Merge/mix-down all selected" onclick="digichain.mergeSelected(event)" class="button-outline check">MRG</button>
+        <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline check">RVS</button>&nbsp;
+        <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)" class="button-outline check">MRG</button>
       </div>
     </div>
     <div class="column">
     </div>
     <div class="column-33 align-right right-buttons">
       <div class="download-buttons">
-        <button class="btn-download has-shift-mod" onclick="digichain.downloadAll(event)"><i class="gg-software-download"></i><span class="selection-count"> - </span></button>
+        <button title="Download all the selected samples converted to the current audio context as a zip file (with folder structure retained). Shift+click to get the files in a zip with their folders flattened into the file names." class="btn-download has-shift-mod" onclick="digichain.downloadAll(event)"><i class="gg-software-download"></i><span class="selection-count"> - </span></button>
         <button title="Download the selected samples joined. Shift+click will resample back to the list." class="btn-download has-shift-mod" onclick="digichain.joinAll(event)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined</button>
 
       </div>
@@ -141,7 +147,7 @@
   </div>
   <div class="row">
     <div class="column">
-      <table>
+      <table id="masterList">
         <thead>
         <tr>
           <th class="w-0"></th>

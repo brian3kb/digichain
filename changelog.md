@@ -10,6 +10,7 @@
  - Shift+Click Reset Button : Randomizes the order of the list.
  - Added 'Difference (Side)' stereo -> mono processing option.
  - Trim All Selected action.
+ - Reverse All Selected action.
  - Merge All Selected action - mixes down all the selected items into one sample.
 
 2023-04-07 1.3.1

@@ -264,9 +264,12 @@ function normalize(event, id) {
   item.waveform = false;
 }
 
-function reverse(event, id) {
-  const item = editing;
-
+function reverse(event, item, renderEditPanel = true) {
+  if (!renderEditPanel && item) {
+    selection.start = 0;
+    selection.end = item.buffer.length;
+  }
+  item = item || editing;
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel).slice(selection.start, selection.end).reverse();
     let dataCount = 0;
@@ -275,7 +278,9 @@ function reverse(event, id) {
       dataCount++;
     }
   }
-  renderEditPanelWaveform(multiplier);
+  if (renderEditPanel) {
+    renderEditPanelWaveform(multiplier);
+  }
   item.waveform = false;
 }
 

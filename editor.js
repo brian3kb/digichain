@@ -51,12 +51,15 @@ export function renderEditor(item) {
   </div>
   <div class="sample-op-buttons">
   <button title="Normalize the volume of the sample." class="normalize button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
+  <button title="Reverses the sample playback" class="reverse button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>&nbsp;&nbsp;-&nbsp;
   <button title="Trims any zero valued audio from the end of the sample." class="trim-right button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
-  <button title="Reverses the sample playback" class="reverse button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>
   <button title="Half the speed of the sample" class="pitch button-outline" onclick="digichain.editor.perSamplePitch(event, .5)">Half-speed</button>
   <button title="Double the speed of the sample" class="pitch button-outline" onclick="digichain.editor.perSamplePitch(event, 2)">Double-speed</button>
   </div>
-  <span>Note: sample operations are destructive, applied immediately, no undo.</span>
+  <span>
+    Normalize & Reverse affect the selected part of the sample, Trim Right, Half-speed, Double-speed affect the whole sample.<br>
+    Note: sample operations are destructive, applied immediately, no undo.
+  </span>
 <!--  <button onclick="digichain.editWaveformAction(event, false, true)" class="float-right button-outline has-shift-mod" style="margin-top: 1rem;">Add to samples</button>-->
   `;
 
@@ -84,21 +87,27 @@ function renderEditPanelWaveform(multiplier = 1) {
   drawWaveform(editing, editPanelWaveformEl, editing.meta.channel, {
     width: waveformWidth, height: 128, multiplier
   });
-  //editPanelWaveformEl.addEventListener('click', (e)=> console.warn(e));
 }
 export function drawWaveform(file, el, channel, dimensions) {
   let drawData = [];
-  let drawResolution = Math.floor(file.buffer.length / 20);
+  let drawResolution = Math.floor(file.buffer.length / 32);
   if (conf.masterChannels === 2 && file.buffer.numberOfChannels > 1) { channel = 'S'; }
-  drawResolution = drawResolution > 4096 ? 4096: (drawResolution * (dimensions?.multiplier || 1));
+  if (file.buffer.length > 512) {
+    drawResolution = (drawResolution > 4096 ? 4096: drawResolution) * (((dimensions?.multiplier || 0) * 2) || 1);
+  } else {
+    drawResolution = file.buffer.length;
+  }
   for (let y = 0; y < file.buffer.length; y += Math.floor(file.buffer.length / drawResolution)) {
-    if (channel === 'S') {
-      drawData.push(
-          (file.buffer.getChannelData(0)[y] + file.buffer.getChannelData(1)[y]) / 2
-      );
-    } else  {
-      drawData.push(file.buffer.getChannelData((channel === 'R' ? 1 : 0))[y]);
-    }
+    // if (channel === 'S') {
+    //   drawData.push(
+    //       (file.buffer.getChannelData(0)[y] + file.buffer.getChannelData(1)[y]) / 2
+    //   );
+    // } else {
+    //   drawData.push(file.buffer.getChannelData((channel === 'R' ? 1 : 0))[y]);
+    // }
+    drawData.push(
+        (file.buffer.getChannelData(0)[y] + file.buffer.getChannelData(file.buffer.numberOfChannels - 1)[y]) / 2
+    );
   }
   draw(drawData, file.meta.id, el, dimensions);
 }
@@ -219,6 +228,10 @@ function changeSelectionPoint(event, shiftKey = false) {
 
 function perSamplePitch(event, pitchValue, id) {
   const item = editing;
+
+  if (item.buffer.length < 1024 && pitchValue > 1) {
+    return alert('Sample too small to be pitched up further.');
+  }
 
   const pitchedWav = audioBufferToWav(item.buffer, item.meta, (conf.masterSR * pitchValue), conf.masterBitDepth, item.buffer.numberOfChannels);
   const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {

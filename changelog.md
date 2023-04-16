@@ -13,6 +13,7 @@
  - Reverse All Selected action.
  - Merge All Selected action - mixes down all the selected items into one sample.
  - Enabled 32bit float wav exports.
+ - Prevent pitch-up crashing when doubling a very small audio buffer.
 
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)

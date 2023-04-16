@@ -420,6 +420,9 @@ function showMergePanel() {
     f.meta.pan = f.meta.pan || 'C';
     return f;
   });
+  if (mergeFiles.length < 2) {
+    return alert('Merge requires more than one file to be selected.');
+  }
 
   mergePanelContentEl.innerHTML = `
      <div class="row">
@@ -1097,49 +1100,27 @@ const setCountValues = () => {
 };
 
 const buildRowMarkupFromFile = (f, type = 'main') => {
-  const rowTypes = {
-    main: {
-      head:`
+  return type === 'main' ?
+      `
       <tr class="file-row ${f.meta.checked ? 'checked' : ''}" data-id="${f.meta.id}"
             onclick="digichain.handleRowClick(event, '${f.meta.id}')"
             onmousedown="digichain.handleRowClick(event, '${f.meta.id}')"  
             ondragstart="digichain.rowDragStart(event)" draggable="true">
-      `,
-      parts: ['dragHandle', 'toggle', 'moveUp', 'moveDown', 'waveform', 'filePath', 'duration',
-        'channelOptions', 'split', 'duplicate', 'edit', 'remove']
-      },
-    merge: {
-      head: `<tr class="file-row" data-id="${f.meta.id}">`,
-      parts: ['filePath', 'duration', 'channelOptionsAll', 'panningOptionsAll']
-    }
-  };
-  const cols = {
-    dragHandle: `
         <td>
             <i class="gg-more-vertical"></i>
         </td>
-    `,
-    toggle: `
         <td class="toggle-td">
             <button onclick="digichain.toggleCheck(event, '${f.meta.id}')" class="${f.meta.checked ? '' : 'button-outline'} check toggle-check">&nbsp;</button>
         </td>
-    `,
-    moveUp: `
         <td class="move-up-td">
             <button title="Move up in sample list." onclick="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
         </td>
-    `,
-    moveDown: `
         <td class="move-down-td">
             <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
         </td>
-    `,
-    waveform: `
         <td class="waveform-td">
             <canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id}"></canvas>
         </td>
-    `,
-    filePath: `
         <td class="file-path-td">
             <span class="file-path">${f.file.path}</span>
             <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true)">${getNiceFileName(f.file.name)}</a>
@@ -1149,13 +1130,9 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
             ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
             <a class="wav-link-hidden" target="_blank"></a>
         </td>
-    `,
-    duration: `
         <td class="duration-td">
             <span>${f.meta.duration} s</span>
         </td>
-    `,
-    channelOptions: `
         <td class="channel-options-td">
             <div class="channel-options has-shift-mod" style="display: ${f.buffer.numberOfChannels > 1 && masterChannels === 1 ? 'block' : 'none'}">
             <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
@@ -1168,53 +1145,52 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
                 <i class="gg-shape-circle stereo-circle" style="display: ${f.buffer.numberOfChannels === 2 ? 'inline-block' : 'none'}"></i>
             </div>
         </td>
-    `,
-    split: `
         <td class="split-td">
             <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(f) ?'is-ot-file' : ''}"><i class="gg-menu-grid-r"></i></button>
         </td>
-    `,
-    duplicate: `
         <td class="duplicate-td">
             <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
         </td>
-    `,
-    edit: `
         <td class="toggle-edit-td">
             <button title="Edit" onclick="digichain.showEditPanel(event, '${f.meta.id}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
         </td>
-    `,
-    remove: `
         <td class="remove-td">
             <button title="Remove sample (double-click)." ondblclick="digichain.remove('${f.meta.id}')" class="button-clear remove"><i class="gg-trash"></i></button>
         </td>
-    `,
-    channelOptionsAll: `
-        <td class="channel-options-td"">
-            <div class="channel-options" style="display: ${f.buffer.numberOfChannels > 1 ? 'block' : 'none'}">
-            <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L', false, '#mergeList')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
-            <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S', false, '#mergeList')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
-            <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R', false, '#mergeList')" class="${f.meta.channel === 'R' ? 'selected' : ''} channel-option-R">R</a>
-            <a title="Difference between Left and Right channels" onclick="digichain.changeChannel(event, '${f.meta.id}', 'D', false, '#mergeList')" class="${f.meta.channel === 'D' ? 'selected' : ''} channel-option-D">D</a>
-            </div>
-            <div class="channel-options channel-options-stereo" title="Mono sample" style="display: ${f.buffer.numberOfChannels === 1 ? 'block' : 'none'}">
-                <i class="gg-shape-circle"></i>
-            </div>
-        </td>
-    `,
-    panningOptionsAll: `
-        <td class="pan-options-td">
-            <div class="pan-options" style="display: block;">
-            <a title="Hard Left" onclick="digichain.changePan(event, '${f.meta.id}', 'L')" class="${f.meta.pan === 'L' ? 'selected' : ''} pan-option-L">L</a>
-            <a title="Centre" onclick="digichain.changePan(event, '${f.meta.id}', 'C')" class="${f.meta.pan === 'C' ? 'selected' : ''} pan-option-C">C</a>
-            <a title="Hard Right" onclick="digichain.changePan(event, '${f.meta.id}', 'R')" class="${f.meta.pan === 'R' ? 'selected' : ''} pan-option-R">R</a>
-            </div>
-        </td>
-    `,
-  };
-  return rowTypes[type].head + rowTypes[type].parts.map(
-      p => cols[p]
-  ).join('') + `</tr>`;
+      </tr>` :
+      `
+  <tr class="file-row" data-id="${f.meta.id}">
+    <td class="file-path-td">
+      <span class="file-path">${f.file.path}</span>
+      <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true)">${getNiceFileName(f.file.name)}</a>
+      ${f.meta.dupeOf ? ' d' : ''}
+      ${f.meta.editOf ? ' e' : ''}
+      ${f.meta.isMerge ? ' m' : ''}
+      ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
+      <a class="wav-link-hidden" target="_blank"></a>
+    </td>
+    <td class="duration-td">
+      <span>${f.meta.duration} s</span>
+    </td>
+    <td class="channel-options-td"">
+        <div class="channel-options" style="display: ${f.buffer.numberOfChannels > 1 ? 'block' : 'none'}">
+        <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L', false, '#mergeList')" class="${f.meta.channel === 'L' ? 'selected' : ''} channel-option-L">L</a>
+        <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S', false, '#mergeList')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
+        <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R', false, '#mergeList')" class="${f.meta.channel === 'R' ? 'selected' : ''} channel-option-R">R</a>
+        <a title="Difference between Left and Right channels" onclick="digichain.changeChannel(event, '${f.meta.id}', 'D', false, '#mergeList')" class="${f.meta.channel === 'D' ? 'selected' : ''} channel-option-D">D</a>
+        </div>
+        <div class="channel-options channel-options-stereo" title="Mono sample" style="display: ${f.buffer.numberOfChannels === 1 ? 'block' : 'none'}">
+            <i class="gg-shape-circle"></i>
+        </div>
+    </td>
+    <td class="pan-options-td">
+        <div class="pan-options" style="display: block;">
+        <a title="Hard Left" onclick="digichain.changePan(event, '${f.meta.id}', 'L')" class="${f.meta.pan === 'L' ? 'selected' : ''} pan-option-L">L</a>
+        <a title="Centre" onclick="digichain.changePan(event, '${f.meta.id}', 'C')" class="${f.meta.pan === 'C' ? 'selected' : ''} pan-option-C">C</a>
+        <a title="Hard Right" onclick="digichain.changePan(event, '${f.meta.id}', 'R')" class="${f.meta.pan === 'R' ? 'selected' : ''} pan-option-R">R</a>
+        </div>
+    </td>
+  </tr>`;
 };
 
 const drawEmptyWaveforms = (_files) => {
@@ -1243,8 +1219,8 @@ const renderList = () => {
   if (files.length === 0) {
     listEl.innerHTML = '';
   }
-  drawEmptyWaveforms(files);
   document.body.classList.remove('loading');
+  drawEmptyWaveforms(files);
 };
 const bytesToInt = (bh, bm, bl) => {
   return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);

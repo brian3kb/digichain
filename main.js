@@ -1,4 +1,4 @@
-import { Resampler, audioBufferToWav } from './resources.js';
+import {Resampler, audioBufferToWav} from './resources.js';
 import {
   editor,
   showEditor,
@@ -1273,6 +1273,179 @@ const parseOt = (fd, file, fullPath) => {
     return { uuid, failed: true };
   }
 };
+const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
+  const uuid = file.uuid || crypto.randomUUID();
+  let result;
+  try {
+    let start = 0;
+    let end = 0x18;
+    let dv = new DataView(arrayBuffer.slice(start, end));
+    const form = {
+      id: String.fromCharCode(dv.getUint8(0), dv.getUint8(1),
+          dv.getUint8(2), dv.getUint8(3)),
+      fileSize: dv.getUint32(4),
+      type: String.fromCharCode(dv.getUint8(8),
+          dv.getUint8(9), dv.getUint8(10), dv.getUint8(11)),
+    };
+    start = form.type === 'AIFC' ? end : 0xC;
+    end = form.type === 'AIFC' ? 0x68 : 0x2E;
+    dv = new DataView(arrayBuffer.slice(start, end));
+    const comm = {
+      id: String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3)),
+      size: dv.getUint32(4),
+      channels: dv.getUint16(8),
+      frames: dv.getUint32(10),
+      bitDepth: dv.getUint16(14),
+      sampleRate: dv.getUint16(16) + dv.getUint16(21)
+    };
+    start = end;
+    end = start + comm.size;
+    dv = new DataView(arrayBuffer.slice(start, end));
+    const endLength = dv.byteLength;
+    const chunks = {
+      form,
+      comm
+    };
+    for (let offset = 0; offset < endLength;) {
+      const nextChunk = {
+        id: String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3)),
+        size: dv.getUint16(4)
+      };
+      if (nextChunk.id === 'op-1') {
+        const utf8Decoder = new TextDecoder('utf-8');
+        let jsonString = utf8Decoder.decode(arrayBuffer.slice(start + 4, 0x106C));
+        if (jsonString.includes(' SSND')) {
+          jsonString = utf8Decoder.decode(arrayBuffer.slice(start + 4, 0x46C));
+          start = 0x46C;
+        } else {
+          start = 0x106C;
+        }
+
+        // const dv2 = new DataView(arrayBuffer);
+        //   for (let i = 0; dv2.byteLength; i++) {
+        //     const code = String.fromCharCode(dv2.getUint8(i), dv2.getUint8(i+1), dv2.getUint8(i+2), dv2.getUint8(i+3))
+        //     if (code === 'SSND') {
+        //       console.log(code, i);
+        //       jsonString = utf8Decoder.decode(arrayBuffer.slice(start + 4, i));
+        //       start = i;
+        //     }
+        //   }
+
+        nextChunk.data = JSON.parse(jsonString.trimEnd());
+        chunks.json = nextChunk;
+        end = arrayBuffer.byteLength;
+        chunks.bufferDv = new DataView(arrayBuffer.slice(start));
+        chunks.buffer = arrayBuffer.slice(start);
+        break;
+      } else {
+        chunks[nextChunk.id] = nextChunk;
+        offset += nextChunk.size;
+        start = end;
+        end = start + nextChunk.size;
+        if (offset <= arrayBuffer.byteLength) {
+          dv = new DataView(arrayBuffer.slice(start, end));
+        }
+      }
+
+    }
+
+    if (!chunks.json) {
+      // Not an OP-1 aif, which is the only type of aif file supported.
+      return { uuid, failed: true };
+    }
+
+    const offset = 4; // The offset of the first byte of audio data
+    const bytesPerSample = chunks.comm.bitDepth / 8;
+    const channels = [];
+    for (let i = 0; i < chunks.comm.channels; i++) {
+      channels.push(new Float32Array(chunks.comm.frames));
+    }
+
+    for (let i = 0; i < chunks.comm.channels; i++) {
+      let channel = channels[i];
+      for (let j = 0; j < chunks.comm.frames; j++) {
+        let index = offset;
+        index += (j * chunks.comm.channels + i) * bytesPerSample;
+        // Sample
+        let value = chunks.bufferDv.getInt16(index, true);
+        // Scale range from 0 to 2**bitDepth -> -2**(bitDepth-1) to
+        // 2**(bitDepth-1)
+        let range = 1 << chunks.comm.bitDepth - 1;
+        if (value >= range) {
+          value |= ~(range - 1);
+        }
+        // Scale range to -1 to 1
+        channel[j] = value / range;
+        if (j === 0) {
+          channel[j] = 0;
+        }
+      }
+    }
+    
+    const resample = new Resampler(44100, masterSR, 1,
+       channels[0]);
+    let resampleR;
+    resample.resampler(resample.inputBuffer.length);
+
+    if (chunks.comm.channels === 2) {
+      resampleR = new Resampler(44100, masterSR, 1,
+          channels[1]);
+      resampleR.resampler(resampleR.inputBuffer.length);
+    }
+
+
+    const audioArrayBuffer = audioCtx.createBuffer(
+        chunks.comm.channels,
+        resample.outputBuffer.length,
+        masterSR
+    );
+    if (chunks.comm.channels === 2) {
+      for (let i = 0; i < resample.outputBuffer.length; i++) {
+        audioArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
+        audioArrayBuffer.getChannelData(1)[i] = resampleR.outputBuffer[i];
+      }
+    } else {
+      for (let i = 0; i < resample.outputBuffer.length; i++) {
+        audioArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
+      }
+    }
+    console.warn(chunks.json.data);
+
+    /*Update the slice points to masterSR*/
+    if (chunks.json.data.start) {
+      chunks.json.data.start = chunks.json.data.start.map(s => Math.floor((s / 44100) * masterSR));
+    }
+    if (chunks.json.data.end) {
+      chunks.json.data.end = chunks.json.data.end.map(s => Math.floor((s / 44100) * masterSR));
+    }
+
+    console.warn(chunks.json.data);
+
+    files[pushToTop ? 'unshift' : 'push']({
+      file: {
+        lastModified: file.lastModified,
+        name: file.name,
+        path: fullPath.replace(file.name, ''),
+        size: file.size,
+        type: file.type
+      },
+      buffer: audioArrayBuffer, meta: {
+        length: audioArrayBuffer.length,
+        duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
+        startFrame: 0, endFrame: audioArrayBuffer.length,
+        op1Json: chunks.json.data,
+        channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
+        checked: true, id: uuid
+      }
+    });
+    unsorted.push(uuid);
+    return uuid;
+  } catch(err) {
+    console.warn(err);
+    return { uuid, failed: true };
+  }
+};
+
 const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
   const uuid = file.uuid || crypto.randomUUID();
   try {
@@ -1386,7 +1559,7 @@ const consumeFileInput = (inputFiles) => {
   document.getElementById('loadingText').textContent = 'Loading samples';
   document.body.classList.add('loading');
   const _files = [...inputFiles].filter(
-      f => ['syx', 'wav', 'flac'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
+      f => ['syx', 'wav', 'flac', 'aif'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
   );
   const _mFiles = [...inputFiles].filter(
       f => ['ot'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
@@ -1428,13 +1601,15 @@ const consumeFileInput = (inputFiles) => {
     reader.onload = function(e) {
       file.uuid = crypto.randomUUID();
       file.fullPath = file.fullPath || '';
-      if (file.name.toLowerCase().endsWith('.syx')) {
+      if (file.name.toLowerCase().endsWith('.syx') || file.name.toLowerCase().endsWith('.aif')) {
         // binary data
         const buffer = e.target.result;
         const bufferByteLength = buffer.byteLength;
         const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
         count.push(file.uuid);
-        let result = parseSds(bufferUint8Array, file, file.fullPath);
+        let result = file.name.toLowerCase().endsWith('.aif') ?
+            parseAif(buffer, bufferUint8Array, file, file.fullPath):
+            parseSds(bufferUint8Array, file, file.fullPath);
         if (result.failed) {
           count.splice(count.findIndex(c => c === result.uuid ),1);
         }

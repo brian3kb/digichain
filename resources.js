@@ -1,6 +1,7 @@
-export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels) {
+export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, pitchModifier = 1) {
   let numChannels = buffer.numberOfChannels;
   let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
+  sampleRate = sampleRate * pitchModifier;
 
   let result;
   if (meta.channel && masterNumChannels === 1) {
@@ -26,7 +27,7 @@ export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumCh
       result = buffer.getChannelData(0);
     }
   }
-  return encodeWAV(result, format, sampleRate, numChannels, bitDepth);
+  return encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier);
 }
 
 DataView.prototype.setInt24 = function(pos, val, littleEndian) {
@@ -34,11 +35,24 @@ DataView.prototype.setInt24 = function(pos, val, littleEndian) {
   this.setInt16(pos + 1, val >> 8, littleEndian);
 }
 
-export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth) {
-  var bytesPerSample = bitDepth / 8;
-  var blockAlign = numChannels * bytesPerSample;
+export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, slices, pitchModifier = 1) {
+  let bytesPerSample = bitDepth / 8;
+  let blockAlign = numChannels * bytesPerSample;
+  let sliceData;
+  let buffer;
 
-  var buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+  if (slices && slices.length !== 0) {
+    let _slices = pitchModifier === 1 ? slices : slices.map(slice => ({
+      n: slice.n, s: Math.round(slice.s / pitchModifier),
+      e: Math.round(slice.e / pitchModifier)
+    }));
+    sliceData = `{"sr": ${sampleRate}, "dcs":` + JSON.stringify(_slices) + '}';
+    sliceData = sliceData.padEnd(sliceData.length + sliceData.length%4, ' ');
+    buffer = new ArrayBuffer(44 + (sliceData.length + 8) + samples.length * bytesPerSample);
+  } else {
+    buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+  }
+
   var view = new DataView(buffer);
 
   /* RIFF identifier */
@@ -74,6 +88,12 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth) {
   } else {
     writeFloat32(view, 44, samples);
   }
+  if (slices && slices.length !== 0) {
+    writeString(view, view.byteLength - (sliceData.length + 8), 'DCSD');
+    view.setUint32(view.byteLength - (sliceData.length + 4), sliceData.length);
+    writeString(view, view.byteLength - sliceData.length, sliceData);
+  }
+
   return buffer;
 }
 

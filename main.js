@@ -28,8 +28,9 @@ const audioConfigOptions = {
 let masterSR = 48000;
 let masterBitDepth = 16;
 let masterChannels = 1;
-let pitchModifier = 1;
-let zipDownloads = true;
+let pitchModifier = JSON.parse(localStorage.getItem('pitchModifier'))?? 1;
+let zipDownloads = JSON.parse(localStorage.getItem('zipDownloads'))?? true;
+let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData'))?? true;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
 let unsorted = [];
@@ -37,6 +38,7 @@ let metaFiles = [];
 let mergeFiles = [];
 let lastSort = '';
 let lastSelectedRow;
+let lastSliceFileImport = []; // [].enabledTracks = {t[x]: boolean}
 let workBuffer;
 let sliceGrid = 0;
 let sliceOptions = Array.from(DefaultSliceOptions);
@@ -51,7 +53,39 @@ metaFiles.getByFileName = function(filename) {
 };
 metaFiles.getByFile = function(file) {
   if (file.meta.slicedFrom) { return false; }
-  return this.find(m =>m.name.replace(/\.[^.]*$/,'') === file.file.name.replace(/\.[^.]*$/,''));
+  const found = this.find(m =>m.name.replace(/\.[^.]*$/,'') === file.file.name.replace(/\.[^.]*$/,''));
+  if (found) { return found; }
+  if (file.meta.op1Json && file.meta.op1Json.start) {
+    return {
+      uuid: file.meta.uuid,
+      name: file.file.name,
+      path: file.file.path,
+      cssClass: 'is-op-file',
+      sliceCount: file.meta.op1Json.start.length,
+      slices: file.meta.op1Json.start.map(
+          (s, i) => ({
+            startPoint: s,
+            endPoint: file.meta.op1Json.end[i]
+          })
+      )
+    };
+  }
+  if (file.meta.slices) {
+    return {
+      uuid: file.meta.uuid,
+      name: file.file.name,
+      path: file.file.path,
+      cssClass: 'is-dc-file',
+      sliceCount: file.meta.slices.length,
+      slices: file.meta.slices.map(
+          slice => ({
+            startPoint: slice.s,
+            endPoint: slice.e,
+            name: slice.n
+          })
+      )
+    };
+  }
 };
 metaFiles.removeSelected = function() {
   files.forEach(f => {
@@ -100,7 +134,7 @@ const toggleModifier = (key) => {
 };
 
 const closePopUps = () => {
-  return document.querySelectorAll('.pop-up').forEach(w => w.classList.remove('show'));
+  document.querySelectorAll('.pop-up').forEach(w => w.classList.remove('show'));
   renderList();
 };
 
@@ -133,7 +167,7 @@ const showEditPanel = (event, id) => {
 async function setWavLink(file, linkEl) {
   const fileName = getNiceFileName('', file, false, true);
   let wav = audioBufferToWav(
-      file.buffer, file.meta, (masterSR * pitchModifier), masterBitDepth, masterChannels
+      file.buffer, file.meta, masterSR, masterBitDepth, masterChannels, pitchModifier
   );
   let blob = new window.Blob([new DataView(wav)], {
     type: 'audio/wav',
@@ -142,8 +176,13 @@ async function setWavLink(file, linkEl) {
     let linkedFile = await fetch(URL.createObjectURL(blob));
     let arrBuffer = await linkedFile.arrayBuffer();
     let pitchedBuffer = await audioCtx.decodeAudioData(arrBuffer);
+    let meta = {...file.meta};
+    meta.slices = meta.slices.map(slice => ({
+      n: slice.n, s: Math.round(slice.s / pitchModifier),
+      e: Math.round(slice.e / pitchModifier)
+    }));
     wav = audioBufferToWav(
-        pitchedBuffer, file.meta, masterSR, masterBitDepth, masterChannels
+        pitchedBuffer, meta, masterSR, masterBitDepth, masterChannels
     );
     blob = new window.Blob([new DataView(wav)], {
       type: 'audio/wav',
@@ -281,7 +320,7 @@ function showInfo() {
   document.querySelector('.info-panel-md').classList.add('show');
 }
 
-function pitchExports(value) {
+function pitchExports(value, silent) {
   const octaves = {
     2: 1,
     4: 2,
@@ -289,14 +328,23 @@ function pitchExports(value) {
   };
   if ([.25,.5,1,2,4,8].includes(+value)) {
     pitchModifier = +value;
+    localStorage.setItem('pitchModifier', pitchModifier);
     infoEl.textContent = pitchModifier === 1 ? '' : `All exported samples will be pitched up ${octaves[pitchModifier]} octave${pitchModifier > 2 ? 's' : ''}`;
+    if (silent) { return ; }
     showExportSettingsPanel();
   }
+  return value;
 }
 
 function toggleSetting(param) {
   if (param === 'zipDl' ) {
     zipDownloads = !zipDownloads;
+    localStorage.setItem('zipDownloads', zipDownloads);
+    showExportSettingsPanel();
+  }
+  if (param === 'embedSliceData') {
+    embedSliceData = !embedSliceData;
+    localStorage.setItem('embedSliceData', embedSliceData);
     showExportSettingsPanel();
   }
 }
@@ -324,8 +372,13 @@ function showExportSettingsPanel() {
 <td><span>Download multi-file/joined downloads as one zip file? &nbsp;&nbsp;&nbsp;</span></td>
 <td><button onclick="digichain.toggleSetting('zipDl')" class="check ${zipDownloads ? 'button' : 'button-outline'}">${ zipDownloads ? 'YES' : 'NO'}</button></td>
 </tr>
+<tr>
+<td><span>Embed slice information in exported wav files?<br>(Disable this if files cause an error loading for you.) &nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData ? 'button' : 'button-outline'}">${ embedSliceData ? 'YES' : 'NO'}</button></td>
+</tr>
 </tbody>
 </table>
+<span class="settings-info">All settings here will persist when the app re-opens.</span>
   `;
   document.querySelector('.export-settings-panel-md').classList.add('show');
 }
@@ -355,7 +408,7 @@ function getMonoFloat32ArrayFromBuffer(buffer, channel, getAudioBuffer = false) 
   return result;
 }
 
-function joinToMono(audioArrayBuffer, _files, totalLength, largest, pad) {
+function joinToMono(audioArrayBuffer, _files, largest, pad) {
   let totalWrite = 0;
   _files.forEach((file, idx) => {
     const bufferLength = pad ? largest : file.buffer.length;
@@ -369,7 +422,7 @@ function joinToMono(audioArrayBuffer, _files, totalLength, largest, pad) {
   });
 }
 
-function joinToStereo(audioArrayBuffer, _files, totalLength, largest, pad) {
+function joinToStereo(audioArrayBuffer, _files, largest, pad) {
   let totalWrite = 0;
   _files.forEach((file, idx) => {
     const bufferLength = pad ? largest : file.buffer.length;
@@ -442,8 +495,8 @@ function showMergePanel() {
      </table>
    </div>
   </div>
-  <button class="float-left" onclick="digichain.performMergeUiCall()">Merge Files</button>
   <span class="merge-info">Merging flattens each source sample to mono based on the mixdown choice and pans that mono file hard left/right or centers. If you want to retain a stereo files stereo field in the merge, duplicate it first and choose its L/R mix.</span>
+  <button class="float-right" onclick="digichain.performMergeUiCall()">Merge Files</button>
   `;
   mergePanelEl.classList.add('show');
 }
@@ -519,6 +572,7 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
   if (zipDownloads && !toInternal) { zip = zip || new JSZip(); }
   let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(f => f.meta.checked);
   let tempFiles = _files.splice(0, (sliceGrid > 0 ? sliceGrid : _files.length));
+  let slices;
   filesRemaining = Array.from(_files);
   _files = tempFiles;
   if (pad && sliceGrid !== 0 && _files.length !== 0) {
@@ -531,6 +585,22 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
     total +=  pad ? largest : file.buffer.length;
     return total;
   }, 0);
+  if (embedSliceData) {
+    slices = [];
+    let offset = 0;
+    for (let x = 0; x < _files.length; x++) {
+      if (_files[x].meta.slices) {
+        slices = [...slices, ..._files[x].meta.slices];
+        offset += _files[x].buffer.length;
+      } else {
+        slices.push({
+          s: offset,
+          e: offset += (pad ? largest : _files[x].buffer.length),
+          n: _files[x].file.name
+        });
+      }
+    }
+  }
 
   const audioArrayBuffer = audioCtx.createBuffer(
       masterChannels,
@@ -538,8 +608,8 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
       masterSR
   );
 
-  if (masterChannels === 1) { joinToMono(audioArrayBuffer, _files, totalLength, largest, pad); }
-  if (masterChannels === 2) { joinToStereo(audioArrayBuffer, _files, totalLength, largest, pad); }
+  if (masterChannels === 1) { joinToMono(audioArrayBuffer, _files, largest, pad); }
+  if (masterChannels === 2) { joinToStereo(audioArrayBuffer, _files, largest, pad); }
 
   const joinedEl = document.getElementById('getJoined');
   const path = _files[0].file.path ? `${(_files[0].file.path || '').replace(/\//gi, '-')}` : '';
@@ -547,7 +617,7 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
     name: _files.length === 1 ?
         `${path}joined_${pad ? 'spaced_' : ''}${getNiceFileName('', _files[0], true)}_${fileCount+1}--[${_files.length}].wav` :
         `${path}joined_${pad ? 'spaced_' : ''}${fileCount+1}--[${_files.length}].wav`
-    }, buffer: audioArrayBuffer, meta: {}};
+    }, buffer: audioArrayBuffer, meta: { slices }};
   if (toInternal) {
 
       const blob = await setWavLink(fileData, joinedEl);
@@ -556,8 +626,9 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
       fileReader.fileCount = fileCount;
 
       fileReader.onload = (e) => {
+        const fb = e.target.result.slice(0);
         audioCtx.decodeAudioData(e.target.result, function(buffer) {
-          parseWav(buffer, {
+          parseWav(buffer, fb, {
             lastModified: new Date().getTime(),
             name: _files.length === 1 ?
                 `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('', _files[0], true)}_${fileReader.fileCount+1}--[${_files.length}].wav`:
@@ -772,6 +843,26 @@ const duplicate = (event, id, prepForEdit = false) => {
   renderList();
 };
 
+function splitFromFile(input) { //TODO: Put slices onto meta.customSlices in otMeta format. new fn on action buttons T1-T4
+  if (!input.target?.files?.length) { return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    if (!e.target.result) { return ; }
+    const json = JSON.parse(e.target.result);
+    if (!json.clips) { return ; }
+    lastSliceFileImport = json.clips.map(clip => ({
+      track: clip.ch + 1,
+      startPoint: clip.start,
+      endPoint: clip.stop
+    }));
+    lastSliceFileImport.enabledTracks = lastSliceFileImport.reduce(
+        (acc, val) => ({[`t${val.track}`]: true, ...acc}), {}
+    );
+    console.warn(lastSliceFileImport);
+  };
+  reader.readAsText(input.target.files[0]);
+}
+
 const splitByOtSlices = (event, id, pushInPlace = false, sliceSource = 'ot') => {
   const file = getFileById(id);
   const pushInPlaceItems = [];
@@ -796,6 +887,9 @@ const splitByOtSlices = (event, id, pushInPlace = false, sliceSource = 'ot') => 
     const uuid = crypto.randomUUID();
     slice.buffer = audioArrayBuffer;
     slice.file = {...file.file};
+    if (otMeta.slices[i].name) {
+      slice.file.name = otMeta.slices[i].name;
+    }
     slice.meta = {
       length: audioArrayBuffer.length,
       duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
@@ -1068,6 +1162,19 @@ const splitAction = (event, id, slices) => {
   fileNameEl.textContent = getNiceFileName('', item, true);
   sliceByOtButtonEl.style.display = otMeta ? 'inline-block' : 'none';
   sliceByOtButtonEl.textContent = otMeta ? `${otMeta.sliceCount}` : 'OT';
+  if (otMeta?.cssClass === 'is-op-file') {
+    sliceByOtButtonEl.classList.remove('is-ot-file');
+    sliceByOtButtonEl.classList.remove('is-dc-file');
+    sliceByOtButtonEl.classList.add('is-op-file');
+  } else if (otMeta?.cssClass === 'is-dc-file') {
+    sliceByOtButtonEl.classList.remove('is-ot-file');
+    sliceByOtButtonEl.classList.remove('is-op-file');
+    sliceByOtButtonEl.classList.add('is-dc-file');
+  } else {
+    sliceByOtButtonEl.classList.add('is-ot-file');
+    sliceByOtButtonEl.classList.remove('is-op-file');
+    sliceByOtButtonEl.classList.remove('is-dc-file');
+  }
   splitSizeAction(false,0);
   el.classList.add('show');
   drawWaveform(item, splitPanelWaveformEl, item.meta.channel, {
@@ -1146,7 +1253,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
             </div>
         </td>
         <td class="split-td">
-            <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(f) ?'is-ot-file' : ''}"><i class="gg-menu-grid-r"></i></button>
+            <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(f)?.cssClass}"><i class="gg-menu-grid-r"></i></button>
         </td>
         <td class="duplicate-td">
             <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
@@ -1264,6 +1371,7 @@ const parseOt = (fd, file, fullPath) => {
       uuid,
       name: file.name,
       path: fullPath,
+      cssClass: 'is-ot-file',
       sliceCount,
       slices
     });
@@ -1277,78 +1385,75 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
   const uuid = file.uuid || crypto.randomUUID();
   let result;
   try {
-    let start = 0;
-    let end = 0x18;
-    let dv = new DataView(arrayBuffer.slice(start, end));
-    const form = {
-      id: String.fromCharCode(dv.getUint8(0), dv.getUint8(1),
-          dv.getUint8(2), dv.getUint8(3)),
-      fileSize: dv.getUint32(4),
-      type: String.fromCharCode(dv.getUint8(8),
-          dv.getUint8(9), dv.getUint8(10), dv.getUint8(11)),
-    };
-    start = form.type === 'AIFC' ? end : 0xC;
-    end = form.type === 'AIFC' ? 0x68 : 0x2E;
-    dv = new DataView(arrayBuffer.slice(start, end));
-    const comm = {
-      id: String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3)),
-      size: dv.getUint32(4),
-      channels: dv.getUint16(8),
-      frames: dv.getUint32(10),
-      bitDepth: dv.getUint16(14),
-      sampleRate: dv.getUint16(16) + dv.getUint16(21)
-    };
-    start = end;
-    end = start + comm.size;
-    dv = new DataView(arrayBuffer.slice(start, end));
-    const endLength = dv.byteLength;
-    const chunks = {
-      form,
-      comm
-    };
-    for (let offset = 0; offset < endLength;) {
-      const nextChunk = {
-        id: String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3)),
-        size: dv.getUint16(4)
-      };
-      if (nextChunk.id === 'op-1') {
-        const utf8Decoder = new TextDecoder('utf-8');
-        let jsonString = utf8Decoder.decode(arrayBuffer.slice(start + 4, 0x106C));
-        if (jsonString.includes(' SSND')) {
-          jsonString = utf8Decoder.decode(arrayBuffer.slice(start + 4, 0x46C));
-          start = 0x46C;
-        } else {
-          start = 0x106C;
-        }
+    let dv = new DataView(arrayBuffer);
+    let chunks = {};
+    let chunkKeys = ['FORM', 'COMM', 'op-1', 'SSND'];
 
-        // const dv2 = new DataView(arrayBuffer);
-        //   for (let i = 0; dv2.byteLength; i++) {
-        //     const code = String.fromCharCode(dv2.getUint8(i), dv2.getUint8(i+1), dv2.getUint8(i+2), dv2.getUint8(i+3))
-        //     if (code === 'SSND') {
-        //       console.log(code, i);
-        //       jsonString = utf8Decoder.decode(arrayBuffer.slice(start + 4, i));
-        //       start = i;
-        //     }
-        //   }
-
-        nextChunk.data = JSON.parse(jsonString.trimEnd());
-        chunks.json = nextChunk;
-        end = arrayBuffer.byteLength;
-        chunks.bufferDv = new DataView(arrayBuffer.slice(start));
-        chunks.buffer = arrayBuffer.slice(start);
-        break;
-      } else {
-        chunks[nextChunk.id] = nextChunk;
-        offset += nextChunk.size;
-        start = end;
-        end = start + nextChunk.size;
-        if (offset <= arrayBuffer.byteLength) {
-          dv = new DataView(arrayBuffer.slice(start, end));
-        }
+    const getChunkData = (code, offset) => {
+      switch (code) {
+        case 'FORM':
+          chunks.form = {
+            offset,
+            id: String.fromCharCode(dv.getUint8(offset),
+                dv.getUint8(offset + 1),
+                dv.getUint8(offset + 2), dv.getUint8(offset + 3)),
+            fileSize: dv.getUint32(offset + 4),
+            type: String.fromCharCode(dv.getUint8(offset + 8),
+                dv.getUint8(offset + 9), dv.getUint8(offset + 10),
+                dv.getUint8(offset + 11)),
+          };
+          break;
+        case 'COMM':
+          chunks.comm = {
+            offset,
+            id: String.fromCharCode(dv.getUint8(offset),
+                dv.getUint8(offset + 1), dv.getUint8(offset + 2),
+                dv.getUint8(offset + 3)),
+            size: dv.getUint32(offset + 4),
+            channels: dv.getUint16(offset + 8),
+            frames: dv.getUint32(offset + 10),
+            bitDepth: dv.getUint16(offset + 14),
+            sampleRate: dv.getUint16(offset + 16) + dv.getUint16(offset + 21)
+          };
+          break;
+        case 'op-1':
+          const utf8Decoder = new TextDecoder('utf-8');
+          const dv2 = new DataView(arrayBuffer);
+          let ssndOffset;
+          for (let i = 0; i < dv.byteLength; i++) {
+            const code = String.fromCharCode(dv.getUint8(i), dv.getUint8(i + 1),
+                dv.getUint8(i + 2), dv.getUint8(i + 3));
+            if (code === 'SSND') {
+              ssndOffset = i;
+              break;
+            }
+          }
+          let jsonString = utf8Decoder.decode(
+              arrayBuffer.slice(offset + 4, ssndOffset));
+         let maxSize = chunks.form.type === 'AIFC' ?  44100*20 : 44100*12;
+         let scale = chunks.form.type === 'AIFC' ?  2434 : 4058;
+          chunks.json = {
+            id: String.fromCharCode(dv.getUint8(offset), dv.getUint8(offset+1), dv.getUint8(offset+2), dv.getUint8(offset+3)),
+            size: dv.getUint16(offset+4),
+            bytesInLength: maxSize * 2,
+            maxSize,
+            scale,
+            data: JSON.parse(jsonString.replace(/\]\}.*/gi, ']}').trimEnd())
+          };
+          break;
+        case 'SSND':
+          chunks.buffer = arrayBuffer.slice(offset + 4);
+          chunks.bufferDv = new DataView(chunks.buffer);
       }
+    };
 
+    for (let i = 0; i < dv.byteLength - 4; i++) {
+      const code = String.fromCharCode(dv.getUint8(i), dv.getUint8(i+1), dv.getUint8(i+2), dv.getUint8(i+3))
+      if (chunkKeys.includes(code)) {
+        getChunkData(code, i);
+        chunkKeys = chunkKeys.filter(k => k !== code);
+      }
     }
-
     if (!chunks.json) {
       // Not an OP-1 aif, which is the only type of aif file supported.
       return { uuid, failed: true };
@@ -1367,7 +1472,7 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
         let index = offset;
         index += (j * chunks.comm.channels + i) * bytesPerSample;
         // Sample
-        let value = chunks.bufferDv.getInt16(index, true);
+        let value = chunks.bufferDv.getInt16(index, chunks.form.type === 'AIFC');
         // Scale range from 0 to 2**bitDepth -> -2**(bitDepth-1) to
         // 2**(bitDepth-1)
         let range = 1 << chunks.comm.bitDepth - 1;
@@ -1393,7 +1498,6 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
       resampleR.resampler(resampleR.inputBuffer.length);
     }
 
-
     const audioArrayBuffer = audioCtx.createBuffer(
         chunks.comm.channels,
         resample.outputBuffer.length,
@@ -1409,17 +1513,41 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
         audioArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
       }
     }
-    console.warn(chunks.json.data);
+    const getRelPosition = (v, i) => {
+      //const cVal = Math.min(Math.max(v - 1, 0), chunks.json.maxSize);
+      //return Math.round((chunks.comm.frames * 44100) / chunks.json.bytesInLength * cVal * 2);
+      //return v / (chunks.json.bytesInLength / chunks.comm.frames);
+      return (v / chunks.json.scale) - (i*13);
+      //return rightRotate(v, i);
+    };
+
+    let INT_BITS = 16;
+    /*Function to left rotate n by d bits*/
+    function leftRotate(n, d) {
+      /* In n<<d, last d bits are 0. To
+       put first 3 bits of n at
+      last, do bitwise or of n<<d
+      with n >>(INT_BITS - d) */
+      return (n << d) | (n >> (INT_BITS - d));
+    }
+
+    /*Function to right rotate n by d bits*/
+    function rightRotate(n, d) {
+      /* In n>>d, first d bits are 0.
+      To put last 3 bits of at
+      first, do bitwise or of n>>d
+      with n <<(INT_BITS - d) */
+      return (n >> d) | (n << (INT_BITS - d));
+    }
+
 
     /*Update the slice points to masterSR*/
     if (chunks.json.data.start) {
-      chunks.json.data.start = chunks.json.data.start.map(s => Math.floor((s / 44100) * masterSR));
+      chunks.json.data.start = chunks.json.data.start.map((s, i) => Math.floor((getRelPosition(s, i) / 44100) * masterSR));
     }
     if (chunks.json.data.end) {
-      chunks.json.data.end = chunks.json.data.end.map(s => Math.floor((s / 44100) * masterSR));
+      chunks.json.data.end = chunks.json.data.end.map((s, i) => Math.floor((getRelPosition(s, i) / 44100) * masterSR));
     }
-
-    console.warn(chunks.json.data);
 
     files[pushToTop ? 'unshift' : 'push']({
       file: {
@@ -1435,7 +1563,8 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
         startFrame: 0, endFrame: audioArrayBuffer.length,
         op1Json: chunks.json.data,
         channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
-        checked: true, id: uuid
+        checked: true, id: uuid,
+        slices: false
       }
     });
     unsorted.push(uuid);
@@ -1503,7 +1632,8 @@ const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
         length: resample.outputBuffer.length, loopStart, loopEnd, loopType,
         duration: Number(resample.outputBuffer.length / masterSR).toFixed(3),
         startFrame: 0, endFrame: resample.outputBuffer.length,
-        checked: true, id: uuid
+        checked: true, id: uuid,
+        slices: false
       }
     });
     unsorted.push(uuid);
@@ -1513,8 +1643,38 @@ const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
   }
 };
 
-const parseWav = (audioArrayBuffer, file, fullPath = '', pushToTop = false, checked = true) => {
+const parseWav = (audioArrayBuffer, arrayBuffer, file, fullPath = '', pushToTop = false, checked = true) => {
   const uuid = file.uuid || crypto.randomUUID();
+
+  let dv = new DataView(arrayBuffer);
+  let slices = false;
+  for (let i = 0; i < dv.byteLength - 4; i++) {
+    const code = String.fromCharCode(dv.getUint8(i), dv.getUint8(i+1), dv.getUint8(i+2), dv.getUint8(i+3));
+    if (code === 'data') {
+      const size = dv.getUint32(i + 4, true);
+      if (size && size < dv.byteLength) {
+        i = size - 8;
+      }
+    }
+    if (code === 'DCSD') {
+      const size = dv.getUint32(i + 4);
+      const utf8Decoder = new TextDecoder('utf-8');
+      let jsonString = utf8Decoder.decode(
+          arrayBuffer.slice(i + 8, i + 8 + size));
+      try {
+        const json = JSON.parse(jsonString.trimEnd());
+        if (json.sr !== masterSR) {
+          slices = json.dcs.map(slice => ({
+            s: Math.round((slice.s / json.sr) * masterSR),
+            e: Math.round((slice.e / json.sr) * masterSR),
+            n: slice.n
+          }));
+        } else {
+          slices = json.dcs;
+        }
+      } catch(e) {}
+      }
+    }
   try {
     /*duration, length, numberOfChannels, sampleRate*/
     files[pushToTop ? 'unshift' : 'push']({
@@ -1530,7 +1690,8 @@ const parseWav = (audioArrayBuffer, file, fullPath = '', pushToTop = false, chec
         duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
         startFrame: 0, endFrame: audioArrayBuffer.length,
         checked: checked, id: uuid,
-        channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : ''
+        channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
+        slices: slices
       }
     });
     unsorted.push(uuid);
@@ -1601,9 +1762,9 @@ const consumeFileInput = (inputFiles) => {
     reader.onload = function(e) {
       file.uuid = crypto.randomUUID();
       file.fullPath = file.fullPath || '';
+      const buffer = e.target.result;
       if (file.name.toLowerCase().endsWith('.syx') || file.name.toLowerCase().endsWith('.aif')) {
         // binary data
-        const buffer = e.target.result;
         const bufferByteLength = buffer.byteLength;
         const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
         count.push(file.uuid);
@@ -1619,8 +1780,9 @@ const consumeFileInput = (inputFiles) => {
 
       if ((file.name.toLowerCase().endsWith('.wav') || file.type === 'audio/wav') || file.name.toLowerCase().endsWith('.flac')) {
         count.push(file.uuid);
-        audioCtx.decodeAudioData(e.target.result, data => {
-          let result = parseWav(data, file, file.fullPath);
+        const fb = buffer.slice(0);
+        audioCtx.decodeAudioData(buffer, data => {
+          let result = parseWav(data, fb, file, file.fullPath);
           if (result.failed) {
             count.splice(count.findIndex(c => c === result.uuid ),1);
           }
@@ -1658,7 +1820,8 @@ document.body.addEventListener(
             let linkedFile = await fetch(link);
             if (!linkedFile.url.includes('.wav')) { return ; } // probably not a wav file
             let buffer = await linkedFile.arrayBuffer();
-            await audioCtx.decodeAudioData(buffer, data => parseWav(data, {
+            const fb = buffer.slice(0);
+            await audioCtx.decodeAudioData(buffer, data => parseWav(data, fb, {
               lastModified: new Date().getTime(), name: linkedFile.url.split('/').reverse()[0],
               size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) / 8) * buffer.numberOfChannels /1024,
               type: 'audio/wav'
@@ -1794,6 +1957,8 @@ setEditorConf({
   masterBitDepth
 });
 
+pitchExports(pitchModifier, true);
+
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {
   sliceOptions,
@@ -1824,6 +1989,7 @@ window.digichain = {
   rowDragStart,
   splitAction,
   splitEvenly,
+  splitFromFile,
   splitSizeAction,
   toggleModifier,
   toggleOptionsPanel,

@@ -56,7 +56,7 @@ export function renderEditor(item) {
   <button title="Half the speed of the sample" class="pitch button-outline" onclick="digichain.editor.perSamplePitch(event, .5)">Half-speed</button>
   <button title="Double the speed of the sample" class="pitch button-outline" onclick="digichain.editor.perSamplePitch(event, 2)">Double-speed</button>
   </div>
-  <span>
+  <span class="edit-info">
     Normalize & Reverse affect the selected part of the sample, Trim Right, Half-speed, Double-speed affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo.
   </span>
@@ -115,7 +115,7 @@ export function drawWaveform(file, el, channel, dimensions) {
 export function getNiceFileName(name, file, excludeExtension, includePath) {
   let fname = file ? `${file.file.name.replace(/\.[^.]*$/,'')}${file.meta?.dupeOf ? '-d' : ''}${file.meta?.sliceNumber ? '-s' + file.meta.sliceNumber : ''}.wav`:
       name.replace(
-          /\.syx$|\.wav$/, '');
+          /\.syx$|\.wav$|\.aif$|\.flac$/, '');
   fname = (includePath && file.file.path) ? `${file.file.path.replace(/\//gi, '-')}` + fname : fname;
   return excludeExtension ? fname.replace(/\.[^.]*$/,'') : fname;
 }
@@ -246,7 +246,11 @@ function perSamplePitch(event, pitchValue, id) {
         ...item.meta,
         length: buffer.length,
         duration: Number(buffer.length / conf.masterSR).toFixed(3),
-        startFrame: 0, endFrame: buffer.length
+        startFrame: 0, endFrame: buffer.length,
+        slices: item.meta.slices ? item.meta.slices.map(slice => ({
+          n: slice.n, s: Math.round(slice.s / pitchValue),
+          e: Math.round(slice.e / pitchValue)
+        })) : false
       };
       renderEditPanelWaveform(multiplier);
       selection.end = Math.round(selection.end / pitchValue);

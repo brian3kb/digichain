@@ -111,7 +111,7 @@ input { color: #a8a8a8; }
     margin-top: 0;
 }
 #getJoined, .wav-link-hidden, .hidden { visibility: hidden; }
-#getJoined, #uploadInput { display: none; }
+#getJoined, #uploadInput, #uploadSliceFile { display: none; }
 #fileNum { padding-left: 1rem; }
 table#masterList { padding-bottom: 12rem; padding-top: 1rem; }
 #fileList:empty::after {
@@ -198,7 +198,7 @@ td button { margin: 0.5rem; }
     width: 4rem;
 }
 .waveform-td { padding: 0 1rem; }
-.is-ot-file::after {
+.is-ot-file::after, .is-op-file::after, .is-dc-file::after {
     text-align: center;
     content: 'OT';
     color: #b91c1c;
@@ -208,6 +208,12 @@ td button { margin: 0.5rem; }
     margin-left: 0.9rem;
     background-color: #202124;
     line-height: 1rem;
+}
+.is-op-file::after {
+    content: 'OP';
+}
+.is-dc-file::after {
+    content: 'DC';
 }
 .file-path { display: block; }
 .toggle-check, .sort-check {
@@ -479,8 +485,8 @@ body.shiftKey-down .has-shift-mod-i {
     max-height: 60vh;
     overflow: auto;
 }
-.merge-info {
-    float: right;
+.merge-info, .edit-info, .settings-info {
+    float: left;
     width: 80%;
     font-size: 1.25rem;
 }

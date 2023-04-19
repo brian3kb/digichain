@@ -65,7 +65,20 @@
     <input title="Transient detection percentage threshold." type="number" id="transientThreshold" name="transientThreshold"
            min="1" max="100" value="80">
   </div>
-  <button onclick="digichain.splitAction(event, false, true)" class="float-right button-outline has-shift-mod" style="margin-top: 1rem;">Slice to samples</button>
+  <div class="float-left">
+    <div class="float-left">
+      <label title="Load slices from a tape.json file." style="margin-top: 1rem;" class="button button-outline" for="uploadSliceFile">Slices from file...</label>
+      <input id="uploadSliceFile" onchange="digichain.splitFromFile(event)" type="file" />
+    </div>
+    <div class="float-left slice-from-file-buttons hidden" style="margin-top: 1rem;
+    margin-left: 1rem;">
+      <button class="button-outline check sff-button">T1</button>
+      <button class="button-outline check sff-button">T2</button>
+      <button class="button-outline check sff-button">T3</button>
+      <button class="button-outline check sff-button">T4</button>
+    </div>
+  </div>
+  <button onclick="digichain.splitAction(event, false, true)" class="float-right button has-shift-mod" style="margin-top: 1rem;">Slice to samples</button>
 </div>
 
 <div id="editPanel" class="edit-panel-options pop-up" data-id="">

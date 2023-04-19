@@ -3,9 +3,6 @@
  - Affect selection with click for start, right-click or shift+click for end point.
  - Fixed bug where file path changes were not persisted.
  - Added 1x, 2x, 4x zoom levels for edit panel waveform.
- - TODO: Fold slice grid into the edit panel.
- - TODO: Allow changes to start/end point of slices by bouncing over to the edit panel.
- - TODO: Rewrite the otMeta / MetaFiles logic.
  - Shift+Click Column Header : Sorts the list, but will keep the selected items grouped to the top of the list.
  - Shift+Click Reset Button : Randomizes the order of the list.
  - Added 'Difference (Side)' stereo -> mono processing option.
@@ -14,6 +11,12 @@
  - Merge All Selected action - mixes down all the selected items into one sample.
  - Enabled 32bit float wav exports.
  - Prevent pitch-up crashing when doubling a very small audio buffer.
+ - Added support for lading 16bit 44.1 aif files (only those produced to the customized TE aif file formats).
+ - Added slice from OP-1/OP-Z/OP-1 Field drum-kit aif files.
+ - DC slice format embedded in output chain wav file so user can restore the chains to slices retaining the input filename.
+ - Allow disabling slice embed in settings, as some devices do not like custom riff chunks in wav files (looking at you OP-1 Field, and the irony considering what your aif files look like!)
+ - Settings on the settings panel are saved to local-storage and will persist when the app re-opens.
+ - WIP: Slice from tape.json.
 
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)

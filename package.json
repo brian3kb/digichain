@@ -9,7 +9,7 @@
   "scripts": {
     "minjs": "terser main.js --compress ecma=2020 --output latest/main.js",
     "minjsres": "terser resources.js --compress ecma=2020 --output latest/resources.js",
-    "minjseditor": "terser resources.js --compress ecma=2020 --output latest/editor.js",
+    "minjseditor": "terser editor.js --compress ecma=2020 --output latest/editor.js",
     "mincss": "csso main.css --output latest/main.css",
     "mincsslib": "csso lib.css --output latest/lib.css"
   },

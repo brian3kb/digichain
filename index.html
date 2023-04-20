@@ -72,10 +72,10 @@
     </div>
     <div class="float-left slice-from-file-buttons hidden" style="margin-top: 1rem;
     margin-left: 1rem;">
-      <button class="button-outline check sff-button">T1</button>
-      <button class="button-outline check sff-button">T2</button>
-      <button class="button-outline check sff-button">T3</button>
-      <button class="button-outline check sff-button">T4</button>
+      <button class="button-outline check sff-button sff-t1" onclick="digichain.splitFromTrack(event, 1)">T1</button>
+      <button class="button-outline check sff-button sff-t2" onclick="digichain.splitFromTrack(event, 2)">T2</button>
+      <button class="button-outline check sff-button sff-t3" onclick="digichain.splitFromTrack(event, 3)">T3</button>
+      <button class="button-outline check sff-button sff-t4" onclick="digichain.splitFromTrack(event, 4)">T4</button>
     </div>
   </div>
   <button onclick="digichain.splitAction(event, false, true)" class="float-right button has-shift-mod" style="margin-top: 1rem;">Slice to samples</button>

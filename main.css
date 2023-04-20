@@ -198,7 +198,7 @@ td button { margin: 0.5rem; }
     width: 4rem;
 }
 .waveform-td { padding: 0 1rem; }
-.is-ot-file::after, .is-op-file::after, .is-dc-file::after {
+.is-ot-file::after, .is-op-file::after, .is-dc-file::after, .sff-button::after {
     text-align: center;
     content: 'OT';
     color: #b91c1c;
@@ -214,6 +214,18 @@ td button { margin: 0.5rem; }
 }
 .is-dc-file::after {
     content: 'DC';
+}
+.sff-t1::after {
+    content: 'T1';
+}
+.sff-t2::after {
+    content: 'T2';
+}
+.sff-t3::after {
+    content: 'T3';
+}
+.sff-t4::after {
+    content: 'T4';
 }
 .file-path { display: block; }
 .toggle-check, .sort-check {

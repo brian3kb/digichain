@@ -50,7 +50,17 @@ let modifierKeys = {
 };
 
 metaFiles.getByFileName = function(filename) {
-  return this.find(m =>m.name.replace(/\.[^.]*$/,'') === filename.replace(/\.[^.]*$/,''));
+  let found = this.find(m =>m.name.replace(/\.[^.]*$/,'') === filename.replace(/\.[^.]*$/,''));
+  if (filename === '---sliceToTransientCached---' && !found) {
+    found = {
+      uuid: crypto.randomUUID(),
+      name: '---sliceToTransientCached---',
+      sliceCount: 0,
+      slices: []
+    };
+    metaFiles.push(found);
+  }
+  return found;
 };
 metaFiles.getByFile = function(file) {
   if (file.meta.slicedFrom) { return false; }
@@ -881,6 +891,8 @@ const duplicate = (event, id, prepForEdit = false) => {
 };
 
 function splitFromFile(input) { //TODO: Put slices onto meta.customSlices in otMeta format. new fn on action buttons T1-T4
+  const trackButtonsContainerEl = document.querySelector('.slice-from-file-buttons');
+  const trackButtonsEl = document.querySelectorAll('.slice-from-file-buttons button');
   if (!input.target?.files?.length) { return; }
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -889,15 +901,24 @@ function splitFromFile(input) { //TODO: Put slices onto meta.customSlices in otM
     if (!json.clips) { return ; }
     lastSliceFileImport = json.clips.map(clip => ({
       track: clip.ch + 1,
-      startPoint: clip.start,
-      endPoint: clip.stop
+      startPoint: Math.round((clip.start / 44100) * masterSR),
+      endPoint: Math.round((clip.stop / 44100) * masterSR)
     }));
-    lastSliceFileImport.enabledTracks = lastSliceFileImport.reduce(
-        (acc, val) => ({[`t${val.track}`]: true, ...acc}), {}
-    );
-    console.warn(lastSliceFileImport);
+    lastSliceFileImport.trackSlices = {};
+    lastSliceFileImport.forEach(
+        slice => lastSliceFileImport.trackSlices[`t${slice.track}`] = (lastSliceFileImport.trackSlices[`t${slice.track}`]??0) + 1 )
+    trackButtonsContainerEl.classList.remove('hidden');
+    trackButtonsEl.forEach((btn, i) => btn.textContent = `${lastSliceFileImport.trackSlices[`t${i+1}`]}`);
   };
   reader.readAsText(input.target.files[0]);
+}
+
+function splitFromTrack(event, track) {
+  const sliceGroupEl = document.querySelector(`.split-panel-options .slice-group`);
+  const file = getFileById(sliceGroupEl.dataset.id);
+  file.meta.customSlices = {slices: lastSliceFileImport.filter(slice => slice.track === track)};
+  file.meta.customSlices.sliceCount = file.meta.customSlices.slices.length;
+  drawSliceLines(file.meta.customSlices.length, file, file.meta.customSlices);
 }
 
 const splitByOtSlices = (event, id, pushInPlace = false, sliceSource = 'ot') => {
@@ -995,7 +1016,7 @@ const splitEvenly = (event, id, slices, pushInPlace = false) => {
 
 const splitByTransient = (file, threshold = .8) => {
   const transientPositions = [];
-  const frameSize = file.buffer.length / 64;
+  const frameSize = Math.floor(file.buffer.length / 256);
   let lastStart = undefined;
   let lastEnd = undefined;
   for (let i = 0; i < file.buffer.length; i++) {
@@ -1008,7 +1029,8 @@ const splitByTransient = (file, threshold = .8) => {
       if (lastEnd === undefined) {
         // I want loose equality here as I want 0.000 to be true against 0
         if (Math.abs(file.buffer.getChannelData(0)[i]).toFixed(3) == 0 || i + frameSize > file.buffer.length) {
-          lastEnd =  i + frameSize > file.buffer.length ? i : i + frameSize;
+          //lastEnd =  i + frameSize > file.buffer.length ? i : i + frameSize;
+          lastEnd = i;
         }
       }
     }
@@ -1026,15 +1048,6 @@ const splitByTransient = (file, threshold = .8) => {
 
 // map transient positions into slice object.
   let metaTransient = metaFiles.getByFileName('---sliceToTransientCached---');
-  if (!metaTransient) {
-    metaTransient = {
-      uuid: crypto.randomUUID(),
-      name: '---sliceToTransientCached---',
-      sliceCount: 0,
-      slices: []
-    };
-    metaFiles.push(metaTransient);
-  }
 
   metaTransient.slices = transientPositions;
   metaTransient.sliceCount = metaTransient.slices.length;
@@ -2028,6 +2041,7 @@ window.digichain = {
   splitEvenly,
   splitFromFile,
   splitSizeAction,
+  splitFromTrack,
   toggleModifier,
   toggleOptionsPanel,
   showExportSettingsPanel,

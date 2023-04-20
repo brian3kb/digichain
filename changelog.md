@@ -17,7 +17,7 @@
  - Allow disabling slice embed in settings, as some devices do not like custom riff chunks in wav files.
  - Settings on the settings panel are saved to local-storage and will persist when the app re-opens.
  - Option to play pop-markers at the start and end of the sample for direct sampling to the Digitakt audio inputs. Two options, 0db markers (which prevents the DT's auto normalization from changing the recorded sample volume), and peak, which sets the pop-marker volumes to match the loudest peak in the sample.
- - WIP: Slice from tape.json.
+ - Slice from tape.json (OP-1 Field tape file slice markers).
 
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)

@@ -2,9 +2,28 @@
 
 DigiChain is a web app made to make the creation of sample chains as easy as possible for use on the Digitakt (and any other sampler that can slice up samples).
 
-While originally created as a tool to help make evenly spaced sample chains to use on the Elektron Digitakt’s slice grid machine introduced in the 1.5 firmware update, DigiChain has grown to incorporate other features, many of which were suggested by the good folks over on the Elektronauts forum.
+Supports batch converting of files to a chosen bit depth and sample rate (mono/stereo).
+Choose the way stereo files get processed to mono, with Left, Right, Sum, and Difference (Side) with live preview of the choice from the sample list.
+Join the selected files together into a sample chain, with the option to pad all samples to be the same length for evenly sized slices (perfect for the Digitakt's fixed slice grids).
 
-The primary function is being able to drop samples into the list, these can be folders containing samples (as all dropped folders are recursively parsed for sample data) – PCM wav files are what will be looked for, with the addition of support for .syx SysEx SDS audio midi dumps which are used in MachineDrum sample packs – these can be consumed and converted to standard wav files.
+Use the simple editing tools to trim-right, normalize, reverse, or pitch up/down the samples.
+Batch operations for trim-right, normalize and reverse.
+
+Merge the selected files (layered on top of each other) into one stereo file with the merge tool, put different samples on each channel, or center them.
+
+Import Octatrack .ot files to slice to individual samples for export or further processing/joining.
+
+Import OP-1, OP-Z, OP-1 Field aif drum kits and slice them to individual samples. Slice up the OP-1 Field stereo tape files from their tape.json file.
+
+Import syx samples from the Elektron MachineDrum.
+
+Chains created in DigiChain retain their contained samples slice markers for later splitting back out if needed.
+
+Pitch up all exported files by 1, 2 or 3 octaves to reduce the file-sizes.
+
+When playing back samples from within the list directly out to the Digitakt, or another sampler - make use of the pop-markers that add a short audio burst at the beginning and end of the sample. Makes sure threshold record starts at the right time without losing  that first transient, with a visible marker at the end to trim to for a perfect loop. Choose from 0db marker, which will prevent the Digitakt from being able to further normalize the audio, or peak, to set the volume of the marker to the loudest peak in the sample being played back.
+
+While originally created as a tool to help make evenly spaced sample chains to use on the Elektron Digitakt’s slice grid machine introduced in the 1.5 firmware update, DigiChain has grown to incorporate other features, many of which were suggested by the good folks over on the Elektronauts forum.
 
 Once the files are in the list, they are ready to be ordered into chains, choose the chain length on the slice grid in the top left buttons group (shift+click to keep the selections already in the list) – the list will show a green line to indicate when a chain ends and a new one begins below.
 
@@ -20,30 +39,4 @@ While it is a web app, once loaded, there is no connection required, and can be 
 
 There is a full complement of keyboard shortcuts to help navigate through things quickly.
 
-**Keyboard Shortcuts**
- 
- - Up / Down Arrow Keys: when a sample row is highlighted, this changes the highlighted sample.
- - P : plays the currently highlighted sample in the list.
- - I : inverts the selected items in the list.
- - Escape : closes any open dialog windows and stops all sample playback.
- - Enter / Return : toggles the selection of the currently highlighted sample in the list.
- - L / S / R : changes the channel for stereo files being processed to mono.
-
-**Shift + Click / Shift + Key**
- - Up / Down Keys : moves the highlighted sample up or down in the list.
- - P : plays the currently highlighted sample looped. 
- - Waveform View : plays the sample looped, click again to go back to one-shot.
- - Slice Grid Number & Off Buttons : changes the slice grid size, but keeps the selected samples in the list.
- - Duplicate Icon : puts the duplicated file at the end of the sample list.
- - Move Up Icon : moves directly to the top of the sample list.
- - Move Down Icon : moved directly to the end of the sample list.
- - L S R Options : sets all stereo samples method for mono conversion (take left, right, or sum to mono).
- - Download All : processed files will be have the imported folder structure flattened into their file names (all files will be at the root level of the zip file).
- - Joined / Joined Spaced : audio will be resampled internally back to the list instead of prompting to save as a file (clicking the filename in the list will still allow the wav download).
- - H : Toggles showing/hiding the top buttons panel, to give more space for the grid.
- - Slice Sample Options: Will put the slices in the list directly below the source sample. 
- - G : Toggles grid-view/list-view (grid-view is now the default for narrow screen width devices like phones).
-
-**Ctrl + Click**
- - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.
- - Slice Grid Off Button : restores the default slice grid options.
+see the keyboard-shortcuts.md for details.

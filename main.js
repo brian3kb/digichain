@@ -890,7 +890,7 @@ const duplicate = (event, id, prepForEdit = false) => {
   renderList();
 };
 
-function splitFromFile(input) { //TODO: Put slices onto meta.customSlices in otMeta format. new fn on action buttons T1-T4
+function splitFromFile(input) {
   const trackButtonsContainerEl = document.querySelector('.slice-from-file-buttons');
   const trackButtonsEl = document.querySelectorAll('.slice-from-file-buttons button');
   if (!input.target?.files?.length) { return; }
@@ -971,6 +971,7 @@ const splitByOtSlices = (event, id, pushInPlace = false, sliceSource = 'ot') => 
   if (pushInPlaceItems.length) {
     files.splice(getFileIndexById(id) + 1, 0, ...pushInPlaceItems);
   }
+  file.meta.customSlices = false;
   renderList();
 };
 
@@ -1080,6 +1081,9 @@ const splitSizeAction = (event, slices, threshold) => {
         option.classList.add('button-outline');
   });
   drawSliceLines(slices, file, otMeta);
+  if (file?.meta?.customSlices) {
+    file.meta.customSlices = false;
+  }
 };
 
 const remove = (id) => {
@@ -1230,6 +1234,7 @@ const splitAction = (event, id, slices) => {
   drawWaveform(item, splitPanelWaveformEl, item.meta.channel, {
     width: +splitPanelWaveformContainerEl.dataset.waveformWidth, height: 128
   });
+  item.meta.customSlices = false;
 };
 
 const secondsToMinutes = (time) => {

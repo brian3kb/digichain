@@ -15,7 +15,7 @@
   ],
   "theme_color": "#202124",
   "background_color": "#202124",
-  "start_url": "https://digichain.brianbar.net/latest",
+  "start_url": "https://digichain.brianbar.net/",
   "display": "standalone",
   "cache": [
     "/index.html",

@@ -40,6 +40,7 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
   let blockAlign = numChannels * bytesPerSample;
   let sliceData;
   let buffer;
+  let riffSize;
 
   if (slices && slices.length !== 0) {
     let _slices = pitchModifier === 1 ? slices : slices.map(slice => ({
@@ -49,8 +50,10 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
     sliceData = `{"sr": ${sampleRate}, "dcs":` + JSON.stringify(_slices) + '}';
     sliceData = sliceData.padEnd(sliceData.length + sliceData.length%4, ' ');
     buffer = new ArrayBuffer(44 + (sliceData.length + 8) + samples.length * bytesPerSample);
+    riffSize = 36 + (sliceData.length + 8) + samples.length * bytesPerSample;
   } else {
     buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+    riffSize = 36 + samples.length * bytesPerSample;
   }
 
   var view = new DataView(buffer);
@@ -58,7 +61,7 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
   /* RIFF identifier */
   writeString(view, 0, 'RIFF');
   /* RIFF chunk length */
-  view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+  view.setUint32(4, riffSize, true);
   /* RIFF type */
   writeString(view, 8, 'WAVE');
   /* format chunk identifier */
@@ -89,8 +92,11 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
     writeFloat32(view, 44, samples);
   }
   if (slices && slices.length !== 0) {
+    /*DCSD custom chunk header*/
     writeString(view, view.byteLength - (sliceData.length + 8), 'DCSD');
-    view.setUint32(view.byteLength - (sliceData.length + 4), sliceData.length);
+    /*DCSD custom chunk size*/
+    view.setUint32(view.byteLength - (sliceData.length + 4), sliceData.length, true);
+    /*DCSD custom chunk data*/
     writeString(view, view.byteLength - sliceData.length, sliceData);
   }
 

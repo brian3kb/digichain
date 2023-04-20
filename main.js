@@ -29,6 +29,7 @@ let masterSR = 48000;
 let masterBitDepth = 16;
 let masterChannels = 1;
 let pitchModifier = JSON.parse(localStorage.getItem('pitchModifier'))?? 1;
+let playWithPopMarker = JSON.parse(localStorage.getItem('playWithPopMarker'))?? 0;
 let zipDownloads = JSON.parse(localStorage.getItem('zipDownloads'))?? true;
 let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData'))?? true;
 let audioCtx = new AudioContext({sampleRate: masterSR});
@@ -336,7 +337,7 @@ function pitchExports(value, silent) {
   return value;
 }
 
-function toggleSetting(param) {
+function toggleSetting(param, value) {
   if (param === 'zipDl' ) {
     zipDownloads = !zipDownloads;
     localStorage.setItem('zipDownloads', zipDownloads);
@@ -345,6 +346,12 @@ function toggleSetting(param) {
   if (param === 'embedSliceData') {
     embedSliceData = !embedSliceData;
     localStorage.setItem('embedSliceData', embedSliceData);
+    showExportSettingsPanel();
+  }
+  if (param === 'playWithPopMarker' ) {
+    playWithPopMarker = value;
+    files.forEach(f => f.meta.peak = undefined);
+    localStorage.setItem('playWithPopMarker', playWithPopMarker);
     showExportSettingsPanel();
   }
 }
@@ -368,6 +375,14 @@ function showExportSettingsPanel() {
     <button onclick="digichain.pitchExports(4)" class="check ${pitchModifier === 4 ? 'button' : 'button-outline'}">2</button>
     <button onclick="digichain.pitchExports(8)" class="check ${pitchModifier === 8 ? 'button' : 'button-outline'}">3</button><br></td>
 </tr>
+    <tr>
+    <td><span>Play pop markers when playing back samples?<br>0db prevents DT normalization.<br>Peak sets pop to loudest sample peak. &nbsp;&nbsp;&nbsp;</span></td>
+    <td>
+    <button onclick="digichain.toggleSetting('playWithPopMarker', 0)" class="check ${playWithPopMarker === 0 ? 'button' : 'button-outline'}">OFF</button>
+    <button onclick="digichain.toggleSetting('playWithPopMarker', 1)" class="check ${playWithPopMarker === 1 ? 'button' : 'button-outline'}">0db</button>
+    <button onclick="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${playWithPopMarker === 2 ? 'button' : 'button-outline'}">Peak</button>
+    </td>
+    </tr>
 <tr>
 <td><span>Download multi-file/joined downloads as one zip file? &nbsp;&nbsp;&nbsp;</span></td>
 <td><button onclick="digichain.toggleSetting('zipDl')" class="check ${zipDownloads ? 'button' : 'button-outline'}">${ zipDownloads ? 'YES' : 'NO'}</button></td>
@@ -690,9 +705,31 @@ const playFile = (event, id, loop) => {
     file.source.stop();
   }
   file.source = audioCtx.createBufferSource();
-  file.source.buffer = file.meta.channel && masterChannels === 1 ?
+  let buffer = file.meta.channel && masterChannels === 1 ?
       getMonoFloat32ArrayFromBuffer(file.buffer, file.meta.channel, true) :
       file.buffer;
+
+  if (playWithPopMarker) {
+    const popAudio = audioCtx.createBuffer(1, 8, masterSR);
+    const popBuffer = audioCtx.createBuffer(buffer.numberOfChannels, buffer.length + (popAudio.length * 2), masterSR);
+    const popData = popAudio.getChannelData(0);
+    let peak;
+    if (playWithPopMarker === 2) {
+      peak = file.meta.peak??editor.normalize(event, file, false, true);
+    } else {
+      peak = 1;
+    }
+    new Array(popAudio.length).fill(0).forEach((x, i) => popAudio.getChannelData(0)[i] = peak);
+    for(let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const channelData = buffer.getChannelData(channel);
+      popBuffer.copyToChannel(popData, channel);
+      popBuffer.copyToChannel(channelData, channel, popAudio.length);
+      popBuffer.copyToChannel(popData, channel, popAudio.length + channelData.length);
+    }
+    buffer = popBuffer;
+  }
+
+  file.source.buffer = buffer;
   //file.source.playbackRate.value = 8;
   file.source.connect(audioCtx.destination);
   file.source.loop = loop;

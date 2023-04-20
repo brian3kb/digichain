@@ -262,7 +262,7 @@ function perSamplePitch(event, pitchValue, id) {
   })();
 }
 
-function normalize(event, item, renderEditPanel = true) {
+function normalize(event, item, renderEditPanel = true, findPeakOnly = false) {
   if (!renderEditPanel && item) {
     selection.start = 0;
     selection.end = item.buffer.length;
@@ -277,6 +277,10 @@ function normalize(event, item, renderEditPanel = true) {
     }
   }
   maxSample = !maxSample ? 1 : maxSample;
+  item.meta.peak = maxSample;
+  if (findPeakOnly) {
+    return maxSample;
+  }
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel);
     for (let i = selection.start; i < selection.end; i++) {
@@ -305,6 +309,16 @@ function reverse(event, item, renderEditPanel = true) {
       dataCount++;
     }
   }
+  item.meta = {...item.meta};
+  if (selection.start === 0 && selection.end === item.buffer.length) {
+    item.meta.slices = item.meta.slices ? item.meta.slices.map(slice => ({
+      n: slice.n, s: selection.end - slice.e,
+      e: selection.end - slice.s
+    })) : false;
+  } else {
+    //item.meta.slices = false;
+  }
+
   if (renderEditPanel) {
     renderEditPanelWaveform(multiplier);
   }
@@ -346,6 +360,9 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
     duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
     startFrame: 0, endFrame: audioArrayBuffer.length
   };
+  if (item.meta.slices) {
+    item.meta.slices[item.meta.slices.length - 1].e = item.buffer.length;
+  }
   if (renderEditPanel) {
     renderEditPanelWaveform(multiplier);
   }

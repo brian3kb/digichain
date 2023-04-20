@@ -14,8 +14,9 @@
  - Added support for loading 16bit 44.1 aif files (only those produced to the customized TE aif file formats).
  - Added slice from OP-1/OP-Z/OP-1 Field drum-kit aif files.
  - DC slice format embedded in output chain wav file so user can restore the chains to slices retaining the input filename.
- - Allow disabling slice embed in settings, as some devices do not like custom riff chunks in wav files (looking at you OP-1 Field, and the irony considering what your aif files look like!)
+ - Allow disabling slice embed in settings, as some devices do not like custom riff chunks in wav files.
  - Settings on the settings panel are saved to local-storage and will persist when the app re-opens.
+ - Option to play pop-markers at the start and end of the sample for direct sampling to the Digitakt audio inputs. Two options, 0db markers (which prevents the DT's auto normalization from changing the recorded sample volume), and peak, which sets the pop-marker volumes to match the loudest peak in the sample.
  - WIP: Slice from tape.json.
 
 2023-04-07 1.3.1

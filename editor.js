@@ -50,11 +50,15 @@ export function renderEditor(item) {
     </div>
   </div>
   <div class="sample-op-buttons">
-  <button title="Normalize the volume of the sample." class="normalize button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
-  <button title="Reverses the sample playback" class="reverse button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>&nbsp;&nbsp;-&nbsp;
-  <button title="Trims any zero valued audio from the end of the sample." class="trim-right button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
-  <button title="Half the speed of the sample" class="pitch button-outline" onclick="digichain.editor.perSamplePitch(event, .5)">Half-speed</button>
-  <button title="Double the speed of the sample" class="pitch button-outline" onclick="digichain.editor.perSamplePitch(event, 2)">Double-speed</button>
+  <button title="Normalize the volume of the sample." class="normalize button button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
+  <button title="Reverses the sample playback" class="reverse button button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>&nbsp;&nbsp;-&nbsp;
+  <button title="Trims any zero valued audio from the end of the sample." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
+  &nbsp;&nbsp;&nbsp;
+  <button title="Lower pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5)">-12</button>
+  <button title="Lower pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12))">-1</button>
+  &nbsp;<span> Adjust Pitch (semi-tones) </span>&nbsp;
+  <button title="Increase pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12))">+1</button>
+  <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2)">+12</button>
   </div>
   <span class="edit-info">
     Normalize & Reverse affect the selected part of the sample, Trim Right, Half-speed, Double-speed affect the whole sample.<br>
@@ -247,6 +251,7 @@ function perSamplePitch(event, pitchValue, id) {
         length: buffer.length,
         duration: Number(buffer.length / conf.masterSR).toFixed(3),
         startFrame: 0, endFrame: buffer.length,
+        note: false,
         slices: item.meta.slices ? item.meta.slices.map(slice => ({
           n: slice.n, s: Math.round(slice.s / pitchValue),
           e: Math.round(slice.e / pitchValue)

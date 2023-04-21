@@ -331,7 +331,6 @@ CanvasRenderingContext2D.prototype.clear =
       }
     };
 
-
 /*JSZIP*/
 /*!
 

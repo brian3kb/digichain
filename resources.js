@@ -103,6 +103,114 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
   return buffer;
 }
 
+export function encodeAif(audioBuffer, opJsonData) {
+  const numChannels = audioBuffer.numberOfChannels;
+  const numFrames = audioBuffer.length;
+  let offset = 0;
+  //let sampleRate = 0x400eac44 0x00000000 0x0000; // 80bit float of 44100
+
+  /*TODO verify that this works without reserving the max byte lengh that the json data could populate (0x1004) */
+  const writeApplData = (dataView, data, offset) => {
+    const utf8Encoder = new TextEncoder('utf-8');
+    const encData = utf8Encoder.encode(JSON.stringify(data));
+    let pad = encData.length%2;
+    dataView.setUint32(offset, 0x4150504c);
+    dataView.setUint32(offset + 4, encData.byteLength + pad); // size of the APPL chunk
+    offset = 8;
+    for (let i = 0; i < encData.byteLength; i++) {
+      dataView.setUint8(offset + i, encData[i]);
+      offset++;
+    }
+    if (pad === 1) {
+      dataView.setUint8(offset, 20);
+      offset++;
+    }
+    return offset;
+  };
+
+  const writeSampleRate = (dataView, offset) => {
+    dataView.setUint32(offset, 0x400eac44);
+    dataView.setUint32(offset + 4, 0x00000000);
+    dataView.setUint16(offset + 8, 0x0000);
+    return offset + 2;
+  };
+  if (audioBuffer.sampleRate !== 44100) {
+    return ; // only handling 44.1khz
+  }
+
+  // calculate the size of the audio data
+  const dataSize = numFrames * numChannels * 2; // 2 bytes per sample
+
+  // create a new DataView for the AIFF file
+  const dataView = new DataView(new ArrayBuffer(46 + dataSize));
+
+  // write the AIFF file header form
+  dataView.setUint32(0, 0x464f524d);
+  dataView.setUint32(4, 36 + dataSize); // size of the file
+  if (numChannels === 1) {
+    // aif type aiff
+    dataView.setUint32(8, 0x41494646);
+    // COMM
+    dataView.setUint32(12, 0x434f4d4d);
+    dataView.setUint32(16, 18); // size of the COMM chunk
+    dataView.setUint16(20, numChannels); // number of channels
+    dataView.setUint32(22, numFrames); // number of frames
+    dataView.setUint16(26, 16); // bits per sample
+    offset = 28;
+    offset = writeSampleRate(dataView, offset); //38
+    // APPL
+    offset = writeApplData(dataView, opJsonData, offset);
+  } else {
+    // aif type aifc
+    dataView.setUint32(8, 0x41494643);
+    dataView.setUint32(12, 0x46564552);
+    dataView.setUint32(16, 0x00000004);
+    dataView.setUint32(20, 0xA2805140);
+    // COMM
+    dataView.setUint32(24, 0x434f4d4d);
+    dataView.setUint32(28, 64); // size of the COMM chunk
+    dataView.setUint16(32, numChannels); // number of channels
+    dataView.setUint32(34, numFrames); // number of frames
+    dataView.setUint16(38, 16); // bits per sample
+    offset = 40;
+    offset = writeSampleRate(dataView, offset);
+    //sowt = 0x736F7774295369676E656420696E746567657220286C6974746C652D656E6469616E29206C696E6561722050434D;
+    dataView.setUint32(offset, 0x736F7774);
+    dataView.setUint32(offset + 4, 0x29536967);
+    dataView.setUint32(offset + 8, 0x6E656420);
+    dataView.setUint32(offset + 12, 0x696E7465);
+    dataView.setUint32(offset + 16, 0x67657220);
+    dataView.setUint32(offset + 20, 0x286C6974);
+    dataView.setUint32(offset + 24, 0x746C652D);
+    dataView.setUint32(offset + 28, 0x656E6469);
+    dataView.setUint32(offset + 32, 0x616E2920);
+    dataView.setUint32(offset + 36, 0x6C696E65);
+    dataView.setUint32(offset + 40, 0x61722050)
+    dataView.setUint16(offset + 44, 0x434D);
+    offset = offset + 46;
+  }
+  // APPL
+  offset = writeApplData(dataView, opJsonData, offset);
+  dataView.setUint32(4, offset + dataSize - 8); // update size of the file
+
+  dataView.setUint32(offset, 0x53534e44); // "SSND"
+  dataView.setUint32(offset + 4, dataSize + 8); // size of the SSND chunk
+  dataView.setUint32(offset + 8, 0); // offset
+  dataView.setUint32(offset + 12, 0); // block size
+
+  offset = offset + 16;
+  // write the audio data
+  for (let i = 0; i < numFrames; i++) {
+    for (let j = 0; j < numChannels; j++) {
+      const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(j)[i]));
+      const value = sample < 0 ? sample * 32768 : sample * 32767;
+      dataView.setInt16(offset + (i * numChannels + j) * 2, value, numChannels === 2);
+    }
+  }
+
+  return dataView;
+}
+
 function interleave(inputL, inputR) {
   var length = inputL.length + inputR.length;
   var result = new Float32Array(length);
@@ -139,7 +247,7 @@ function floatTo24BitPCM(output, offset, input) {
 }
 
 function writeString(view, offset, string) {
-  for (var i = 0; i < string.length; i++) {
+  for (let i = 0; i < string.length; i++) {
     view.setUint8(offset + i, string.charCodeAt(i));
   }
 }

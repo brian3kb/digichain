@@ -291,7 +291,9 @@ td button { margin: 0.5rem; }
 /*.channel-options-stereo i.stereo-circle {*/
 /*    margin-left: -1.35rem;*/
 /*}*/
-.info-panel-md, .split-panel-options, .edit-panel-options, .merge-panel-options, .not-served-md, .export-settings-panel-md {
+.info-panel-md, .split-panel-options, .edit-panel-options,
+.merge-panel-options, .not-served-md, .export-settings-panel-md,
+.op-export-panel-options {
     position: fixed;
     width: 512px;
     top: 16vh;
@@ -308,6 +310,7 @@ td button { margin: 0.5rem; }
     max-width: 512px;
     display: none;
 }
+.op-export-panel-options { top: 1vh;}
 a {
     cursor: pointer;
 }
@@ -508,6 +511,35 @@ table#mergeList th {
 table#mergeList td.file-path-td {
     padding-top: 1.25rem;
     padding-bottom: 1.25rem;
+}
+
+
+/*OP Editor*/
+.op-key {
+    width: 22rem;
+    height: 5rem;
+    border: 1px solid;
+    border-radius: 7px;
+    margin: 3px;
+    float: left;
+}
+.op-key.black:nth-of-type(1) { margin-top: 3rem; }
+.op-key.black:nth-of-type(4), .op-key.black:nth-of-type(6), .op-key.black:nth-of-type(9) { margin-top: 6rem; }
+
+.sample-list {
+    width: 40%;
+    border: 1px solid;
+    float: left;
+    max-height: 60rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-radius: 5px;
+}
+.white-keys, .black-keys {
+    width: 28%;
+}
+.white-keys .op-key {
+    float: right;
 }
 
 @media (min-width: 430px) {
@@ -745,7 +777,9 @@ table#mergeList td.file-path-td {
 }
 
 @media (min-width: 1100px) {
-    .info-panel-md, .split-panel-options, .edit-panel-options, .merge-panel-options, .not-served-md, .export-settings-panel-md {
+    .info-panel-md, .split-panel-options, .edit-panel-options,
+    .merge-panel-options, .not-served-md, .export-settings-panel-md,
+    .op-export-panel-options {
         width: 1030px;
         top: 16vh;
         left: 50%;
@@ -759,6 +793,7 @@ table#mergeList td.file-path-td {
         box-sizing: content-box;
         max-width: 1030px;
     }
+    .op-export-panel-options { top: 1vh;}
     #exportSettingsPanel {
         width: 512px;
         margin: 0 -256px;

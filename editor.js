@@ -3,6 +3,12 @@ import {audioBufferToWav} from './resources.js';
 const editPanelEl = document.getElementById('editPanel');
 const editableItemsEl = document.getElementById('editableItems');
 const editEl = document.getElementById('editorPanelContent');
+
+const opExportPanelEl = document.getElementById('opExportPanel');
+const opExportEl = document.getElementById('opExportPanelContent');
+
+const views = ['sample', 'slice', 'opExport'];
+
 let editing;
 let conf; // {audioCtx, masterSR, masterChannels, masterBitDepth}
 let multiplier = 1;
@@ -12,22 +18,59 @@ let selection = {
   step: 0
 };
 
+let samples = [];
+
 export function setEditorConf(options) {
   conf = options;
 }
-export function showEditor(item, options, sliceEditor = false) {
+export function showEditor(data, options, view = 'sample') {
   conf = options;
-  editing = item;
-  multiplier = 1;
-  selection.end = item.buffer.length;
-  selection.start = 0;
-  selection.step = Math.round(item.buffer.length / (1024 * multiplier));
-  renderEditableItems();
-  renderEditor(editing);
-  updateSelectionEl();
-  editPanelEl.classList.add('show');
-  renderEditPanelWaveform();
+  if (view === 'sample') {
+    editing = data;
+    multiplier = 1;
+    selection.end = editing.buffer.length;
+    selection.start = 0;
+    selection.step = Math.round(editing.buffer.length / (1024 * multiplier));
+    renderEditableItems();
+    renderEditor(editing);
+    updateSelectionEl();
+    editPanelEl.classList.add('show');
+    renderEditPanelWaveform();
+    return;
+  }
+  if (view === 'opExport') {
+    samples = data;
+    renderOpExport();
+    opExportPanelEl.classList.add('show');
+  }
 }
+
+function renderKey(color, index) {
+  return `
+    <div class="op-key ${color} key-${index}">${index + 1}</div>   
+  `;
+}
+
+function renderOpSampleList() {
+  return samples.reduce((acc, item) => acc += `
+  <div class="row">
+    ${getNiceFileName(item.file.name)}
+  </div>
+  `, '');
+}
+
+function renderOpExport() {
+  const keys = {
+    black: [  1,  3,  5,      8, 10,     13, 15, 17,     20, 22],
+    white: [0,  2,  4,  6,  7,  9, 11, 12, 14, 16, 18, 19, 21, 23]
+  };
+  opExportEl.innerHTML = `
+    <div class="sample-list float-left">${renderOpSampleList()}</div>
+    <div class="black-keys float-right">${keys.black.reduce((a, i) => a += renderKey('black', i), '')}</div>
+    <div class="white-keys float-right">${keys.white.reduce((a, i) => a += renderKey('white', i), '')}</div>
+  `;
+}
+
 export function renderEditor(item) {
   editing = item === editing ? editing : item;
   editEl.innerHTML = `
@@ -61,13 +104,10 @@ export function renderEditor(item) {
   <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2)">+12</button>
   </div>
   <span class="edit-info">
-    Normalize & Reverse affect the selected part of the sample, Trim Right, Half-speed, Double-speed affect the whole sample.<br>
+    Normalize & Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo.
   </span>
-<!--  <button onclick="digichain.editWaveformAction(event, false, true)" class="float-right button-outline has-shift-mod" style="margin-top: 1rem;">Add to samples</button>-->
   `;
-
-
 }
 
 function renderEditableItems() {

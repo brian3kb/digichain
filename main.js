@@ -40,6 +40,7 @@ let mergeFiles = [];
 let lastSort = '';
 let lastSelectedRow;
 let lastSliceFileImport = []; // [].enabledTracks = {t[x]: boolean}
+let lastOpKit = [];
 let workBuffer;
 let sliceGrid = 0;
 let sliceOptions = Array.from(DefaultSliceOptions);
@@ -160,18 +161,26 @@ const toggleOptionsPanel = () => {
   buttonsEl.classList.contains('hidden') ? toggleButtonEl.classList.add('collapsed') : toggleButtonEl.classList.remove('collapsed');
 };
 
-const showEditPanel = (event, id) => {
-  if (id) {
-    lastSelectedRow = getRowElementById(id);
+const showEditPanel = (event, id, view = 'samples') => {
+  let data;
+  if (view === 'opExport') {
+    lastOpKit = files.filter(f => f.meta.checked);
+    data = lastOpKit;
+  } else {
+    if (id && view !== 'opExport') {
+      lastSelectedRow = getRowElementById(id);
+    }
+    data = getFileById(id || lastSelectedRow.dataset.id);
   }
   showEditor(
-      getFileById(id || lastSelectedRow.dataset.id),
+      data,
       {
         audioCtx,
         masterSR,
         masterChannels,
         masterBitDepth
-      }
+      },
+      view
   );
 };
 
@@ -1442,7 +1451,7 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
   try {
     let dv = new DataView(arrayBuffer);
     let chunks = {};
-    let chunkKeys = ['FORM', 'COMM', 'op-1', 'SSND'];
+    let chunkKeys = ['FORM', 'COMM', 'APPL', 'SSND'];
 
     const getChunkData = (code, offset) => {
       switch (code) {
@@ -1468,33 +1477,26 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
             channels: dv.getUint16(offset + 8),
             frames: dv.getUint32(offset + 10),
             bitDepth: dv.getUint16(offset + 14),
-            sampleRate: dv.getUint16(offset + 16) + dv.getUint16(offset + 21)
+            //sampleRate: dv.getFloat32(offset + 16, true)
           };
           break;
-        case 'op-1':
+        case 'APPL'://'op-1':
           const utf8Decoder = new TextDecoder('utf-8');
-          const dv2 = new DataView(arrayBuffer);
-          let ssndOffset;
-          for (let i = 0; i < dv.byteLength; i++) {
-            const code = String.fromCharCode(dv.getUint8(i), dv.getUint8(i + 1),
-                dv.getUint8(i + 2), dv.getUint8(i + 3));
-            if (code === 'SSND') {
-              ssndOffset = i;
-              break;
-            }
-          }
-          let jsonString = utf8Decoder.decode(
-              arrayBuffer.slice(offset + 4, ssndOffset));
-         let maxSize = chunks.form.type === 'AIFC' ?  44100*20 : 44100*12;
-         let scale = chunks.form.type === 'AIFC' ?  2434 : 4058;
+          let maxSize = chunks.form.type === 'AIFC' ? 44100 * 20 : 44100 * 12;
+          let scale = chunks.form.type === 'AIFC' ? 2434 : 4058;
           chunks.json = {
-            id: String.fromCharCode(dv.getUint8(offset), dv.getUint8(offset+1), dv.getUint8(offset+2), dv.getUint8(offset+3)),
-            size: dv.getUint16(offset+4),
+            id: String.fromCharCode(dv.getUint8(offset),
+                dv.getUint8(offset + 1), dv.getUint8(offset + 2),
+                dv.getUint8(offset + 3)),
+            size: dv.getUint32(offset + 4),
             bytesInLength: maxSize * 2,
             maxSize,
             scale,
-            data: JSON.parse(jsonString.replace(/\]\}.*/gi, ']}').trimEnd())
           };
+          let jsonString = utf8Decoder.decode(
+              arrayBuffer.slice(offset + 12, chunks.json.size + offset + 8));
+          chunks.json.data = JSON.parse(
+              jsonString.replace(/\]\}.*/gi, ']}').trimEnd());
           break;
         case 'SSND':
           chunks.buffer = arrayBuffer.slice(offset + 4);
@@ -1952,10 +1954,6 @@ document.body.addEventListener('keydown', (event) => {
   if (keyboardShortcutsDisabled) { return ; }
   if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
   if (event.ctrlKey) { document.body.classList.add('ctrlKey-down'); }
-  if (event.code === 'ArrowDown' && (!lastSelectedRow || !lastSelectedRow.isConnected)) {
-    lastSelectedRow = document.querySelector('#fileList tr');
-    return;
-  }
   if (event.code === 'Escape') {
     if (files.length && !(event.shiftKey || modifierKeys.shiftKey)) {
       files.forEach(f => f.source?.stop());
@@ -1965,6 +1963,11 @@ document.body.addEventListener('keydown', (event) => {
   if (arePopUpsOpen()) {
     // Don't listen for keyboard commands when popups are open.
     return ;
+  }
+
+  if (event.code === 'ArrowDown' && (!lastSelectedRow || !lastSelectedRow.isConnected)) {
+    lastSelectedRow = document.querySelector('#fileList tr');
+    return;
   }
   if (files.length &&  (event.code === 'KeyI')) {
     return invertFileSelection();

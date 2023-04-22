@@ -87,6 +87,11 @@
   <div id="editorPanelContent"></div>
 </div>
 
+<div id="opExportPanel" class="op-export-panel-options pop-up" data-id="">
+  <a class="float-right" onclick="document.getElementById('opExportPanel').classList.remove('show');"><i class="gg-close"></i></a>
+  <div id="opExportPanelContent"></div>
+</div>
+
 <div id="mergePanel" class="merge-panel-options pop-up">
   <a class="float-right" onclick="document.getElementById('mergePanel').classList.remove('show'); digichain.renderList();"><i class="gg-close"></i></a>
   <div id="mergePanelContent"></div>
@@ -159,6 +164,7 @@
         <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[6])" class="button-outline has-shift-mod has-ctrl-mod check sel-6" data-sel="6">120</button><br>
         <button title="Download the selected samples joined, spaced evenly. Shift+click will resample back to the list." class="min-width-20 dl-spaced has-shift-mod" onclick="digichain.joinAll(event, true)"><i class="gg-software-download"></i><span class="join-count"> - </span> Joined (Spaced)</button>
         <button title="Export settings" onclick="digichain.showExportSettingsPanel(event)" class="button-clear toggle-export-settings"><i class="gg-options"></i></button>
+        <button title="OP-X Export" onclick="digichain.showEditPanel(event, false, 'opExport')" class="button-clear toggle-export-settings" style="line-height: 5rem;">OP</button>
         <a id="getJoined">_</a>
       </div>
     </div>

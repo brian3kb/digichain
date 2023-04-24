@@ -111,6 +111,7 @@ input { color: #a8a8a8; }
     margin-top: 0;
 }
 #getJoined, .wav-link-hidden, .hidden { visibility: hidden; }
+.fade { opacity: .15; }
 #getJoined, #uploadInput, #uploadSliceFile { display: none; }
 #fileNum { padding-left: 1rem; }
 table#masterList { padding-bottom: 12rem; padding-top: 1rem; }
@@ -311,7 +312,26 @@ td button { margin: 0.5rem; }
     display: none;
 }
 .op-export-panel-options { top: 1vh;}
-a {
+.op-export-side-panel-options {
+    width: 50rem;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: -50rem;
+    z-index: 5;
+    border-left: 1px solid #2c2d30;
+    max-width: 50%;
+    transition: right .33s ease-in;
+    padding: 1rem;
+    background: #202124c7;
+}
+.op-export-side-panel-options.show {
+    right: 0;
+}
+#opExportPanelContent {
+    margin: 2rem;
+}
+ a {
     cursor: pointer;
 }
 .w-0 { width: 0; }
@@ -381,6 +401,9 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     margin-top: 0;
     margin-right: 0.5rem;
     top: 0.35rem;
+}
+.right-buttons {
+    transition: opacity .33s ease-in;
 }
 .btn-audio-config * { color: #7a6241; }
 .btn-audio-config:hover * { color: #d79c4e; }
@@ -522,9 +545,39 @@ table#mergeList td.file-path-td {
     border-radius: 7px;
     margin: 3px;
     float: left;
+    background-color: #202124b5;
 }
 .op-key.black:nth-of-type(1) { margin-top: 3rem; }
 .op-key.black:nth-of-type(4), .op-key.black:nth-of-type(6), .op-key.black:nth-of-type(9) { margin-top: 6rem; }
+
+.op-key::before {
+    content: 'L';
+    position: absolute;
+    width: 7rem;
+    display: block;
+    height: 5rem;
+    line-height: 5rem;
+    text-align: center;
+    background: #cb9d5b26;
+    border-bottom-left-radius: 7px;
+    border-top-left-radius: 7px;
+    padding: 1px;
+}
+.op-key::after {
+    content: 'R';
+    position: absolute;
+    width: 7rem;
+    display: block;
+    height: 5rem;
+    line-height: 5rem;
+    text-align: center;
+    background: #3c2b1366;
+    border-bottom-right-radius: 7px;
+    border-top-right-radius: 7px;
+    padding: 1px;
+    margin-left: 15rem;
+    margin-top: -2.7rem;
+}
 
 .sample-list {
     width: 40%;
@@ -535,9 +588,9 @@ table#mergeList td.file-path-td {
     overflow-y: auto;
     border-radius: 5px;
 }
-.white-keys, .black-keys {
-    width: 28%;
-}
+/*.white-keys, .black-keys {*/
+/*    width: 28%;*/
+/*}*/
 .white-keys .op-key {
     float: right;
 }

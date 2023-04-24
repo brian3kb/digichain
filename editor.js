@@ -6,6 +6,7 @@ const editEl = document.getElementById('editorPanelContent');
 
 const opExportPanelEl = document.getElementById('opExportPanel');
 const opExportEl = document.getElementById('opExportPanelContent');
+const rightButtonsEl = document.querySelector('.right-buttons');
 
 const views = ['sample', 'slice', 'opExport'];
 
@@ -43,6 +44,7 @@ export function showEditor(data, options, view = 'sample') {
     buildOpData();
     renderOpExport();
     opExportPanelEl.classList.add('show');
+    rightButtonsEl.classList.add('fade');
   }
 }
 
@@ -93,13 +95,17 @@ function renderOpExport() {
     black: [  1,  3,  5,      8, 10,     13, 15, 17,     20, 22],
     white: [0,  2,  4,  6,  7,  9, 11, 12, 14, 16, 18, 19, 21, 23]
   };
+  //    <div className="sample-list float-left">${renderOpSampleList()}</div>
   opExportEl.innerHTML = `
-    <div class="sample-list float-left">${renderOpSampleList()}</div>
-    <div class="black-keys float-right">${keys.black.reduce((a, i) => a += renderKey('black', i), '')}</div>
-    <div class="white-keys float-right">${keys.white.reduce((a, i) => a += renderKey('white', i), '')}</div>
     <div>
-    <button class="button" onclick="digichain.editor.buildOpKit()">Build Kit</button>
-</div>
+    <div class="op-keys row">
+            <div class="white-keys float-right">${keys.white.reduce((a, i) => a += renderKey('white', i), '')}</div>
+        <div class="black-keys float-right">${keys.black.reduce((a, i) => a += renderKey('black', i), '')}</div>
+    </div><br>
+      <div class="op-buttons row">
+        <button class="button float-right" onclick="digichain.editor.buildOpKit()">Build Kit</button>
+      </div>
+    </div>
   `;
 }
 

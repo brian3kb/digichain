@@ -161,7 +161,7 @@ const toggleOptionsPanel = () => {
   buttonsEl.classList.contains('hidden') ? toggleButtonEl.classList.add('collapsed') : toggleButtonEl.classList.remove('collapsed');
 };
 
-const showEditPanel = (event, id, view = 'samples') => {
+const showEditPanel = (event, id, view = 'sample') => {
   let data;
   if (view === 'opExport') {
     lastOpKit = files.filter(f => f.meta.checked);
@@ -1482,21 +1482,21 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
           break;
         case 'APPL'://'op-1':
           const utf8Decoder = new TextDecoder('utf-8');
-          let maxSize = chunks.form.type === 'AIFC' ? 44100 * 20 : 44100 * 12;
-          let scale = chunks.form.type === 'AIFC' ? 2434 : 4058;
+          //let maxSize = chunks.form.type === 'AIFC' ? 44100 * 20 : 44100 * 12;
+          let scale = chunks.form.type === 'AIFC' && chunks.comm.numberOfChannels === 2 ? 2434 : 4058;
           chunks.json = {
             id: String.fromCharCode(dv.getUint8(offset),
                 dv.getUint8(offset + 1), dv.getUint8(offset + 2),
                 dv.getUint8(offset + 3)),
             size: dv.getUint32(offset + 4),
-            bytesInLength: maxSize * 2,
-            maxSize,
+            //bytesInLength: maxSize * 2,
             scale,
           };
           let jsonString = utf8Decoder.decode(
               arrayBuffer.slice(offset + 12, chunks.json.size + offset + 8));
           chunks.json.data = JSON.parse(
-              jsonString.replace(/\]\}.*/gi, ']}').trimEnd());
+              jsonString.replace(/\]\}(.|\n)+/gi, ']}').trimEnd());
+              //jsonString.replace(/\]\}.*/gi, ']}').trimEnd());
           break;
         case 'SSND':
           chunks.buffer = arrayBuffer.slice(offset + 4);

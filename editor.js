@@ -1,4 +1,4 @@
-import {audioBufferToWav} from './resources.js';
+import {audioBufferToWav, encodeAif} from './resources.js';
 
 const editPanelEl = document.getElementById('editPanel');
 const editableItemsEl = document.getElementById('editableItems');
@@ -40,9 +40,38 @@ export function showEditor(data, options, view = 'sample') {
   }
   if (view === 'opExport') {
     samples = data;
+    buildOpData();
     renderOpExport();
     opExportPanelEl.classList.add('show');
   }
+}
+
+function buildOpData() {
+  samples.json = samples.json || {
+    attack: new Array(24).fill(0),
+      drum_version: 2,
+      dyna_env: [0, 8192, 0, 8192, 0, 0, 0, 0],
+      end: new Array(24).fill(0),
+      fx_active: false,
+      fx_params: [8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
+      fx_type: 'delay',
+      lfo_active: false,
+      lfo_params: [16000, 16000, 16000, 16000, 0, 0, 0, 0],
+      lfo_type: 'tremolo',
+      mtime: 1682173750,
+      name: 'DigiChain Kit',
+      octave: 0,
+      original_folder: 'digichain',
+      pan: new Array(24).fill(0),
+      pan_ab: new Array(24).fill(false),
+      pitch: new Array(24).fill(0),
+      playmode:new Array(24).fill(5119),
+      reverse: new Array(24).fill(12000),
+      start: new Array(24).fill(0),
+      stereo: true,
+      type: 'drum',
+      volume:new Array(24).fill(8192)
+  };
 }
 
 function renderKey(color, index) {
@@ -68,7 +97,21 @@ function renderOpExport() {
     <div class="sample-list float-left">${renderOpSampleList()}</div>
     <div class="black-keys float-right">${keys.black.reduce((a, i) => a += renderKey('black', i), '')}</div>
     <div class="white-keys float-right">${keys.white.reduce((a, i) => a += renderKey('white', i), '')}</div>
+    <div>
+    <button class="button" onclick="digichain.editor.buildOpKit()">Build Kit</button>
+</div>
   `;
+}
+
+function buildOpKit() {
+  const linkEl = document.querySelector('.aif-link-hidden');
+  const dataView =  encodeAif(samples[0].buffer, samples.json);
+  let blob = new window.Blob([dataView], {
+    type: 'audio/aiff',
+  });
+  linkEl.href = URL.createObjectURL(blob);
+  linkEl.setAttribute('download', 'test-kit.aif');
+  linkEl.click();
 }
 
 export function renderEditor(item) {
@@ -421,5 +464,6 @@ export const editor = {
   normalize,
   trimRight,
   perSamplePitch,
+  buildOpKit,
   reverse
 };

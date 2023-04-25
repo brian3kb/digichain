@@ -78,7 +78,22 @@ function buildOpData() {
 
 function renderKey(color, index) {
   return `
-    <div class="op-key ${color} key-${index}">${index + 1}</div>   
+    <div class="op-key ${color} key-${index}"
+         ondragenter="this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="this.classList.remove('drag-over')"
+         >
+        <div class="left-a"
+           ondragenter="this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="this.classList.remove('drag-over')"
+        >L</div>     
+        <div class="right-b"
+           ondragenter="this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="this.classList.remove('drag-over')"
+        >R</div>     
+    </div>   
   `;
 }
 

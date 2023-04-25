@@ -32,6 +32,7 @@ let pitchModifier = JSON.parse(localStorage.getItem('pitchModifier'))?? 1;
 let playWithPopMarker = JSON.parse(localStorage.getItem('playWithPopMarker'))?? 0;
 let zipDownloads = JSON.parse(localStorage.getItem('zipDownloads'))?? true;
 let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData'))?? true;
+let secondsPerFile = 0;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
 let unsorted = [];
@@ -125,6 +126,10 @@ function changeAudioConfig(event) {
   [masterSR, masterBitDepth, masterChannels] = [audioConfigOptions[selection].sr, audioConfigOptions[selection].bd, audioConfigOptions[selection].c];
   event.target.dataset.selection = selection;
   audioCtx = new AudioContext({sampleRate: masterSR});
+  toggleSecondsPerFile(false,
+      secondsPerFile === 0 ? 0 :
+      (masterChannels === 2 ? 20 : 12)
+  );
   renderList();
 }
 
@@ -375,6 +380,29 @@ function toggleSetting(param, value) {
   }
 }
 
+function toggleSecondsPerFile(event, value) {
+  const toggleEl = document.querySelector('.toggle-seconds-per-file');
+  const toggleSpanEl = document.querySelector('.toggle-seconds-per-file span');
+  if (value !== undefined) {
+    secondsPerFile = value;
+  } else {
+    secondsPerFile = secondsPerFile === 0 ?
+        (masterChannels === 2 ? 20 : 12):
+        0;
+  }
+  if (secondsPerFile === 0) {
+    toggleEl.classList.remove('on');
+    toggleSpanEl.innerText = 'off';
+  } else {
+    toggleEl.classList.add('on');
+    toggleSpanEl.innerText = `${secondsPerFile}s`;
+    selectSliceAmount({
+      shiftKey: true,
+      target: document.querySelector('.slice-grid-off')
+    }, 0);
+  }
+}
+
 function showExportSettingsPanel() {
   const panelContentEl = document.querySelector('.export-settings-panel-md .content');
   panelContentEl.innerHTML = `
@@ -604,8 +632,12 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
   if (files.length === 0) { return; }
   if (toInternal || (event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
   if (zipDownloads && !toInternal) { zip = zip || new JSZip(); }
+
   let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(f => f.meta.checked);
+
+
   let tempFiles = _files.splice(0, (sliceGrid > 0 ? sliceGrid : _files.length));
+
   let slices;
   filesRemaining = Array.from(_files);
   _files = tempFiles;
@@ -965,6 +997,9 @@ const splitByOtSlices = (event, id, pushInPlace = false, sliceSource = 'ot') => 
       sliceNumber: `${file.meta.sliceNumber ? file.meta.sliceNumber + '-' : ''}${i+1}`, slicedFrom: file.meta.id,
       channel: audioArrayBuffer.numberOfChannels > 1 ? 'L': ''
     };
+    slice.meta.customSlices = false;
+    slice.meta.op1Json = false;
+    slice.meta.slices = false;
 
     file.buffer.getChannelData(0).slice(otMeta.slices[i].startPoint, otMeta.slices[i].endPoint).forEach((a, idx) => slice.buffer.getChannelData(0)[idx] = a);
     if (file.buffer.numberOfChannels === 2) {
@@ -980,7 +1015,6 @@ const splitByOtSlices = (event, id, pushInPlace = false, sliceSource = 'ot') => 
   if (pushInPlaceItems.length) {
     files.splice(getFileIndexById(id) + 1, 0, ...pushInPlaceItems);
   }
-  file.meta.customSlices = false;
   renderList();
 };
 
@@ -1927,6 +1961,10 @@ document.body.addEventListener(
         }, 500);
       } else {
         let target = event.target;
+        if (document.getElementById('opExportPanel').classList.contains('show')) {
+          // Block row re-ordering while op export side panel is open.
+          return ;
+        }
         while (!target.classList.contains('file-row')) {
           target = target.parentElement || document.body;
           target = target.nodeName === 'THEAD' ? document.querySelector('tr.file-row') : target;
@@ -2056,5 +2094,6 @@ window.digichain = {
   showEditPanel,
   pitchExports,
   toggleSetting,
+  toggleSecondsPerFile,
   editor
 };

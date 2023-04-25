@@ -196,7 +196,7 @@ td button { margin: 0.5rem; }
 .align-right { text-align: right; }
 .check {
     padding: 0;
-    width: 4rem;
+    width: 4.2rem;
 }
 .waveform-td { padding: 0 1rem; }
 .is-ot-file::after, .is-op-file::after, .is-dc-file::after, .sff-button::after {
@@ -306,11 +306,12 @@ td button { margin: 0.5rem; }
     padding: 2rem;
     border-radius: 5px;
     box-shadow: 0 0 4px #cf8600;
-    display: none;
     box-sizing: content-box;
     max-width: 512px;
+    transition: opacity .33s ease-in;
     display: none;
 }
+
 .op-export-panel-options { top: 1vh;}
 .op-export-side-panel-options {
     width: 50rem;
@@ -343,26 +344,34 @@ td button { margin: 0.5rem; }
 }
 .btn-download {
     padding: 0;
-    width: 16.25rem;
+    width: 16rem;
+}
+.btn-download-all {
+    margin-left: 1rem;
 }
 .dl-single-files { width: 10rem; }
 .dl-spaced{
-    width: 22rem;
+    width: 16rem;
     padding: 0;
     float: left;
 }
-.toggle-export-settings {
+.toggle-export-settings, .toggle-seconds-per-file {
     padding: 0 1rem;
     float: right;
     transform: translateY(-0.75rem);
 }
+.toggle-seconds-per-file {
+    margin: 0.7rem 1rem 0 0;
+    color: #2f3234;
+}
+.toggle-seconds-per-file.on { color: #d79c4e; }
 .slice-group {
     border: 1px solid orange;
     padding: 1rem;
     border-radius: 5px;
     text-align: center;
     padding-bottom: 0.25rem;
-    width: 33rem;
+    width: 35rem;
     height: 10.75rem;
     background-color: #202124;
     transition: transform .2s ease-in;
@@ -404,6 +413,13 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
 }
 .right-buttons {
     transition: opacity .33s ease-in;
+}
+.right-buttons:has(.toggle-seconds-per-file.on) button.check:not(.slice-grid-off) {
+    pointer-events: none;
+    color: #2f3234;
+    border-color: #2f3234 !important;
+    background-color: transparent !important;
+
 }
 .btn-audio-config * { color: #7a6241; }
 .btn-audio-config:hover * { color: #d79c4e; }
@@ -550,21 +566,22 @@ table#mergeList td.file-path-td {
 .op-key.black:nth-of-type(1) { margin-top: 3rem; }
 .op-key.black:nth-of-type(4), .op-key.black:nth-of-type(6), .op-key.black:nth-of-type(9) { margin-top: 6rem; }
 
-.op-key::before {
-    content: 'L';
+.op-key .left-a{
     position: absolute;
     width: 7rem;
     display: block;
     height: 5rem;
     line-height: 5rem;
     text-align: center;
-    background: #cb9d5b26;
+    /*background: #cb9d5b26;*/
+    background: #3c2b1366;
     border-bottom-left-radius: 7px;
     border-top-left-radius: 7px;
     padding: 1px;
+    opacity: 0;
+    transition: opacity .15s ease;
 }
-.op-key::after {
-    content: 'R';
+.op-key .right-b {
     position: absolute;
     width: 7rem;
     display: block;
@@ -576,7 +593,25 @@ table#mergeList td.file-path-td {
     border-top-right-radius: 7px;
     padding: 1px;
     margin-left: 15rem;
-    margin-top: -2.7rem;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+
+.op-key.drag-over .left-a,
+.op-key.drag-over .right-b,
+
+.op-key:has(.left-a.drag-over) .right-b,
+.op-key:has(.right-b.drag-over) .left-a
+{
+    opacity: 1;
+}
+.op-key.drag-over .left-a.drag-over,
+.op-key.drag-over .right-b.drag-over,
+.op-key .left-a.drag-over,
+.op-key .right-b.drag-over {
+    box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.1);
+    visibility: visible;
+    opacity: 1;
 }
 
 .sample-list {
@@ -692,7 +727,6 @@ table#mergeList td.file-path-td {
     .min-width-20, .column-33, .column-33 .download-buttons, .column-33 .slice-group { width: 100%; }
     .column-33 .btn-download { width: 49.3%;}
     .column-33 .check { width: 13.1%; }
-    .column-33 .dl-spaced { width: 81.5%;}
     .left-buttons .row { display: block; }
     .left-buttons .button { width: 48.5%; margin-right: 0.1rem; }
     .left-buttons .row .button:first-child { margin-left: 0.25rem;}
@@ -707,7 +741,7 @@ table#mergeList td.file-path-td {
         margin-top: -31rem;
     }
     #toggleOptionsButton {
-        margin-top: 30.5rem;
+        margin-top: 35.5rem;
     }
 }
 
@@ -728,7 +762,7 @@ table#mergeList td.file-path-td {
         padding-top: 2.5rem;
     }
     #toggleOptionsButton {
-        margin-top: 29rem;
+        margin-top: 34rem;
     }
     .waveform-container {
         display: none;

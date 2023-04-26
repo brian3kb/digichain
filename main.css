@@ -300,7 +300,7 @@ td button { margin: 0.5rem; }
     top: 16vh;
     left: 50%;
     margin: 0 -256px;
-    z-index: 1000;
+    z-index: 100;
     background-color: #202124;
     border: 1px solid orange;
     padding: 2rem;
@@ -328,6 +328,9 @@ td button { margin: 0.5rem; }
 }
 .op-export-side-panel-options.show {
     right: 0;
+}
+.loading .op-export-side-panel-options.show {
+    opacity: .05;
 }
 #opExportPanelContent {
     margin: 2rem;
@@ -362,9 +365,9 @@ td button { margin: 0.5rem; }
 }
 .toggle-seconds-per-file {
     margin: 0.7rem 1rem 0 0;
-    color: #2f3234;
+    color: #2f3234 !important;
 }
-.toggle-seconds-per-file.on { color: #d79c4e; }
+.toggle-seconds-per-file.on { color: #d79c4e !important;}
 .slice-group {
     border: 1px solid orange;
     padding: 1rem;
@@ -414,7 +417,8 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
 .right-buttons {
     transition: opacity .33s ease-in;
 }
-.right-buttons:has(.toggle-seconds-per-file.on) button.check:not(.slice-grid-off) {
+.right-buttons:has(.toggle-seconds-per-file.on) button.check:not(.slice-grid-off),
+.right-buttons:has(.toggle-seconds-per-file.on) button.dl-spaced {
     pointer-events: none;
     color: #2f3234;
     border-color: #2f3234 !important;
@@ -446,6 +450,7 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
 }
 .loading .loading-message {
     display: block;
+    z-index: 100;
 }
 .loading .container {
     opacity: .15;

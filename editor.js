@@ -139,6 +139,7 @@ export function renderEditor(item) {
   editing = item === editing ? editing : item;
   editEl.innerHTML = `
   <button onclick="digichain.playFile(event);" class="button-outline check">Play</button>
+  <button onclick="digichain.playFile(event, false, true);" class="button-outline check">Loop</button>
   <button onclick="digichain.stopPlayFile(event);" class="button-outline check">Stop</button>
   <div class="zoom-level float-right">
     <button class="zoom-1x button-outline check" onclick="digichain.editor.zoomLevel('editor', 1)">1x</button>

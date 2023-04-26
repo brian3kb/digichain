@@ -11,13 +11,18 @@
  - Merge All Selected action - mixes down all the selected items into one sample.
  - Enabled 32bit float wav exports.
  - Prevent pitch-up crashing when doubling a very small audio buffer.
- - Added support for loading 16bit 44.1 aif files (only those produced to the customized TE aif file formats).
+ - Added support for loading 16bit 44.1k aif files (only those produced to the customized TE aif file formats).
  - Added slice from OP-1/OP-Z/OP-1 Field drum-kit aif files.
  - DC slice format embedded in output chain wav file so user can restore the chains to slices retaining the input filename.
  - Allow disabling slice embed in settings, as some devices do not like custom riff chunks in wav files.
  - Settings on the settings panel are saved to local-storage and will persist when the app re-opens.
  - Option to play pop-markers at the start and end of the sample for direct sampling to the Digitakt audio inputs. Two options, 0db markers (which prevents the DT's auto normalization from changing the recorded sample volume), and peak, which sets the pop-marker volumes to match the loudest peak in the sample.
  - Slice from tape.json (OP-1 Field tape file slice markers).
+ - Show/hide touch modifier buttons in options panel.
+ - Restore last used sample rate/bit depth/channel selection in options.
+ - Added loop playback button to editor panel.
+ - Checking for suspended audio-context and resuming if suspended before playback.
+ - Split chained files at 12s (mono) or 20s (stereo) lengths mode. 
 
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)

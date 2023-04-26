@@ -23,15 +23,21 @@ const audioConfigOptions = {
   m4800024: { sr: 48000, bd: 24, c: 1 },
   s4800024: { sr: 48000, bd: 24, c: 2 },
   m4800032: { sr: 48000, bd: 32, c: 1 },
-  s4800032: { sr: 48000, bd: 32, c: 2 }
+  s4800032: { sr: 48000, bd: 32, c: 2 },
+
+  m4410016a: { sr: 44100, bd: 16, c: 1, f: 'a' },
+  s4410016a: { sr: 44100, bd: 16, c: 2, f: 'a' }
 };
 let masterSR = 48000;
 let masterBitDepth = 16;
 let masterChannels = 1;
+let lastUsedAudioConfig = localStorage.getItem('lastUsedAudioConfig')?? 'm4800016';
+let restoreLastUsedAudioConfig = JSON.parse(localStorage.getItem('restoreLastUsedAudioConfig'))?? true;
 let pitchModifier = JSON.parse(localStorage.getItem('pitchModifier'))?? 1;
 let playWithPopMarker = JSON.parse(localStorage.getItem('playWithPopMarker'))?? 0;
 let zipDownloads = JSON.parse(localStorage.getItem('zipDownloads'))?? true;
 let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData'))?? true;
+let showTouchModifierKeys = JSON.parse(localStorage.getItem('showTouchModifierKeys'))?? true;
 let secondsPerFile = 0;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
@@ -113,14 +119,22 @@ metaFiles.removeByName = function(filename) {
   }
 }
 
-function changeAudioConfig(event) {
-  const selection = event?.target?.selectedOptions[0]?.value || 'm4800016';
+function changeAudioConfig(event, option) {
+  const selection = option ||
+                           event?.target?.selectedOptions[0]?.value ||
+                           'm4800016';
   if (files.length > 0 && audioConfigOptions[selection].sr !== masterSR) {
     let conf = confirm(`Changing audio export sample rate will remove all files from the sample list.\n\n Do you want to continue?`);
     if (!conf) {
       event.target.selectedIndex = [...event.target.options].findIndex(s => s.value === event.target.dataset.selection);
       return false;
     }
+  }
+  if (option) {
+    document.getElementById('audioConfigOptions').value = option;
+  } else {
+    lastUsedAudioConfig = selection;
+    localStorage.setItem('lastUsedAudioConfig', selection);
   }
   files = audioConfigOptions[selection].sr !== masterSR ? [] : files;
   [masterSR, masterBitDepth, masterChannels] = [audioConfigOptions[selection].sr, audioConfigOptions[selection].bd, audioConfigOptions[selection].c];
@@ -130,6 +144,12 @@ function changeAudioConfig(event) {
       secondsPerFile === 0 ? 0 :
       (masterChannels === 2 ? 20 : 12)
   );
+  setEditorConf({
+    audioCtx,
+    masterSR,
+    masterChannels,
+    masterBitDepth
+  });
   renderList();
 }
 
@@ -372,6 +392,19 @@ function toggleSetting(param, value) {
     localStorage.setItem('embedSliceData', embedSliceData);
     showExportSettingsPanel();
   }
+  if (param === 'restoreLastUsedAudioConfig') {
+    restoreLastUsedAudioConfig = !restoreLastUsedAudioConfig;
+    localStorage.setItem('restoreLastUsedAudioConfig', restoreLastUsedAudioConfig);
+    showExportSettingsPanel();
+  }
+  if (param === 'showTouchModifierKeys') {
+    showTouchModifierKeys = !showTouchModifierKeys;
+    localStorage.setItem('showTouchModifierKeys', showTouchModifierKeys);
+    document.querySelector('.touch-buttons').classList[
+        showTouchModifierKeys ? 'remove' : 'add'
+        ]('hidden');
+    showExportSettingsPanel();
+  }
   if (param === 'playWithPopMarker' ) {
     playWithPopMarker = value;
     files.forEach(f => f.meta.peak = undefined);
@@ -401,6 +434,7 @@ function toggleSecondsPerFile(event, value) {
       target: document.querySelector('.slice-grid-off')
     }, 0);
   }
+  setCountValues();
 }
 
 function showExportSettingsPanel() {
@@ -422,6 +456,10 @@ function showExportSettingsPanel() {
     <button onclick="digichain.pitchExports(4)" class="check ${pitchModifier === 4 ? 'button' : 'button-outline'}">2</button>
     <button onclick="digichain.pitchExports(8)" class="check ${pitchModifier === 8 ? 'button' : 'button-outline'}">3</button><br></td>
 </tr>
+<tr>
+<td><span>Restore the last used Sample Rate/Bit Depth/Channel? &nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('restoreLastUsedAudioConfig')" class="check ${restoreLastUsedAudioConfig ? 'button' : 'button-outline'}">${ restoreLastUsedAudioConfig ? 'YES' : 'NO'}</button></td>
+</tr>
     <tr>
     <td><span>Play pop markers when playing back samples?<br>0db prevents DT normalization.<br>Peak sets pop to loudest sample peak. &nbsp;&nbsp;&nbsp;</span></td>
     <td>
@@ -437,6 +475,10 @@ function showExportSettingsPanel() {
 <tr>
 <td><span>Embed slice information in exported wav files?<br>(Disable this if files cause an error loading for you.) &nbsp;&nbsp;&nbsp;</span></td>
 <td><button onclick="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData ? 'button' : 'button-outline'}">${ embedSliceData ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<td><span>Show Shift/Ctrl modifier touch buttons?&nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('showTouchModifierKeys')" class="check ${showTouchModifierKeys ? 'button' : 'button-outline'}">${ showTouchModifierKeys ? 'YES' : 'NO'}</button></td>
 </tr>
 </tbody>
 </table>
@@ -635,33 +677,63 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
 
   let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(f => f.meta.checked);
 
+  let tempFiles, slices, largest;
+  let totalLength = 0;
 
-  let tempFiles = _files.splice(0, (sliceGrid > 0 ? sliceGrid : _files.length));
+  if (secondsPerFile === 0) { /*Using slice grid file lengths*/
+    tempFiles = _files.splice(0, (sliceGrid > 0 ? sliceGrid : _files.length));
 
-  let slices;
-  filesRemaining = Array.from(_files);
-  _files = tempFiles;
-  if (pad && sliceGrid !== 0 && _files.length !== 0) {
-    while (_files.length !== sliceGrid) {
-      _files.push(_files[_files.length - 1]);
+    filesRemaining = Array.from(_files);
+    _files = tempFiles;
+    if (pad && sliceGrid !== 0 && _files.length !== 0) {
+      while (_files.length !== sliceGrid) {
+        _files.push(_files[_files.length - 1]);
+      }
     }
+    largest = _files.reduce((big, cur) => big > cur.buffer.length ? big : cur.buffer.length, 0);
+    totalLength = _files.reduce((total, file) => {
+      total +=  pad ? largest : file.buffer.length;
+      return total;
+    }, 0);
+
+  } else { /*Using max length in seconds file lengths*/
+    const processing = _files.reduce((a, f) => {
+      if (a.duration + +f.meta.duration <= (secondsPerFile * pitchModifier)) {
+        a.duration = a.duration + +f.meta.duration;
+        a.totalLength = a.totalLength + +f.meta.length;
+        a.processed.push(f);
+      } else {
+        a.skipped.push(f);
+      }
+      return a;
+    }, { duration: 0, totalLength: 0, processed: [], skipped: [] });
+
+    totalLength = processing.totalLength;
+    filesRemaining = processing.skipped;
+    _files = processing.processed;
   }
-  const largest = _files.reduce((big, cur) => big > cur.buffer.length ? big : cur.buffer.length, 0);
-  const totalLength = _files.reduce((total, file) => {
-    total +=  pad ? largest : file.buffer.length;
-    return total;
-  }, 0);
-  if (embedSliceData) {
+
+  if (embedSliceData && !lastUsedAudioConfig.includes('a')) {
     slices = [];
     let offset = 0;
     for (let x = 0; x < _files.length; x++) {
       if (_files[x].meta.slices) {
-        slices = [...slices, ..._files[x].meta.slices];
-        offset += _files[x].buffer.length;
+        if (slices.length > 0) {
+          const lastLen = +_files[x - 1].buffer.length;
+          const _slices = JSON.parse(JSON.stringify(_files[x].meta.slices));
+          _slices.forEach(slice => {
+            slice.s = slice.s + lastLen;
+            slice.e = slice.e + lastLen;
+          });
+          slices = [...slices, ..._slices];
+        } else {
+          slices = [...slices, ..._files[x].meta.slices];
+        }
+        offset += +_files[x].buffer.length;
       } else {
         slices.push({
           s: offset,
-          e: offset += (pad ? largest : _files[x].buffer.length),
+          e: offset += (pad ? largest : +_files[x].buffer.length),
           n: _files[x].file.name
         });
       }
@@ -754,6 +826,9 @@ const playFile = (event, id, loop) => {
   loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
   if (file.source) {
     file.source.stop();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
   }
   file.source = audioCtx.createBufferSource();
   let buffer = file.meta.channel && masterChannels === 1 ?
@@ -1294,14 +1369,44 @@ const setCountValues = () => {
   const joinCount = selectionCount === 0 ? 0 : (selectionCount > 0 && sliceGrid > 0 ? Math.ceil(selectionCount / sliceGrid) : 1);
   document.getElementById('fileNum').textContent = `${files.length}/${selectionCount}`;
   document.querySelector('.selection-count').textContent = ` ${selectionCount || '-'} `;
-  document.querySelectorAll('.join-count').forEach(el => el.textContent = ` ${joinCount === 0 ? '-' : joinCount} `);
   document.getElementById('lengthHeaderLink').textContent = `Length (${secondsToMinutes(filesSelectedDuration)}/${secondsToMinutes(filesDuration)})`;
-  try {
-    document.querySelectorAll('tr').forEach(row => row.classList.remove('end-of-grid'));
-    document.querySelectorAll('tr.checked').forEach(
-        (row, i) => (i+1)%sliceGrid === 0 ? row.classList.add('end-of-grid') : row.classList.remove('end-of-grid'));
+  if (secondsPerFile === 0) {
+    document.querySelectorAll('.join-count').forEach(el => el.textContent = ` ${joinCount === 0 ? '-' : joinCount} `);
+    try {
+      document.querySelectorAll('tr').forEach(row => row.classList.remove('end-of-grid'));
+      document.querySelectorAll('tr.checked').forEach(
+          (row, i) => (i+1)%sliceGrid === 0 ? row.classList.add('end-of-grid') : row.classList.remove('end-of-grid'));
 
-  } catch(e) {}
+    } catch(e) {}
+  } else { /*When using max length in seconds.*/
+    const calcFiles = (items, count = 0) => {
+      let progress = { duration: 0, processed: [], skipped: [], count };
+      let _items = items;
+      while (_items.length > 0) {
+        progress = _items.reduce((a, f) => {
+          if (a.duration + +f.meta.duration <= (secondsPerFile * pitchModifier)) {
+            a.duration = a.duration + +f.meta.duration;
+            a.processed.push(f);
+          } else {
+            a.skipped.push(f);
+          }
+          return a;
+        }, progress);
+        progress.count++;
+        progress.duration = 0;
+        _items = Array.from(progress.skipped);
+        progress.skipped = [];
+      }
+      return progress.count;
+    };
+
+    let joinCountSec = filesSelected.length === 0 ? 0 : calcFiles(filesSelected);
+    document.querySelector('.join-count-chain').textContent = ` ${joinCountSec === 0 ? '-' : joinCountSec} `;
+    try {
+      document.querySelectorAll('tr').forEach(row => row.classList.remove('end-of-grid'));
+    } catch(e) {}
+  }
+
 };
 
 const buildRowMarkupFromFile = (f, type = 'main') => {
@@ -2046,14 +2151,23 @@ document.body.addEventListener('keydown', (event) => {
   }
 });
 
-setEditorConf({
-  audioCtx,
-  masterSR,
-  masterChannels,
-  masterBitDepth
-});
-
+/*Actions based on restored local storage states*/
 pitchExports(pitchModifier, true);
+document.querySelector('.touch-buttons').classList[
+    showTouchModifierKeys ? 'remove' : 'add'
+    ]('hidden');
+if (restoreLastUsedAudioConfig) {
+  changeAudioConfig({
+    target: document.getElementById('audioConfigOptions')
+  }, lastUsedAudioConfig);
+} else {
+  setEditorConf({
+    audioCtx,
+    masterSR,
+    masterChannels,
+    masterBitDepth
+  });
+}
 
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {

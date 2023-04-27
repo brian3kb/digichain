@@ -159,17 +159,22 @@ export function renderEditor(item) {
   </div>
   <div class="sample-op-buttons">
   <button title="Normalize the volume of the sample." class="normalize button button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
+  
+  <button title="Silence the selected audio." class="silence button button-outline" onclick="digichain.editor.fade()">Silence</button>
+  <button title="Fade in the selected audio." class="fade-in button button-outline" onclick="digichain.editor.fade('in')">Fade In</button>
+  <button title="Fade out the selected audio." class="fade-out button button-outline" onclick="digichain.editor.fade('out')">Fade Out</button>
+  
   <button title="Reverses the sample playback" class="reverse button button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>&nbsp;&nbsp;-&nbsp;
   <button title="Trims any zero valued audio from the end of the sample." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
   &nbsp;&nbsp;&nbsp;
   <button title="Lower pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5)">-12</button>
   <button title="Lower pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12))">-1</button>
-  &nbsp;<span> Adjust Pitch (semi-tones) </span>&nbsp;
+  &nbsp;<span> Pitch (semitones) </span>&nbsp;
   <button title="Increase pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12))">+1</button>
   <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2)">+12</button>
   </div>
   <span class="edit-info">
-    Normalize & Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
+    Normalize, Silence, Fade In, Fade Out, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo.
   </span>
   `;
@@ -405,6 +410,42 @@ function normalize(event, item, renderEditPanel = true, findPeakOnly = false) {
   item.waveform = false;
 }
 
+function fade(type, item, renderEditPanel = true) {
+  if (!renderEditPanel && item) {
+    selection.start = 0;
+    selection.end = item.buffer.length;
+  }
+  item = item || editing;
+
+  const numChannels = item.buffer.numberOfChannels;
+  const sampleRate = item.buffer.sampleRate;
+  const fadeDuration = (selection.end - selection.start);
+  const numSamples = fadeDuration * numChannels;
+  const fadeSamples = fadeDuration * sampleRate;
+
+  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+    let data = item.buffer.getChannelData(channel);
+    for (let i = selection.start; i < selection.end; i++) {
+      if (type === 'out') {
+        data[i] = data[i] * ((fadeDuration - i) / fadeDuration);
+      } else if (type === 'in') {
+        data[i] = data[i] * (i / fadeDuration);
+        if (data[i] > data[selection.end]) {
+          data[i] = data[selection.end];
+        }
+      } else if (type === 'curse') {
+        data[i] = ((fadeDuration - i) / fadeDuration) / data[i];
+      } else {
+        data[i] = 0;
+      }
+    }
+  }
+  if (renderEditPanel) {
+    renderEditPanelWaveform(multiplier);
+  }
+  item.waveform = false;
+}
+
 function reverse(event, item, renderEditPanel = true) {
   if (!renderEditPanel && item) {
     selection.start = 0;
@@ -484,6 +525,7 @@ export const editor = {
   zoomLevel,
   changeSelectionPoint,
   normalize,
+  fade,
   trimRight,
   perSamplePitch,
   buildOpKit,

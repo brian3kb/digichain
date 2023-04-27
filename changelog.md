@@ -22,7 +22,10 @@
  - Restore last used sample rate/bit depth/channel selection in options.
  - Added loop playback button to editor panel.
  - Checking for suspended audio-context and resuming if suspended before playback.
- - Split chained files at 12s (mono) or 20s (stereo) lengths mode. 
+ - Split chained files at 12s (mono) or 20s (stereo) lengths mode. Sample order will loosely follow the list order, but it will try to fit smaller samples into the chain up to the max limit from further down the selected items in the list, so some samples may be out of order depending on their length and where they could be slotted into each chain to use up the time in the best way possible.
+ - Ctrl+Click on the max length per chain in seconds to set a custom limit.
+ - Fixed bug where joining chains together with single additional sample between caused the slice offsets to be incorrect.
+ - Added playback indicator icon and play-head marker to waveforms in the list view.
 
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)

@@ -299,7 +299,7 @@ async function downloadFile(id, fireLink = false) {
 
 function removeSelected() {
   metaFiles.removeSelected();
-  files.forEach(f => f.meta.checked ? f.source?.stop() : '' );
+  files.forEach(f => stopPlayFile(false, f.meta.id));
   files = files.filter(f => !f.meta.checked);
   unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
   renderList();
@@ -413,9 +413,23 @@ function toggleSetting(param, value) {
   }
 }
 
+function setCustomSecondsPerFileValue(targetEl, size, silent = false) {
+  let newValue = size;
+  if (!silent) { newValue = prompt(`Change max seconds per file "${size}" to what new value?`); }
+  if (newValue && !isNaN(newValue)) {
+    newValue = Math.abs(Math.ceil(+newValue));
+    secondsPerFile = +newValue;
+    targetEl.textContent = newValue;
+  }
+  return +newValue;
+};
+
 function toggleSecondsPerFile(event, value) {
   const toggleEl = document.querySelector('.toggle-seconds-per-file');
   const toggleSpanEl = document.querySelector('.toggle-seconds-per-file span');
+  if (event.ctrlKey || modifierKeys.ctrlKey) {
+    value = setCustomSecondsPerFileValue(toggleSpanEl, secondsPerFile) || value;
+  }
   if (value !== undefined) {
     secondsPerFile = value;
   } else {
@@ -719,24 +733,23 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
     for (let x = 0; x < _files.length; x++) {
       if (_files[x].meta.slices) {
         if (slices.length > 0) {
-          const lastLen = +_files[x - 1].buffer.length;
           const _slices = JSON.parse(JSON.stringify(_files[x].meta.slices));
           _slices.forEach(slice => {
-            slice.s = slice.s + lastLen;
-            slice.e = slice.e + lastLen;
+            slice.s = slice.s + offset;
+            slice.e = slice.e + offset;
           });
           slices = [...slices, ..._slices];
         } else {
           slices = [...slices, ..._files[x].meta.slices];
         }
-        offset += +_files[x].buffer.length;
       } else {
         slices.push({
           s: offset,
-          e: offset += (pad ? largest : +_files[x].buffer.length),
+          e: offset + (pad ? largest : +_files[x].buffer.length),
           n: _files[x].file.name
         });
       }
+      offset += +_files[x].buffer.length;
     }
   }
 
@@ -816,16 +829,26 @@ function joinAllByPath(event, pad = false) { //TODO: test and hook into UI
 
 const stopPlayFile = (event, id) => {
   const file = getFileById(id || lastSelectedRow.dataset.id);
-  if (file.source) {
-    file.source.stop();
-  }
+    file?.source?.stop();
+    file.meta.playing = false;
+    file.waveform?.classList?.remove('playing');
+    let playHead = file.waveform?.parentElement?.querySelector('.play-head');
+    if (playHead) { playHead.remove(); }
+
 };
 
 const playFile = (event, id, loop) => {
   const file = getFileById(id || lastSelectedRow.dataset.id);
+  let playHead;
   loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
   if (file.source) {
     file.source.stop();
+    file.meta.playing = false;
+    if (id) {
+      file.waveform?.classList?.remove('playing');
+      let playHead = file.waveform?.parentElement.querySelector('.play-head');
+      if (playHead) { playHead.remove(); }
+    }
   }
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
@@ -856,10 +879,30 @@ const playFile = (event, id, loop) => {
   }
 
   file.source.buffer = buffer;
-  //file.source.playbackRate.value = 8;
   file.source.connect(audioCtx.destination);
   file.source.loop = loop;
+
+  if (id){
+    playHead = document.createElement('span');
+    playHead.classList.add('play-head');
+    playHead.style.animationDuration = `${file.meta.duration}s`;
+    file.waveform.parentElement.appendChild(playHead);
+  }
+
   file.source.start();
+
+  file.meta.playing = true;
+  if (id) {
+    playHead.style.animationIterationCount = file.source.loop ? 'infinite' : 'unset';
+    file.waveform?.classList?.add('playing');
+  }
+  if (!file.source.loop && id) {
+    setTimeout(() => {
+      file.meta.playing = false;
+      file.waveform?.classList?.remove('playing');
+      playHead.remove();
+    }, file.meta.duration * 1000);
+  }
 };
 
 const toggleCheck = (event, id) => {
@@ -1205,6 +1248,8 @@ const splitSizeAction = (event, slices, threshold) => {
 };
 
 const remove = (id) => {
+  stopPlayFile(false, id);
+  const rowEl = getRowElementById(id);
   const fileIdx = getFileIndexById(id);
   const removed = files.splice(fileIdx, 1);
   const unsortIdx = unsorted.findIndex(uuid => uuid === id);
@@ -1212,7 +1257,7 @@ const remove = (id) => {
   if (removed[0]) {
     metaFiles.removeByName(removed[0].file.name);
   }
-  renderList();
+  rowEl.remove();
 }
 
 const move = (event, id, direction) => {
@@ -1361,6 +1406,13 @@ const secondsToMinutes = (time) => {
   return  mins > 0 ? `${mins}m ${Math.round(+seconds)}s` : `${seconds}s`;
 };
 
+const clearModifiers = () => {
+  modifierKeys.shiftKey = false;
+  modifierKeys.ctrlKey = false;
+  document.body.classList.remove('shiftKey-down');
+  document.body.classList.remove('ctrlKey-down');
+};
+
 const setCountValues = () => {
   const filesSelected = files.filter(f => f.meta.checked);
   const selectionCount = filesSelected.length;
@@ -1406,7 +1458,7 @@ const setCountValues = () => {
       document.querySelectorAll('tr').forEach(row => row.classList.remove('end-of-grid'));
     } catch(e) {}
   }
-
+  clearModifiers();
 };
 
 const buildRowMarkupFromFile = (f, type = 'main') => {
@@ -1429,7 +1481,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
             <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
         </td>
         <td class="waveform-td">
-            <canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id}"></canvas>
+            <canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id} ${f.meta.playing ? 'playing' : ''}"></canvas>
         </td>
         <td class="file-path-td">
             <span class="file-path">${f.file.path}</span>
@@ -2088,8 +2140,7 @@ document.body.addEventListener(
 );
 
 document.body.addEventListener('keyup', (event) => {
-  if (!event.shiftKey) { document.body.classList.remove('shiftKey-down'); }
-  if (!event.ctrlKey) { document.body.classList.remove('ctrlKey-down'); }
+  clearModifiers();
 });
 
 document.body.addEventListener('keydown', (event) => {
@@ -2099,7 +2150,7 @@ document.body.addEventListener('keydown', (event) => {
   if (event.ctrlKey) { document.body.classList.add('ctrlKey-down'); }
   if (event.code === 'Escape') {
     if (files.length && !(event.shiftKey || modifierKeys.shiftKey)) {
-      files.forEach(f => f.source?.stop());
+      files.forEach(f => stopPlayFile(false, f.meta.id));
     }
     return closePopUps();
   }

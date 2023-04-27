@@ -158,6 +158,39 @@ canvas.waveform {
     transform: scaleY(0.95) translateY(-0.1rem);
 }
 canvas.waveform:hover { opacity: .98; }
+
+@keyframes waveformPlayHead {
+    from { margin-left: 0; }
+    to { margin-left: 150px; }
+}
+
+.waveform-td:has(canvas.waveform.playing)::before {
+    content: '';
+    display: block;
+    position: absolute;
+    margin-left: 140px;
+    margin-top: 8px;
+    width: 0;
+    height: 0;
+    border-top: .5rem solid transparent;
+    border-bottom: .5rem solid transparent;
+    border-left: .75rem solid #008000b0;
+}
+td.waveform-td span.play-head {
+    display: block;
+    height: 58px;
+    width: 1px;
+    position: absolute;
+    background-color: #4a4032;
+    margin-top: -61px;
+    margin-left: 0;
+    animation-name: waveformPlayHead;
+    animation-timing-function: linear;
+}
+td.waveform-td span.play-head.play {
+    margin-left: 150px !important;
+}
+
 .waveform-container {
     width: auto;
     height: 15rem;
@@ -245,7 +278,7 @@ td button { margin: 0.5rem; }
     margin-top: -0.15rem;
 }
 .sample-op-buttons .button {
-    width: 14rem;
+    width: 8.5rem;
     padding: 0;
 }
 .sample-op-buttons {

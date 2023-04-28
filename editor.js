@@ -1,4 +1,4 @@
-import {audioBufferToWav, encodeAif} from './resources.js';
+import {audioBufferToWav, buildOpData, encodeAif} from './resources.js';
 
 const editPanelEl = document.getElementById('editPanel');
 const editableItemsEl = document.getElementById('editableItems');
@@ -41,39 +41,15 @@ export function showEditor(data, options, view = 'sample') {
   }
   if (view === 'opExport') {
     samples = data;
-    buildOpData();
+    createOpData();
     renderOpExport();
     opExportPanelEl.classList.add('show');
     rightButtonsEl.classList.add('fade');
   }
 }
 
-function buildOpData() {
-  samples.json = samples.json || {
-    attack: new Array(24).fill(0),
-      drum_version: 2,
-      dyna_env: [0, 8192, 0, 8192, 0, 0, 0, 0],
-      end: new Array(24).fill(0),
-      fx_active: false,
-      fx_params: [8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
-      fx_type: 'delay',
-      lfo_active: false,
-      lfo_params: [16000, 16000, 16000, 16000, 0, 0, 0, 0],
-      lfo_type: 'tremolo',
-      mtime: 1682173750,
-      name: 'DigiChain Kit',
-      octave: 0,
-      original_folder: 'digichain',
-      pan: new Array(24).fill(0),
-      pan_ab: new Array(24).fill(false),
-      pitch: new Array(24).fill(0),
-      playmode:new Array(24).fill(5119),
-      reverse: new Array(24).fill(12000),
-      start: new Array(24).fill(0),
-      stereo: true,
-      type: 'drum',
-      volume:new Array(24).fill(8192)
-  };
+function createOpData() {
+  samples.json = samples.json || buildOpData([], true);
 }
 
 function renderKey(color, index) {
@@ -95,14 +71,6 @@ function renderKey(color, index) {
         >R</div>     
     </div>   
   `;
-}
-
-function renderOpSampleList() {
-  return samples.reduce((acc, item) => acc += `
-  <div class="row">
-    ${getNiceFileName(item.file.name)}
-  </div>
-  `, '');
 }
 
 function renderOpExport() {
@@ -139,7 +107,7 @@ export function renderEditor(item) {
   editing = item === editing ? editing : item;
   editEl.innerHTML = `
   <button onclick="digichain.playFile(event);" class="button-outline check">Play</button>
-  <button onclick="digichain.playFile(event, false, true);" class="button-outline check">Loop</button>
+  <button onclick="digichain.playFile({ editor: true }, false, true);" class="button-outline check">Loop</button>
   <button onclick="digichain.stopPlayFile(event);" class="button-outline check">Stop</button>
   <div class="zoom-level float-right">
     <button class="zoom-1x button-outline check" onclick="digichain.editor.zoomLevel('editor', 1)">1x</button>
@@ -529,5 +497,6 @@ export const editor = {
   trimRight,
   perSamplePitch,
   buildOpKit,
+  getLastItem : () => editing?.meta?.id,
   reverse
 };

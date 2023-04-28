@@ -6,6 +6,7 @@
  - Escape : closes any open dialog windows and stops all sample playback.
  - Enter / Return : toggles the selection of the currently highlighted sample in the list.
  - L / S / R / D : changes the channel for stereo files being processed to mono.
+ - Number keys 1 through 0 : play the selected sample in the postion of the key with 0 == 10.
 
 **Shift + Click / Shift + Key**
  - Up / Down Keys : moves the highlighted sample up or down in the list.
@@ -27,3 +28,7 @@
 **Ctrl + Click**
  - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.
  - Slice Grid Off Button : restores the default slice grid options.
+ - Time Limit : prompts to enter a custom value for the timed chain lengths when that mode is enabled.
+
+**Alt + Key**
+ - Number 1 - 0, P : Stops the playback and looping of the sample.

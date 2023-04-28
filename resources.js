@@ -1,4 +1,35 @@
-export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, pitchModifier = 1) {
+export function buildOpData(slices = [], returnTemplate = false) {
+  //TODO Convert DCSD slices into the OP-X json format as in the template.
+  const template = {
+    attack: new Array(24).fill(0),
+    drum_version: 2,
+    dyna_env: [0, 8192, 0, 8192, 0, 0, 0, 0],
+    end: new Array(24).fill(0),
+    fx_active: false,
+    fx_params: [8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
+    fx_type: 'delay',
+    lfo_active: false,
+    lfo_params: [16000, 16000, 16000, 16000, 0, 0, 0, 0],
+    lfo_type: 'tremolo',
+    mtime: 1682173750,
+    name: 'DigiChain Kit',
+    octave: 0,
+    original_folder: 'digichain',
+    pan: new Array(24).fill(0),
+    pan_ab: new Array(24).fill(false),
+    pitch: new Array(24).fill(0),
+    playmode:new Array(24).fill(5119),
+    reverse: new Array(24).fill(12000),
+    start: new Array(24).fill(0),
+    stereo: true,
+    type: 'drum',
+    volume:new Array(24).fill(8192)
+  };
+  if (returnTemplate) { return template; }
+  return template;
+}
+
+export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, renderAsAif = false, pitchModifier = 1) {
   let numChannels = buffer.numberOfChannels;
   let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
   sampleRate = sampleRate * pitchModifier;
@@ -27,7 +58,10 @@ export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumCh
       result = buffer.getChannelData(0);
     }
   }
-  return encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier);
+
+  return renderAsAif ?
+      encodeAif(result, sampleRate, numChannels, buildOpData(meta?.slices, true)) :
+      encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier);
 }
 
 DataView.prototype.setInt24 = function(pos, val, littleEndian) {
@@ -110,9 +144,9 @@ function addSampleRateToAiffData(view, offset) {
   }
 }
 
-export function encodeAif(audioBuffer, opJsonData) {
+export function encodeAif(audioData, sampleRate, numberOfChannels, opJsonData) {
   let jsonData = JSON.parse(JSON.stringify(opJsonData));
-  jsonData.stereo = audioBuffer.numberOfChannels === 2;
+  jsonData.stereo = numberOfChannels === 2;
   
   function audioBufferToAiff(buffer) {
     const numChannels = buffer.numberOfChannels;
@@ -125,7 +159,7 @@ export function encodeAif(audioBuffer, opJsonData) {
       result = buffer.getChannelData(0);
     }
 
-    return encodeAIFF(result, sampleRate, numChannels)
+    return encodeAIFF(result, sampleRate, numChannels);
   }
 
   function encodeAIFF(samples, sampleRate, numChannels) {
@@ -191,7 +225,9 @@ export function encodeAif(audioBuffer, opJsonData) {
     }
   }
 
-  return new DataView(audioBufferToAiff(audioBuffer));
+  return audioData.numberOfChannels ?
+      new DataView(audioBufferToAiff(audioData)) :
+      encodeAIFF(audioData, sampleRate, numberOfChannels);
 }
 
 

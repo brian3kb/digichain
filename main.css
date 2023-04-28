@@ -111,6 +111,7 @@ input { color: #a8a8a8; }
     margin-top: 0;
 }
 #getJoined, .wav-link-hidden, .hidden { visibility: hidden; }
+.hide { display: none !important; }
 .fade { opacity: .15; }
 #getJoined, #uploadInput, #uploadSliceFile { display: none; }
 #fileNum { padding-left: 1rem; }
@@ -177,15 +178,18 @@ canvas.waveform:hover { opacity: .98; }
     border-left: .75rem solid #008000b0;
 }
 td.waveform-td span.play-head {
-    display: block;
-    height: 58px;
+    display: none;
+    height: 56px;
     width: 1px;
     position: absolute;
     background-color: #4a4032;
     margin-top: -61px;
     margin-left: 0;
-    animation-name: waveformPlayHead;
     animation-timing-function: linear;
+}
+.waveform-td:has(canvas.waveform.playing) span.play-head {
+    animation-name: waveformPlayHead;
+    display: block;
 }
 td.waveform-td span.play-head.play {
     margin-left: 150px !important;
@@ -362,6 +366,9 @@ td button { margin: 0.5rem; }
 .op-export-side-panel-options.show {
     right: 0;
 }
+/*#masterList { padding-right: 25rem; }*/
+/*td.move-up-td, td.move-down-td {display:none;}*/
+
 .loading .op-export-side-panel-options.show {
     opacity: .05;
 }

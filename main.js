@@ -172,6 +172,7 @@ const toggleModifier = (key) => {
 
 const closePopUps = () => {
   document.querySelectorAll('.pop-up').forEach(w => w.classList.remove('show'));
+  stopPlayFile(false, editor.getLastItem());
   renderList();
 };
 
@@ -209,13 +210,19 @@ const showEditPanel = (event, id, view = 'sample') => {
   );
 };
 
-async function setWavLink(file, linkEl) {
-  const fileName = getNiceFileName('', file, false, true);
-  let wav = audioBufferToWav(
-      file.buffer, file.meta, masterSR, masterBitDepth, masterChannels, pitchModifier
+async function setWavLink(file, linkEl, renderAsAif) {
+  let fileName = getNiceFileName('', file, false, true);
+  let wav, blob;
+
+  fileName = lastUsedAudioConfig.includes('a') ?
+      fileName.replace('.wav', '.aif') :
+      fileName;
+
+  wav = audioBufferToWav(
+      file.buffer, file.meta, masterSR, masterBitDepth, masterChannels, (renderAsAif && pitchModifier === 1), pitchModifier
   );
-  let blob = new window.Blob([new DataView(wav)], {
-    type: 'audio/wav',
+  blob = new window.Blob([new DataView(wav)], {
+    type: renderAsAif && pitchModifier === 1 ? 'audio/aiff' : 'audio/wav',
   });
   if (pitchModifier !== 1) {
     let linkedFile = await fetch(URL.createObjectURL(blob));
@@ -227,10 +234,10 @@ async function setWavLink(file, linkEl) {
       e: Math.round(slice.e / pitchModifier)
     }));
     wav = audioBufferToWav(
-        pitchedBuffer, meta, masterSR, masterBitDepth, masterChannels
+        pitchedBuffer, meta, masterSR, masterBitDepth, masterChannels, renderAsAif
     );
     blob = new window.Blob([new DataView(wav)], {
-      type: 'audio/wav',
+      type: renderAsAif ? 'audio/aiff' : 'audio/wav',
     });
   }
 
@@ -244,6 +251,7 @@ async function downloadAll(event) {
   const flattenFolderStructure = (event.shiftKey || modifierKeys.shiftKey);
   const links = [];
   const el = document.getElementById('getJoined');
+  const renderAsAif = lastUsedAudioConfig.includes('a');
   if (_files.length > 5 && !zipDownloads) {
     const userReadyForTheCommitment = confirm(`You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`);
     if (!userReadyForTheCommitment) { return; }
@@ -254,11 +262,23 @@ async function downloadAll(event) {
   if (zipDownloads && _files.length > 1) {
     const zip = new JSZip();
     for (const file of _files) {
-      const blob = await setWavLink(file, el);
+      const blob = await setWavLink(file, el, renderAsAif);
+      let fileName = '';
+      fileName = lastUsedAudioConfig.includes('a') ?
+          fileName.replace('.wav', '.aif') :
+          fileName;
       if (flattenFolderStructure) {
-        zip.file(getNiceFileName('', file, false, true), blob, { binary: true });
+        let fileName = getNiceFileName('', file, false, true);
+        fileName = lastUsedAudioConfig.includes('a') ?
+            fileName.replace('.wav', '.aif') :
+            fileName;
+        zip.file(fileName, blob, { binary: true });
       } else {
-        zip.file(file.file.path + getNiceFileName('', file, false), blob, { binary: true });
+        let fileName = getNiceFileName('', file, false);
+        fileName = lastUsedAudioConfig.includes('a') ?
+            fileName.replace('.wav', '.aif') :
+            fileName;
+        zip.file(file.file.path + fileName, blob, { binary: true });
       }
     }
     zip.generateAsync({type: 'blob'}).then(blob => {
@@ -290,7 +310,8 @@ async function downloadAll(event) {
 async function downloadFile(id, fireLink = false) {
   const el = getRowElementById(id).querySelector('.wav-link-hidden');
   const file = getFileById(id);
-  await setWavLink(file, el);
+  const renderAsAif = lastUsedAudioConfig.includes('a');
+  await setWavLink(file, el, renderAsAif);
   if (fireLink) {
     el.click();
   }
@@ -299,10 +320,12 @@ async function downloadFile(id, fireLink = false) {
 
 function removeSelected() {
   metaFiles.removeSelected();
-  files.forEach(f => stopPlayFile(false, f.meta.id));
+  //files.forEach(f => stopPlayFile(false, f.meta.id));
+  files.filter(f => f.meta.checked).forEach(f => remove(f.meta.id));
   files = files.filter(f => !f.meta.checked);
   unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
-  renderList();
+  setCountValues();
+  //renderList();
 }
 
 function normalizeSelected(event) {
@@ -727,7 +750,7 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
     _files = processing.processed;
   }
 
-  if (embedSliceData && !lastUsedAudioConfig.includes('a')) {
+  if (embedSliceData) {
     slices = [];
     let offset = 0;
     for (let x = 0; x < _files.length; x++) {
@@ -792,11 +815,15 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
       };
 
   } else {
+    const renderAsAif = lastUsedAudioConfig.includes('a');
       if (zip) {
-        const blob = setWavLink(fileData, joinedEl);
+        const blob = setWavLink(fileData, joinedEl, renderAsAif);
+        fileData.file.name = lastUsedAudioConfig.includes('a') ?
+            fileData.file.name.replace('.wav', '.aif') :
+            fileData.file.name;
         zip.file(fileData.file.name, blob, { binary: true });
       } else {
-        await setWavLink(fileData, joinedEl);
+        await setWavLink(fileData, joinedEl, renderAsAif);
         joinedEl.click();
       }
   }
@@ -828,28 +855,28 @@ function joinAllByPath(event, pad = false) { //TODO: test and hook into UI
 }
 
 const stopPlayFile = (event, id) => {
-  const file = getFileById(id || lastSelectedRow.dataset.id);
+  const file = getFileById(id || lastSelectedRow?.dataset?.id);
+  if (!file) { return ; }
     file?.source?.stop();
-    file.meta.playing = false;
+    if (file.meta.playing && file.meta.playing !== true) {
+      const [fnType, fnId] = file.meta.playing.split('_');
+      window['clear' + fnType](+fnId);
+      file.meta.playing = false;
+      file.playHead?.remove();
+      file.playHead = false;
+    }
     file.waveform?.classList?.remove('playing');
-    let playHead = file.waveform?.parentElement?.querySelector('.play-head');
+    let playHead = file.playHead || file.waveform?.parentElement?.querySelector('.play-head');
     if (playHead) { playHead.remove(); }
-
 };
 
 const playFile = (event, id, loop) => {
   const file = getFileById(id || lastSelectedRow.dataset.id);
   let playHead;
   loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
-  if (file.source) {
-    file.source.stop();
-    file.meta.playing = false;
-    if (id) {
-      file.waveform?.classList?.remove('playing');
-      let playHead = file.waveform?.parentElement.querySelector('.play-head');
-      if (playHead) { playHead.remove(); }
-    }
-  }
+
+  stopPlayFile(false, (id || file.meta.id));
+
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
@@ -858,7 +885,7 @@ const playFile = (event, id, loop) => {
       getMonoFloat32ArrayFromBuffer(file.buffer, file.meta.channel, true) :
       file.buffer;
 
-  if (playWithPopMarker) {
+  if (playWithPopMarker && !event?.editor) {
     const popAudio = audioCtx.createBuffer(1, 8, masterSR);
     const popBuffer = audioCtx.createBuffer(buffer.numberOfChannels, buffer.length + (popAudio.length * 2), masterSR);
     const popData = popAudio.getChannelData(0);
@@ -882,27 +909,38 @@ const playFile = (event, id, loop) => {
   file.source.connect(audioCtx.destination);
   file.source.loop = loop;
 
-  if (id){
+  if (id && !event?.editor){
     playHead = document.createElement('span');
     playHead.classList.add('play-head');
     playHead.style.animationDuration = `${file.meta.duration}s`;
     file.waveform.parentElement.appendChild(playHead);
+    file.playHead = playHead;
   }
 
   file.source.start();
 
-  file.meta.playing = true;
-  if (id) {
+  if (id && !event?.editor) {
     playHead.style.animationIterationCount = file.source.loop ? 'infinite' : 'unset';
     file.waveform?.classList?.add('playing');
+
+    if (file.source.loop) {
+      file.meta.playing = 'Interval_' + setInterval(() => {
+        const ph = file.waveform?.parentElement?.querySelector('.play-head');
+        if (ph) {
+          const phClone = ph.cloneNode(true);
+          ph.remove();
+          file.waveform.parentElement.appendChild(phClone);
+        } else { // Buffer modified while playing, so clear out the meta.
+          stopPlayFile(false, file.meta.id);
+        }
+      }, file.meta.duration * 1000);
+    } else {
+      file.meta.playing = 'Timeout_' + setTimeout(() => {
+        stopPlayFile(false, file.meta.id);
+      }, file.meta.duration * 1000);
+    }
   }
-  if (!file.source.loop && id) {
-    setTimeout(() => {
-      file.meta.playing = false;
-      file.waveform?.classList?.remove('playing');
-      playHead.remove();
-    }, file.meta.duration * 1000);
-  }
+
 };
 
 const toggleCheck = (event, id) => {
@@ -1030,6 +1068,7 @@ const duplicate = (event, id, prepForEdit = false) => {
   }
   item.meta = JSON.parse(JSON.stringify(file.meta)); // meta sometimes contains a customSlices object.
   item.waveform = false;
+  item.meta.playing = false;
   item.meta.id = crypto.randomUUID();
   if (prepForEdit) {
     item.meta.editOf = id;
@@ -1257,6 +1296,7 @@ const remove = (id) => {
   if (removed[0]) {
     metaFiles.removeByName(removed[0].file.name);
   }
+  rowEl.classList.add('hide');
   rowEl.remove();
 }
 
@@ -1560,6 +1600,9 @@ const drawEmptyWaveforms = (_files) => {
     if (!_files[i]) { return ; }
     if (_files[i].waveform) {
       el.replaceWith(_files[i].waveform);
+      if (_files[i].playHead && !_files[i].waveform.nextElementSibling) {
+        _files[i].waveform.parentElement.appendChild(_files[i].playHead);
+      }
     } else {
       drawWaveform(_files[i], el, _files[i].meta.channel);
       _files[i].waveform = el;
@@ -2144,19 +2187,33 @@ document.body.addEventListener('keyup', (event) => {
 });
 
 document.body.addEventListener('keydown', (event) => {
-  const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyD', 'KeyG', 'KeyH', 'KeyI', 'KeyL', 'KeyP', 'KeyR', 'KeyS', 'KeyX' ];
+  const numberKeys = ['Digit1', 'Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8', 'Digit9', 'Digit0'];
+  const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyD', 'KeyG', 'KeyH', 'KeyI', 'KeyL', 'KeyP', 'KeyR', 'KeyS', 'KeyX',
+      ...numberKeys
+  ];
   if (keyboardShortcutsDisabled) { return ; }
   if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
   if (event.ctrlKey) { document.body.classList.add('ctrlKey-down'); }
   if (event.code === 'Escape') {
     if (files.length && !(event.shiftKey || modifierKeys.shiftKey)) {
-      files.forEach(f => stopPlayFile(false, f.meta.id));
+      files.filter(f => f.meta.playing && f.meta.id).forEach(f => stopPlayFile(false, f.meta.id));
     }
     return closePopUps();
   }
   if (arePopUpsOpen()) {
     // Don't listen for keyboard commands when popups are open.
     return ;
+  }
+
+  if (numberKeys.includes(event.code)) {
+    let id = +event.code.charAt(event.code.length - 1);
+    const selected = files.filter(f => f.meta.checked);
+    id = id === 0 ? 9 : (id - 1);
+    if (selected[id]) {
+      event.altKey ?
+          stopPlayFile(false, selected[id].meta.id) :
+          playFile(false, selected[id].meta.id, (event.shiftKey || modifierKeys.shiftKey));
+    }
   }
 
   if (event.code === 'ArrowDown' && (!lastSelectedRow || !lastSelectedRow.isConnected)) {
@@ -2192,7 +2249,7 @@ document.body.addEventListener('keydown', (event) => {
     } else if (event.code === 'Enter') {
       toggleCheck(event, lastSelectedRow.dataset.id);
     } else if (event.code === 'KeyP') {
-      playFile(event, lastSelectedRow.dataset.id);
+      event.altKey ? stopPlayFile(false, lastSelectedRow.dataset.id) : playFile(event, lastSelectedRow.dataset.id);
     } else if (masterChannels === 1 && (event.code === 'KeyL' || event.code === 'KeyR' || event.code === 'KeyS' || event.code === 'KeyD')) {
       const item = getFileById(lastSelectedRow.dataset.id);
       if (item.meta.channel) {

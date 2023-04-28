@@ -140,6 +140,7 @@ function changeAudioConfig(event, option) {
   [masterSR, masterBitDepth, masterChannels] = [audioConfigOptions[selection].sr, audioConfigOptions[selection].bd, audioConfigOptions[selection].c];
   event.target.dataset.selection = selection;
   audioCtx = new AudioContext({sampleRate: masterSR});
+  secondsPerFile = lastUsedAudioConfig.includes('a') ? 20 : secondsPerFile;
   toggleSecondsPerFile(false,
       secondsPerFile === 0 ? 0 :
       (masterChannels === 2 ? 20 : 12)
@@ -230,6 +231,7 @@ async function setWavLink(file, linkEl, renderAsAif) {
     let pitchedBuffer = await audioCtx.decodeAudioData(arrBuffer);
     let meta = {...file.meta};
     meta.slices = meta.slices.map(slice => ({
+      ...slice,
       n: slice.n, s: Math.round(slice.s / pitchModifier),
       e: Math.round(slice.e / pitchModifier)
     }));
@@ -474,6 +476,25 @@ function toggleSecondsPerFile(event, value) {
   setCountValues();
 }
 
+function changeOpParam(event, id, param, value) {
+  const rowEl = getRowElementById(id);
+  const item = getFileById(id);
+  if (param === 'bal') {
+    event.draggable = false;
+    event.preventDefault();
+    const balEl =  rowEl.querySelector('.channel-options-stereo-opf .channel-balance');
+    let newValue = +event.target.value??16384;
+    newValue = newValue - newValue%1024;
+    item.meta.opPan = newValue;
+  }
+  if (param === 'baltoggle') {
+    item.meta.opPanAb = !item.meta.opPanAb;
+    rowEl.querySelector('.channel-options-stereo-opf').classList[
+        item.meta.opPanAb ? 'add' : 'remove']('op-pan-ab-true');
+  }
+  return false;
+}
+
 function showExportSettingsPanel() {
   const panelContentEl = document.querySelector('.export-settings-panel-md .content');
   panelContentEl.innerHTML = `
@@ -663,7 +684,7 @@ function performMerge(mFiles) {
         longest.buffer.length,
         masterSR
     ),
-    meta: {...longest.meta, channel: 'L', isMerge: true, editOf: '', id: crypto.randomUUID() },
+    meta: {...longest.meta, channel: 'L', isMerge: true, editOf: '', id: crypto.randomUUID(), checked: false },
     waveform: false
   };
   for (let i = 0; i < newItem.buffer.length; i++) {
@@ -733,9 +754,11 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
       return total;
     }, 0);
 
-  } else { /*Using max length in seconds file lengths*/
+  } else { /*Using max length in seconds file lengths upto 24 files*/
     const processing = _files.reduce((a, f) => {
-      if (a.duration + +f.meta.duration <= (secondsPerFile * pitchModifier)) {
+      if (
+          (a.duration + +f.meta.duration <= (secondsPerFile * pitchModifier)) &&
+          (a.processed.length < 24)) {
         a.duration = a.duration + +f.meta.duration;
         a.totalLength = a.totalLength + +f.meta.length;
         a.processed.push(f);
@@ -769,7 +792,10 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
         slices.push({
           s: offset,
           e: offset + (pad ? largest : +_files[x].buffer.length),
-          n: _files[x].file.name
+          n: _files[x].file.name,
+          p: _files[x].meta.opPan??16384,
+          pab: _files[x].meta.opPanAb??false,
+          st: _files[x].meta.opPitch??0
         });
       }
       offset += +_files[x].buffer.length;
@@ -804,6 +830,7 @@ async function joinAll(event, pad = false, filesRemaining = [], fileCount = 0, t
         audioCtx.decodeAudioData(e.target.result, function(buffer) {
           parseWav(buffer, fb, {
             lastModified: new Date().getTime(),
+            slices: slices,
             name: _files.length === 1 ?
                 `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('', _files[0], true)}_${fileReader.fileCount+1}--[${_files.length}].wav`:
                 `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount+1}--[${_files.length}].wav`,
@@ -1476,7 +1503,7 @@ const setCountValues = () => {
       let _items = items;
       while (_items.length > 0) {
         progress = _items.reduce((a, f) => {
-          if (a.duration + +f.meta.duration <= (secondsPerFile * pitchModifier)) {
+          if (a.duration + +f.meta.duration <= (secondsPerFile * pitchModifier) && a.processed.length < 24) {
             a.duration = a.duration + +f.meta.duration;
             a.processed.push(f);
           } else {
@@ -1486,6 +1513,7 @@ const setCountValues = () => {
         }, progress);
         progress.count++;
         progress.duration = 0;
+        progress.processed = [];
         _items = Array.from(progress.skipped);
         progress.skipped = [];
       }
@@ -1541,12 +1569,25 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
             <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S')" class="${f.meta.channel === 'S' ? 'selected' : ''} channel-option-S">S</a>
             <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R')" class="${f.meta.channel === 'R' ? 'selected' : ''} channel-option-R">R</a>
             <a title="Difference between Left and Right channels" onclick="digichain.changeChannel(event, '${f.meta.id}', 'D')" class="${f.meta.channel === 'D' ? 'selected' : ''} channel-option-D">D</a>
-            </div>
-            <div class="channel-options channel-options-stereo" title="${f.buffer.numberOfChannels === 1 ? 'Mono sample' : 'Stereo sample'}" style="display: ${masterChannels === 2 ? 'block' : 'none'}">
+            </div>` +
+
+      (lastUsedAudioConfig.includes('a') ?
+            `<div class="channel-options channel-options-stereo channel-options-stereo-opf ${f.meta.opPanAb ? 'op-pan-ab-true' : ''}" title="${f.buffer.numberOfChannels === 1 ? 'Mono sample' : 'Stereo sample'}" style="display: ${masterChannels === 2 ? 'block' : 'none'}"
+             ondblclick="digichain.changeOpParam(event, '${f.meta.id}', 'baltoggle')"
+             >
+                <input class="channel-balance" type="range" style="display: ${f.buffer.numberOfChannels === 2 ? 'inline-block' : 'none'}" min="0" max="32768" onchange="digichain.changeOpParam(event, '${f.meta.id}', 'bal')" value="${f.meta.opPan??16384}" />
+                <i class="gg-shape-circle" style="display: ${f.buffer.numberOfChannels === 1 ? 'inline-block' : 'none'}"></i>
+                <div style="display: ${f.buffer.numberOfChannels === 2 ? 'inline-block' : 'none'}">
+                  <span class="op-la"></span>
+                  <span class="op-rb"></span>
+                </div>
+            </div>` :
+          `<div class="channel-options channel-options-stereo" title="${f.buffer.numberOfChannels === 1 ? 'Mono sample' : 'Stereo sample'}" style="display: ${masterChannels === 2 ? 'block' : 'none'}">
                 <i class="gg-shape-circle"></i>
                 <i class="gg-shape-circle stereo-circle" style="display: ${f.buffer.numberOfChannels === 2 ? 'inline-block' : 'none'}"></i>
-            </div>
-        </td>
+            </div>`) +
+
+      `</td>
         <td class="split-td">
             <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(f)?.cssClass}"><i class="gg-menu-grid-r"></i></button>
         </td>
@@ -1730,6 +1771,9 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
               arrayBuffer.slice(offset + 12, chunks.json.size + offset + 8));
           chunks.json.data = JSON.parse(
               jsonString.replace(/\]\}(.|\n)+/gi, ']}').trimEnd());
+          if (chunks.json.data?.original_folder === 'digichain') {
+            chunks.json.scale = 2434;
+          }
               //jsonString.replace(/\]\}.*/gi, ']}').trimEnd());
           break;
         case 'SSND':
@@ -1936,23 +1980,26 @@ const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
 
 const parseWav = (audioArrayBuffer, arrayBuffer, file, fullPath = '', pushToTop = false, checked = true) => {
   const uuid = file.uuid || crypto.randomUUID();
-
-  let dv = new DataView(arrayBuffer);
   let slices = false;
-  for (let i = 0; i < dv.byteLength - 4; i++) {
-    const code = String.fromCharCode(dv.getUint8(i), dv.getUint8(i+1), dv.getUint8(i+2), dv.getUint8(i+3));
-    if (code === 'data') {
-      const size = dv.getUint32(i + 4, true);
-      if (size && size < dv.byteLength) {
-        i = size - 8;
+  try {
+    let dv = new DataView(arrayBuffer);
+    for (let i = 0; i < dv.byteLength - 4; i++) {
+      const code = String.fromCharCode(dv.getUint8(i), dv.getUint8(i + 1),
+          dv.getUint8(i + 2), dv.getUint8(i + 3));
+      if (i > dv.byteLength || code === 'PAD ') {
+        break;
       }
-    }
-    if (code === 'DCSD') {
-      const size = dv.getUint32(i + 4);
-      const utf8Decoder = new TextDecoder('utf-8');
-      let jsonString = utf8Decoder.decode(
-          arrayBuffer.slice(i + 8, i + 8 + size));
-      try {
+      if (code === 'data') {
+        const size = dv.getUint32(i + 4, true);
+        if (size && size < dv.byteLength) {
+          i = size - 8;
+        }
+      }
+      if (code === 'DCSD') {
+        const size = dv.getUint32(i + 4);
+        const utf8Decoder = new TextDecoder('utf-8');
+        let jsonString = utf8Decoder.decode(
+            arrayBuffer.slice(i + 8, i + 8 + size));
         const json = JSON.parse(jsonString.trimEnd());
         if (json.sr !== masterSR) {
           slices = json.dcs.map(slice => ({
@@ -1963,9 +2010,11 @@ const parseWav = (audioArrayBuffer, arrayBuffer, file, fullPath = '', pushToTop 
         } else {
           slices = json.dcs;
         }
-      } catch(e) {}
       }
     }
+    } catch(e) {
+    slices = false;
+  }
   try {
     /*duration, length, numberOfChannels, sampleRate*/
     files[pushToTop ? 'unshift' : 'push']({
@@ -1982,7 +2031,7 @@ const parseWav = (audioArrayBuffer, arrayBuffer, file, fullPath = '', pushToTop 
         startFrame: 0, endFrame: audioArrayBuffer.length,
         checked: checked, id: uuid,
         channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
-        slices: slices
+        slices: file.slices??slices
       }
     });
     unsorted.push(uuid);
@@ -2317,5 +2366,6 @@ window.digichain = {
   pitchExports,
   toggleSetting,
   toggleSecondsPerFile,
+  changeOpParam,
   editor
 };

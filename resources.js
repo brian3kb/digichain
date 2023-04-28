@@ -15,7 +15,7 @@ export function buildOpData(slices = [], returnTemplate = false) {
     name: 'DigiChain Kit',
     octave: 0,
     original_folder: 'digichain',
-    pan: new Array(24).fill(0),
+    pan: new Array(24).fill(16384),
     pan_ab: new Array(24).fill(false),
     pitch: new Array(24).fill(0),
     playmode:new Array(24).fill(5119),
@@ -26,7 +26,19 @@ export function buildOpData(slices = [], returnTemplate = false) {
     volume:new Array(24).fill(8192)
   };
   if (returnTemplate) { return template; }
-  return template;
+  const opData = JSON.parse(JSON.stringify(template));
+  const scale = 2434; //chunks.form.type === 'AIFC' && chunks.comm.numberOfChannels === 2 ? 2434 : 4058;
+  slices.forEach((slice, idx) => {
+    if (idx > 23) {
+      return ;
+    }
+    opData.pan[idx] = slice.p;
+    opData.pan_ab[idx] = slice.pab;
+    opData.pitch[idx] = slice.st > 24576 ? 24576 : (slice.st < -24576 ? -24576 : slice.st);
+    opData.start[idx] = Math.floor((slice.s * scale) + (idx*13));
+    opData.end[idx] = Math.floor((slice.e * scale) + (idx*13));
+  });
+  return opData;
 }
 
 export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, renderAsAif = false, pitchModifier = 1) {
@@ -60,7 +72,7 @@ export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumCh
   }
 
   return renderAsAif ?
-      encodeAif(result, sampleRate, numChannels, buildOpData(meta?.slices, true)) :
+      encodeAif(result, sampleRate, numChannels, buildOpData(meta?.slices)) :
       encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier);
 }
 

@@ -329,6 +329,50 @@ td button { margin: 0.5rem; }
 /*.channel-options-stereo i.stereo-circle {*/
 /*    margin-left: -1.35rem;*/
 /*}*/
+
+.channel-options-stereo-opf {
+    padding-bottom: 0;
+}
+.channel-options-stereo-opf span.op-la,
+.channel-options-stereo-opf span.op-rb {
+    width: 2.9rem;
+    display: inline-block;
+    float: left;
+}
+.channel-options-stereo-opf span.op-la {
+    border-right: 1px solid rgba(64, 57, 46, 0.6);
+}
+
+.channel-options-stereo-opf input.channel-balance {
+    width: 7rem;
+    margin-left: -0.5rem;
+    position: absolute;
+    height: 2.1rem;
+    background: transparent;
+    appearance: none;
+}
+.channel-options-stereo-opf input.channel-balance::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 36px;
+    width: 4px;
+    background: #3f382e;
+}
+.channel-options-stereo-opf input.channel-balance:focus {
+    outline: none; /* Removes the blue border. You should probably do some kind of focus styling for accessibility reasons though. */
+}
+
+.channel-options-stereo-opf .op-la::after {
+    content: 'L';
+}
+.channel-options-stereo-opf .op-rb::before {
+    content: 'R';
+}
+.channel-options-stereo-opf.op-pan-ab-true .op-la::after {
+    content: 'A';
+}
+.channel-options-stereo-opf.op-pan-ab-true .op-rb::before {
+    content: 'B';
+}
 .info-panel-md, .split-panel-options, .edit-panel-options,
 .merge-panel-options, .not-served-md, .export-settings-panel-md,
 .op-export-panel-options {

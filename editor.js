@@ -135,11 +135,11 @@ export function renderEditor(item) {
   <button title="Reverses the sample playback" class="reverse button button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>&nbsp;&nbsp;-&nbsp;
   <button title="Trims any zero valued audio from the end of the sample." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
   &nbsp;&nbsp;&nbsp;
-  <button title="Lower pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5)">-12</button>
-  <button title="Lower pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12))">-1</button>
+  <button title="Lower pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5, 12)">-12</button>
+  <button title="Lower pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12), 1)">-1</button>
   &nbsp;<span> Pitch (semitones) </span>&nbsp;
-  <button title="Increase pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12))">+1</button>
-  <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2)">+12</button>
+  <button title="Increase pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12), -1)">+1</button>
+  <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2, -12)">+12</button>
   </div>
   <span class="edit-info">
     Normalize, Silence, Fade In, Fade Out, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
@@ -308,7 +308,7 @@ function changeSelectionPoint(event, shiftKey = false) {
   updateSelectionEl();
 }
 
-function perSamplePitch(event, pitchValue, id) {
+function perSamplePitch(event, pitchValue, pitchSteps, id) {
   const item = editing;
 
   if (item.buffer.length < 1024 && pitchValue > 1) {
@@ -326,11 +326,13 @@ function perSamplePitch(event, pitchValue, id) {
       item.buffer = buffer;
       item.meta = {
         ...item.meta,
+        opPitch: (item.meta.opPitch??0) + (512 * pitchSteps),
         length: buffer.length,
         duration: Number(buffer.length / conf.masterSR).toFixed(3),
         startFrame: 0, endFrame: buffer.length,
         note: false,
         slices: item.meta.slices ? item.meta.slices.map(slice => ({
+          ...slice,
           n: slice.n, s: Math.round(slice.s / pitchValue),
           e: Math.round(slice.e / pitchValue)
         })) : false
@@ -431,6 +433,7 @@ function reverse(event, item, renderEditPanel = true) {
   item.meta = {...item.meta};
   if (selection.start === 0 && selection.end === item.buffer.length) {
     item.meta.slices = item.meta.slices ? item.meta.slices.map(slice => ({
+      ...slice,
       n: slice.n, s: selection.end - slice.e,
       e: selection.end - slice.s
     })) : false;

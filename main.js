@@ -404,6 +404,7 @@ function pitchExports(value, silent) {
     localStorage.setItem('pitchModifier', pitchModifier);
     infoEl.textContent = pitchModifier === 1 ? '' : `All exported samples will be pitched up ${octaves[pitchModifier]} octave${pitchModifier > 2 ? 's' : ''}`;
     if (silent) { return ; }
+    setCountValues();
     showExportSettingsPanel();
   }
   return value;

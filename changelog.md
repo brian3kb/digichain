@@ -1,4 +1,4 @@
-1.4.0
+1.4.0 latest
  - Audio editor panel overhaul.
  - Affect selection with click for start, right-click or shift+click for end point.
  - Fixed bug where file path changes were not persisted.

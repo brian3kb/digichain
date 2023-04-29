@@ -161,12 +161,12 @@
       </div>
       <div class="slice-group master-slices" title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
         <button style="margin-left: -0.4rem;" title="Turn off slice grid" onclick="digichain.selectSliceAmount(event, 0)" class="button check has-shift-mod has-ctrl-mod sel-0 slice-grid-off" data-sel="0">Off</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[1])" class="button-outline has-shift-mod has-ctrl-mod check sel-1" data-sel="1">4</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[2])" class="button-outline has-shift-mod has-ctrl-mod check sel-2" data-sel="2">8</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[3])" class="button-outline has-shift-mod has-ctrl-mod check sel-3" data-sel="3">16</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[4])" class="button-outline has-shift-mod has-ctrl-mod check sel-4" data-sel="4">32</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[5])" class="button-outline has-shift-mod has-ctrl-mod check sel-5" data-sel="5">64</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[6])" class="button-outline has-shift-mod has-ctrl-mod check sel-6" data-sel="6">120</button><br>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[1])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-1" data-sel="1">4</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[2])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-2" data-sel="2">8</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[3])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-3" data-sel="3">16</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[4])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-4" data-sel="4">32</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[5])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-5" data-sel="5">64</button>
+        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[6])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-6" data-sel="6">120</button><br>
         <button title="Download the selected samples joined, spaced evenly. Shift+click will resample back to the list." class="dl-spaced has-shift-mod" onclick="digichain.joinAll(event, true)"><i class="gg-software-download"></i><span class="join-count"> - </span> Spaced Chain</button>
         <button title="Download the selected samples joined. Shift+click will resample back to the list." class="btn-download has-shift-mod" onclick="digichain.joinAll(event)"><i class="gg-software-download"></i><span class="join-count join-count-chain"> - </span> Chain</button>
         <a id="getJoined">_</a>

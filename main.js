@@ -11,6 +11,8 @@ const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
 const infoEl = document.getElementById('infoIndicator');
 const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
+const opSliceOptions = [4, 8, 12, 16, 20, 24];
+const otSliceOptions = [4, 8, 16, 32, 48, 64];
 const audioConfigOptions = {
   m4410016: { sr: 44100, bd: 16, c: 1 },
   s4410016: { sr: 44100, bd: 16, c: 2 },
@@ -51,6 +53,7 @@ let lastOpKit = [];
 let workBuffer;
 let sliceGrid = 0;
 let sliceOptions = Array.from(DefaultSliceOptions);
+let lastSliceOptions = Array.from(sliceOptions);
 let keyboardShortcutsDisabled = false;
 let modifierKeys = {
   shiftKey: false,
@@ -1905,7 +1908,6 @@ const parseAif = (arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
     unsorted.push(uuid);
     return uuid;
   } catch(err) {
-    console.warn(err);
     return { uuid, failed: true };
   }
 };

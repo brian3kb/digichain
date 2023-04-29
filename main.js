@@ -257,6 +257,7 @@ async function downloadAll(event) {
   const links = [];
   const el = document.getElementById('getJoined');
   const renderAsAif = lastUsedAudioConfig.includes('a');
+  if (_files.length === 0) { return ; }
   if (_files.length > 5 && !zipDownloads) {
     const userReadyForTheCommitment = confirm(`You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`);
     if (!userReadyForTheCommitment) { return; }

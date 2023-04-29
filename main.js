@@ -1258,9 +1258,9 @@ const splitEvenly = (event, id, slices, pushInPlace = false) => {
   renderList();
 }
 
-const splitByTransient = (file, threshold = .8) => {
-  const transientPositions = [];
+const splitByTransient = (file, threshold = .5) => {
   const frameSize = Math.floor(file.buffer.length / 256);
+  let transientPositions = [];
   let lastStart = undefined;
   let lastEnd = undefined;
   for (let i = 0; i < file.buffer.length; i++) {
@@ -1289,6 +1289,18 @@ const splitByTransient = (file, threshold = .8) => {
       lastEnd = undefined;
     }
   }
+
+  transientPositions = transientPositions.filter(s => {
+    if (s.startPoint > s.startPoint + 512) {
+      return new Array(512).fill(0).every(
+          (p, i) => Math.abs(file.buffer.getChannelData(0)[s.startPoint - i]) < 0.03);
+    } else {
+      return true;
+    }
+  }).map((s, i, a) => {
+    s.endPoint = a[i+1]?.startPoint??(i === a.length - 1 ? file.buffer.length : s.endPoint);
+    return s;
+  });
 
 // map transient positions into slice object.
   let metaTransient = metaFiles.getByFileName('---sliceToTransientCached---');

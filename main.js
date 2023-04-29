@@ -78,18 +78,29 @@ metaFiles.getByFile = function(file) {
   const found = this.find(m =>m.name.replace(/\.[^.]*$/,'') === file.file.name.replace(/\.[^.]*$/,''));
   if (found) { return found; }
   if (file.meta.op1Json && file.meta.op1Json.start) {
+    let opSlices = file.meta.op1Json.start.map(
+        (s, i) => ({
+          startPoint: s,
+          endPoint: file.meta.op1Json.end[i]
+        })).reduce((acc, curr, idx) => {
+          if (acc?.pos && acc.pos > -1) {
+            if (curr.endPoint > acc.pos) {
+              acc.result.push(curr);
+              acc.pos = curr.endPoint;
+            }
+          } else {
+            acc.pos = acc.pos??curr.endPoint;
+            acc.result.push(curr);
+          }
+          return acc;
+        }, { result: [] }).result;
     return {
       uuid: file.meta.uuid,
       name: file.file.name,
       path: file.file.path,
       cssClass: 'is-op-file',
-      sliceCount: file.meta.op1Json.start.length,
-      slices: file.meta.op1Json.start.map(
-          (s, i) => ({
-            startPoint: s,
-            endPoint: file.meta.op1Json.end[i]
-          })
-      )
+      sliceCount: opSlices.length,
+      slices: opSlices
     };
   }
   if (file.meta.slices) {

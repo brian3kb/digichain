@@ -28,16 +28,24 @@ export function buildOpData(slices = [], returnTemplate = false) {
   if (returnTemplate) { return template; }
   const opData = JSON.parse(JSON.stringify(template));
   const scale = 2434; //chunks.form.type === 'AIFC' && chunks.comm.numberOfChannels === 2 ? 2434 : 4058;
-  slices.forEach((slice, idx) => {
-    if (idx > 23) {
-      return ;
-    }
+
+  const s = slices.map((slice, idx) => ({
+    p: slice.p,
+    pab: slice.pab,
+    st: slice.st > 24576 ? 24576 : (slice.st < -24576 ? -24576 : slice.st),
+    s: Math.floor((slice.s * scale) + (idx*13)),
+    e: Math.floor((slice.e * scale) + (idx*13))
+  }));
+
+  for (let idx = 0; idx < 24; idx++) {
+    let slice = s.shift();
     opData.pan[idx] = slice.p;
     opData.pan_ab[idx] = slice.pab;
-    opData.pitch[idx] = slice.st > 24576 ? 24576 : (slice.st < -24576 ? -24576 : slice.st);
-    opData.start[idx] = Math.floor((slice.s * scale) + (idx*13));
-    opData.end[idx] = Math.floor((slice.e * scale) + (idx*13));
-  });
+    opData.pitch[idx] = slice.st;
+    opData.start[idx] = slice.s;
+    opData.end[idx] = slice.e;
+    s.push(slice);
+  }
   return opData;
 }
 

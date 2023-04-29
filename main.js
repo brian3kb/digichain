@@ -1494,7 +1494,7 @@ const setCountValues = () => {
   document.querySelector('.selection-count').textContent = ` ${selectionCount || '-'} `;
   document.getElementById('lengthHeaderLink').textContent = `Length (${secondsToMinutes(filesSelectedDuration)}/${secondsToMinutes(filesDuration)})`;
   if (secondsPerFile === 0) {
-    document.querySelectorAll('.join-count').forEach(el => el.textContent = ` ${joinCount === 0 ? '-' : joinCount} `);
+    document.querySelectorAll('.join-count').forEach((el, idx) => el.textContent = ` ${joinCount === 0 ? '-' : joinCount}${idx === 0 ? ' Spaced' : ''}${joinCount  === 1 ? ' Chain' : ' Chains'}`);
     try {
       document.querySelectorAll('tr').forEach(row => row.classList.remove('end-of-grid'));
       document.querySelectorAll('tr.checked').forEach(
@@ -1525,7 +1525,7 @@ const setCountValues = () => {
     };
 
     let joinCountSec = filesSelected.length === 0 ? 0 : calcFiles(filesSelected);
-    document.querySelector('.join-count-chain').textContent = ` ${joinCountSec === 0 ? '-' : joinCountSec} `;
+    document.querySelector('.join-count-chain').textContent = ` ${joinCountSec === 0 ? '-' : joinCountSec}${joinCountSec  === 1 ? ' Chain' : ' Chains'}`;
     try {
       document.querySelectorAll('tr').forEach(row => row.classList.remove('end-of-grid'));
     } catch(e) {}

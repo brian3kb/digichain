@@ -1,4 +1,4 @@
-import {Resampler, audioBufferToWav} from './resources.js';
+import {Resampler, audioBufferToWav, encodeOt} from './resources.js';
 import {
   editor,
   showEditor,
@@ -45,6 +45,8 @@ let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData')) ??
     true;
 let showTouchModifierKeys = JSON.parse(
     localStorage.getItem('showTouchModifierKeys')) ?? true;
+let exportWithOtFile = JSON.parse(
+    localStorage.getItem('exportWithOtFile')) ?? false;
 let secondsPerFile = 0;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
@@ -973,6 +975,10 @@ async function joinAll(
     } else {
       await setWavLink(fileData, joinedEl, renderAsAif);
       joinedEl.click();
+      if (exportWithOtFile) {
+        let otFile = createAndSetOtFileLink(fileData, joinedEl);
+        if (otFile) {joinedEl.click(); }
+      }
     }
   }
   if (filesRemaining.length > 0) {
@@ -1946,6 +1952,11 @@ const bytesToInt = (bh, bm, bl) => {
   return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
 };
 
+function createAndSetOtFileLink(item, linkEl) {
+  let data = encodeOt(item);
+  return false;
+}
+
 const parseOt = (fd, file, fullPath) => {
   const uuid = file.uuid || crypto.randomUUID();
   const getInt32 = values => {
@@ -1956,22 +1967,8 @@ const parseOt = (fd, file, fullPath) => {
   try {
     // Check header is correct.
     if (![
-      0x46,
-      0x4F,
-      0x52,
-      0x4D,
-      0x00,
-      0x00,
-      0x00,
-      0x00,
-      0x44,
-      0x50,
-      0x53,
-      0x31,
-      0x53,
-      0x4D,
-      0x50,
-      0x41].every(
+      0x46, 0x4F, 0x52, 0x4D, 0x00, 0x00, 0x00, 0x00, 0x44, 0x50, 0x53,
+      0x31, 0x53, 0x4D, 0x50, 0x41].every(
         (b, i) => b === fd[i])
     ) {
       return {uuid, failed: true};

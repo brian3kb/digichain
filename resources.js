@@ -49,6 +49,10 @@ export function buildOpData(slices = [], returnTemplate = false) {
   return opData;
 }
 
+export function encodeOt(item) {
+  return false;
+}
+
 export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, renderAsAif = false, pitchModifier = 1) {
   let numChannels = buffer.numberOfChannels;
   let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;

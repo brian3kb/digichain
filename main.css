@@ -224,7 +224,6 @@ td.waveform-td span.play-head.play {
     margin-top: -150px;
     background-color: #99794b1a;
     opacity: .85;
-    pointer-events: none;
 }
 td { padding: 0; }
 td .gg-more-vertical { opacity: .25; }

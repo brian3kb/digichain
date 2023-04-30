@@ -156,7 +156,7 @@
         <button title="Download all the selected samples converted to the current audio context as a zip file (with folder structure retained). Shift+click to get the files in a zip with their folders flattened into the file names." class="btn-download btn-download-all has-shift-mod" onclick="digichain.downloadAll(event)"><i class="gg-software-download"></i><span class="selection-count"> - </span></button>
         <button title="Export settings" onclick="digichain.showExportSettingsPanel(event)" class="button-clear toggle-export-settings"><i class="gg-options"></i></button>
         <button title="OP-x Export" onclick="digichain.showEditPanel(event, false, 'opExport')" class="button-clear toggle-export-settings hidden" style="line-height: 5rem;">OP</button>
-        <button title="Seconds per file. Enabling will disable the slice grid options." onclick="digichain.toggleSecondsPerFile(event)" class="button-clear toggle-seconds-per-file"><i class="gg-alarm"></i><span>off</span></button>
+        <button title="Seconds per file. Enabling will disable the slice grid options. Samples longer than seconds per file will not be included in the output chains." onclick="digichain.toggleSecondsPerFile(event)" class="button-clear toggle-seconds-per-file"><i class="gg-alarm"></i><span>off</span></button>
 
       </div>
       <div class="slice-group master-slices" title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">

@@ -134,7 +134,7 @@ DataView.prototype.setInt24 = function(pos, val, littleEndian) {
 export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, slices, pitchModifier = 1, embedSliceData = true) {
   let bytesPerSample = bitDepth / 8;
   let blockAlign = numChannels * bytesPerSample;
-  let sliceData;
+  let sliceData = [];
   let buffer;
   let riffSize;
 

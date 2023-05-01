@@ -20,12 +20,14 @@ let selection = {
 };
 
 let samples = [];
+let folders = [];
 
 export function setEditorConf(options) {
   conf = options;
 }
-export function showEditor(data, options, view = 'sample') {
+export function showEditor(data, options, view = 'sample', folderOptions = []) {
   conf = options;
+  folders = folderOptions;
   if (view === 'sample') {
     editing = data;
     multiplier = 1;
@@ -157,7 +159,10 @@ function renderEditableItems() {
     </div><br>
     <div class="input-set">
     <label for="editFilePath" class="before-input">File Path</label>
-      <input type="text" onblur="digichain.editor.updateFile(event)" placeholder="File path of the sample (if known)" id="editFilePath" value="${editing.file.path}" id="editFilePath" readonly>
+      <input type="text" onblur="digichain.editor.updateFile(event)" placeholder="File path of the sample (if known)" id="editFilePath" value="${editing.file.path}" id="editFilePath" list="folderOptions" readonly>
+      <datalist id="folderOptions">
+        ${folders.map(f => '<option value="' + f + '">').join('')}
+      </datalist>
       <button class="button-clear" onclick="digichain.editor.toggleReadOnlyInput('editFilePath')"><i class="gg-pen"></i></button>
     </div>
   `;

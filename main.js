@@ -226,13 +226,14 @@ const toggleOptionsPanel = () => {
 };
 
 const showEditPanel = (event, id, view = 'sample') => {
-  let data;
+  let data, folderOptions;
   if (view === 'opExport') {
     lastOpKit = files.filter(f => f.meta.checked);
     data = lastOpKit;
   } else {
     if (id && view !== 'opExport') {
       lastSelectedRow = getRowElementById(id);
+      folderOptions = [...new Set(files.map(f => f.file.path))];
     }
     data = getFileById(id || lastSelectedRow.dataset.id);
   }
@@ -244,7 +245,8 @@ const showEditPanel = (event, id, view = 'sample') => {
         masterChannels,
         masterBitDepth
       },
-      view
+      view,
+      folderOptions
   );
 };
 function checkShouldExportOtFile() {
@@ -935,7 +937,7 @@ async function joinAll(
         st: _files[x].meta.opPitch ?? 0
       });
     }
-    offset += +_files[x].buffer.length;
+    offset += (pad ? largest : +_files[x].buffer.length);
   }
 
   const audioArrayBuffer = audioCtx.createBuffer(
@@ -975,7 +977,7 @@ async function joinAll(
       audioCtx.decodeAudioData(e.target.result, function(buffer) {
         parseWav(buffer, fb, {
           lastModified: new Date().getTime(),
-          slices: slices,
+          slices: embedSliceData ? slices : false,
           name: _files.length === 1 ?
               `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('',
                   _files[0], true)}_${fileReader.fileCount +

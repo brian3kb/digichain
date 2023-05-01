@@ -34,6 +34,8 @@
  - Numeric keys 1 - 0 play the first 10 selected samples from the list.
  - Alt + numeric key / P key stops the playback and looping of that single sample.
  - Fixed bug where a non-standard wav file PAD chunk caused a page crash.
+ - Double-click to remove a slice before processing slices on the slice panel.
+ - Creation of .ot meta files in 44.1 16/24 stereo non-aif audio contexts. (toggle in settings).
 
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)

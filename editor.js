@@ -121,7 +121,7 @@ export function renderEditor(item) {
         onclick="digichain.editor.changeSelectionPoint(event)"
         onauxclick="digichain.editor.changeSelectionPoint(event, true)"></canvas>
       <div id="editLines">
-        <div class="line"></div>
+        <div class="edit-line"></div>
       </div>
     </div>
   </div>
@@ -264,7 +264,7 @@ function getSelectionEndPoint() {
 }
 
 function updateSelectionEl() {
-  const selection = document.querySelector('#editLines .line');
+  const selection = document.querySelector('#editLines .edit-line');
   const width = getSelectionEndPoint() >= (1024 * multiplier) ? (1024 * multiplier) : getSelectionEndPoint();
   selection.style.marginLeft = `${getSelectionStartPoint()}px`;
   selection.style.width = `${width}px`;

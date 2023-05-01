@@ -110,7 +110,7 @@ input { color: #a8a8a8; }
 .input-set:first-child {
     margin-top: 0;
 }
-#getJoined, .wav-link-hidden, .hidden { visibility: hidden; }
+#getJoined, .wav-link-hidden, .meta-link-hidden, .hidden { visibility: hidden; }
 .hide { display: none !important; }
 .fade { opacity: .15; }
 #getJoined, #uploadInput, #uploadSliceFile { display: none; }
@@ -212,7 +212,7 @@ td.waveform-td span.play-head.play {
     display: none;
 }
 #sliceLines { margin-top: -150px; }
-.waveform-container .line {
+.waveform-container .line, .waveform-container .edit-line {
     /*height: 150px;*/
     /*width: 1px;*/
     /*background-color: #e18603;*/
@@ -224,6 +224,9 @@ td.waveform-td span.play-head.play {
     margin-top: -150px;
     background-color: #99794b1a;
     opacity: .85;
+}
+.waveform-container .edit-line {
+    pointer-events: none;
 }
 td { padding: 0; }
 td .gg-more-vertical { opacity: .25; }
@@ -970,9 +973,9 @@ table#mergeList td.file-path-td {
     }
     .op-export-panel-options { top: 1vh;}
     #exportSettingsPanel {
-        width: 512px;
-        margin: 0 -256px;
-        max-width: 512px;
+        width: 768px;
+        margin: 0 -384px;
+        max-width: 768px;
     }
 }
 

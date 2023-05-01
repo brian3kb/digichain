@@ -49,11 +49,49 @@ export function buildOpData(slices = [], returnTemplate = false) {
   return opData;
 }
 
-export function encodeOt(item) {
-  return false;
+export function encodeOt(slices, bufferLength, tempo = 120) {
+  const dv = new DataView(new ArrayBuffer(0x340));
+  const header =
+      [0x46,0x4F,0x52,0x4D,0x00,0x00,0x00,0x00,0x44,0x50,0x53,0x31,0x53,0x4D,0x50,0x41, 0x00,0x00,0x00,0x00,0x00,0x02,0x00];
+  const bpm = tempo * 6 * 4;
+  const samplesLength = bufferLength;
+  // const samplesLength = items.reduce((total, item) => total += item.buffer.length, 0);
+
+  const bars = Math.round(((124 * samplesLength) / (44100 * 60) + 0.5) * 25);
+
+  header.forEach((x, i) => dv.setUint8(i, x));
+  dv.setUint32(0x17, bpm);
+  dv.setUint32(0x1B, bars); // trim length
+  dv.setUint32(0x1F, bars); // loop length
+  dv.setUint32(0x23, 0); // time stretch
+  dv.setUint32(0x27, 0); // loop?
+  dv.setUint16(0x2B, 48); // gain
+  dv.setUint16(0x2D, 255); // quantize
+  dv.setUint32(0x2E, 0); // trim start
+  dv.setUint32(0x32, samplesLength); // trim end
+  dv.setUint32(0x36, 0); // loop start
+
+  let offset = 0x3A;
+ for (let i = 0; i < 64; i++) {
+   dv.setUint32(offset, slices[i]?.s??0);
+   dv.setUint32(offset + 4, slices[i]?.e??0);
+   dv.setUint32(offset + 8, slices[i]?.s??0);
+   offset += 12;
+ }
+
+  dv.setUint32(0x33A, slices.length); // slice count
+
+  let checksum = 0;
+  for (let i = 0x10; i < dv.byteLength; i++) {
+    checksum += dv.getUint8(i);
+  }
+
+  dv.setUint16(0x33E, checksum);
+
+  return dv;
 }
 
-export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, renderAsAif = false, pitchModifier = 1) {
+export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, renderAsAif = false, pitchModifier = 1, embedSliceData = true) {
   let numChannels = buffer.numberOfChannels;
   let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
   sampleRate = sampleRate * pitchModifier;
@@ -85,7 +123,7 @@ export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumCh
 
   return renderAsAif ?
       encodeAif(result, sampleRate, numChannels, buildOpData(meta?.slices)) :
-      encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier);
+      encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier, embedSliceData);
 }
 
 DataView.prototype.setInt24 = function(pos, val, littleEndian) {
@@ -93,14 +131,14 @@ DataView.prototype.setInt24 = function(pos, val, littleEndian) {
   this.setInt16(pos + 1, val >> 8, littleEndian);
 }
 
-export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, slices, pitchModifier = 1) {
+export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, slices, pitchModifier = 1, embedSliceData = true) {
   let bytesPerSample = bitDepth / 8;
   let blockAlign = numChannels * bytesPerSample;
   let sliceData;
   let buffer;
   let riffSize;
 
-  if (slices && slices.length !== 0) {
+  if (embedSliceData && slices && slices.length !== 0) {
     let _slices = pitchModifier === 1 ? slices : slices.map(slice => ({
       n: slice.n, s: Math.round(slice.s / pitchModifier),
       e: Math.round(slice.e / pitchModifier)

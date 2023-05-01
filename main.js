@@ -247,7 +247,9 @@ const showEditPanel = (event, id, view = 'sample') => {
       view
   );
 };
-
+function checkShouldExportOtFile() {
+  return exportWithOtFile && masterChannels === 2 && masterSR === 44100 && !lastUsedAudioConfig.includes('a');
+}
 async function setWavLink(file, linkEl, renderAsAif) {
   let fileName = getNiceFileName('', file, false, true);
   let wav, blob;
@@ -258,7 +260,7 @@ async function setWavLink(file, linkEl, renderAsAif) {
 
   wav = audioBufferToWav(
       file.buffer, file.meta, masterSR, masterBitDepth, masterChannels,
-      (renderAsAif && pitchModifier === 1), pitchModifier
+      (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData
   );
   blob = new window.Blob([new DataView(wav)], {
     type: renderAsAif && pitchModifier === 1 ? 'audio/aiff' : 'audio/wav',
@@ -275,7 +277,7 @@ async function setWavLink(file, linkEl, renderAsAif) {
     }));
     wav = audioBufferToWav(
         pitchedBuffer, meta, masterSR, masterBitDepth, masterChannels,
-        renderAsAif
+        renderAsAif, embedSliceData
     );
     blob = new window.Blob([new DataView(wav)], {
       type: renderAsAif ? 'audio/aiff' : 'audio/wav',
@@ -316,12 +318,22 @@ async function downloadAll(event) {
             fileName.replace('.wav', '.aif') :
             fileName;
         zip.file(fileName, blob, {binary: true});
+        let otFile = createAndSetOtFileLink(
+            file.meta.slices??[], file.buffer.length, fileName);
+        if (otFile) {
+          zip.file(otFile.name, otFile.blob, {binary: true});
+        }
       } else {
         let fileName = getNiceFileName('', file, false);
         fileName = lastUsedAudioConfig.includes('a') ?
             fileName.replace('.wav', '.aif') :
             fileName;
         zip.file(file.file.path + fileName, blob, {binary: true});
+        let otFile = createAndSetOtFileLink(
+            file.meta.slices??[], file.buffer.length, fileName);
+        if (otFile) {
+          zip.file(file.file.path + otFile.name, otFile.blob, {binary: true});
+        }
       }
     }
     zip.generateAsync({type: 'blob'}).then(blob => {
@@ -344,7 +356,7 @@ async function downloadAll(event) {
     lnk?.click();
     if (links.length === 0 && lnk) {
       clearInterval(intervalId);
-      document.body.classList.add('loading');
+      document.body.classList.remove('loading');
     }
   }, 500);
 
@@ -352,12 +364,16 @@ async function downloadAll(event) {
 
 async function downloadFile(id, fireLink = false) {
   const el = getRowElementById(id).querySelector('.wav-link-hidden');
+  const metaEl = getRowElementById(id).querySelector('.meta-link-hidden');
   const file = getFileById(id);
   const renderAsAif = lastUsedAudioConfig.includes('a');
   await setWavLink(file, el, renderAsAif);
   if (fireLink) {
     el.click();
   }
+  let otFile = createAndSetOtFileLink(
+      file.meta.slices??[], file.buffer.length, file.file.name, metaEl);
+  if (otFile) {metaEl.click(); }
   return el;
 }
 
@@ -462,6 +478,11 @@ function toggleSetting(param, value) {
   if (param === 'embedSliceData') {
     embedSliceData = !embedSliceData;
     localStorage.setItem('embedSliceData', embedSliceData);
+    showExportSettingsPanel();
+  }
+  if (param === 'exportWithOtFile') {
+    exportWithOtFile = !exportWithOtFile;
+    localStorage.setItem('exportWithOtFile', exportWithOtFile);
     showExportSettingsPanel();
   }
   if (param === 'restoreLastUsedAudioConfig') {
@@ -601,6 +622,13 @@ function showExportSettingsPanel() {
 <td><button onclick="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData
       ? 'button'
       : 'button-outline'}">${embedSliceData ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<tr>
+<td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 16/24 stereo [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('exportWithOtFile')" class="check ${exportWithOtFile
+      ? 'button'
+      : 'button-outline'}">${exportWithOtFile ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Show Shift/Ctrl modifier touch buttons?&nbsp;&nbsp;&nbsp;</span></td>
@@ -883,33 +911,31 @@ async function joinAll(
     _files = processing.processed;
   }
 
-  if (embedSliceData) {
-    slices = [];
-    let offset = 0;
-    for (let x = 0; x < _files.length; x++) {
-      if (_files[x].meta.slices) {
-        if (slices.length > 0) {
-          const _slices = JSON.parse(JSON.stringify(_files[x].meta.slices));
-          _slices.forEach(slice => {
-            slice.s = slice.s + offset;
-            slice.e = slice.e + offset;
-          });
-          slices = [...slices, ..._slices];
-        } else {
-          slices = [...slices, ..._files[x].meta.slices];
-        }
-      } else {
-        slices.push({
-          s: offset,
-          e: offset + (pad ? largest : +_files[x].buffer.length),
-          n: _files[x].file.name,
-          p: _files[x].meta.opPan ?? 16384,
-          pab: _files[x].meta.opPanAb ?? false,
-          st: _files[x].meta.opPitch ?? 0
+  slices = [];
+  let offset = 0;
+  for (let x = 0; x < _files.length; x++) {
+    if (_files[x].meta.slices) {
+      if (slices.length > 0) {
+        const _slices = JSON.parse(JSON.stringify(_files[x].meta.slices));
+        _slices.forEach(slice => {
+          slice.s = slice.s + offset;
+          slice.e = slice.e + offset;
         });
+        slices = [...slices, ..._slices];
+      } else {
+        slices = [...slices, ..._files[x].meta.slices];
       }
-      offset += +_files[x].buffer.length;
+    } else {
+      slices.push({
+        s: offset,
+        e: offset + (pad ? largest : +_files[x].buffer.length),
+        n: _files[x].file.name,
+        p: _files[x].meta.opPan ?? 16384,
+        pab: _files[x].meta.opPanAb ?? false,
+        st: _files[x].meta.opPitch ?? 0
+      });
     }
+    offset += +_files[x].buffer.length;
   }
 
   const audioArrayBuffer = audioCtx.createBuffer(
@@ -972,13 +998,17 @@ async function joinAll(
           fileData.file.name.replace('.wav', '.aif') :
           fileData.file.name;
       zip.file(fileData.file.name, blob, {binary: true});
+      let otFile = createAndSetOtFileLink(
+          fileData.meta.slices??[], fileData.buffer.length, fileData.file.name);
+      if (otFile) {
+        zip.file(otFile.name, otFile.blob, {binary: true});
+      }
     } else {
       await setWavLink(fileData, joinedEl, renderAsAif);
       joinedEl.click();
-      if (exportWithOtFile) {
-        let otFile = createAndSetOtFileLink(fileData, joinedEl);
-        if (otFile) {joinedEl.click(); }
-      }
+      let otFile = createAndSetOtFileLink(
+          fileData.meta.slices??[], fileData.buffer.length, fileData.file.name, joinedEl);
+      if (otFile) {joinedEl.click(); }
     }
   }
   if (filesRemaining.length > 0) {
@@ -1804,6 +1834,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
           ${f.meta.isMerge ? ' m' : ''}
           ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
           <a class="wav-link-hidden" target="_blank"></a>
+          <a class="meta-link-hidden" target="_blank"></a>
       </td>
       <td class="duration-td">
           <span>${f.meta.duration} s</span>
@@ -1952,8 +1983,21 @@ const bytesToInt = (bh, bm, bl) => {
   return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
 };
 
-function createAndSetOtFileLink(item, linkEl) {
-  let data = encodeOt(item);
+function createAndSetOtFileLink(slices, bufferLength, fileName, linkEl) {
+  if (checkShouldExportOtFile() && slices && slices.length > 0) {
+    let _slices = slices.length > 64 ? slices.slice(0, 64) : slices;
+    let data = encodeOt(_slices, bufferLength);
+    let fName = fileName.replace('.wav', '.ot');
+    if (!data) { return false ; }
+    let blob = new window.Blob([data], {
+      type: 'application/octet-stream'
+    });
+    if (linkEl) {
+      linkEl.href = URL.createObjectURL(blob);
+      linkEl.setAttribute('download', fName);
+    }
+    return { blob: blob, name: fName };
+  }
   return false;
 }
 

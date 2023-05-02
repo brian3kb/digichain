@@ -1576,8 +1576,9 @@ const move = (event, id, direction) => {
   }
   renderList();
 };
-const sort = (event, by) => {
+const sort = (event, by, prop = 'meta') => {
   const groupByChecked = (event.shiftKey || modifierKeys.shiftKey);
+  const forLocaleCompare = ['name', 'note'];
   if (by === 'id') {
     if (groupByChecked === true) {
       files.sort(
@@ -1589,14 +1590,14 @@ const sort = (event, by) => {
   } else {
     if (lastSort === by) {
       //files.reverse();
-      files = by === 'name' ?
-          files.sort((a, b) => b.file[by].localeCompare(a.file[by])) :
-          files.sort((a, b) => (b.meta[by] - a.meta[by]));
+      files = forLocaleCompare.includes(by) ?
+          files.sort((a, b) => b[prop][by].localeCompare(a[prop][by])) :
+          files.sort((a, b) => (b[prop][by] - a[prop][by]));
       lastSort = '';
     } else {
-      files = by === 'name' ?
-          files.sort((a, b) => a.file[by].localeCompare(b.file[by])) :
-          files.sort((a, b) => (a.meta[by] - b.meta[by]));
+      files = forLocaleCompare.includes(by) ?
+          files.sort((a, b) => a[prop][by].localeCompare(b[prop][by])) :
+          files.sort((a, b) => (a[prop][by] - b[prop][by]));
       lastSort = by;
     }
   }
@@ -1985,6 +1986,10 @@ const bytesToInt = (bh, bm, bl) => {
   return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
 };
 
+function noteFromFileName(name) {
+  const match = name.match(/[-_. ](?![EB]#)([A-G])([#b])?([0-9]|[0-9]{2})?[-_. ]/);
+  return match? match[0].trim() : '';
+}
 function createAndSetOtFileLink(slices, bufferLength, fileName, linkEl) {
   if (checkShouldExportOtFile() && slices && slices.length > 0) {
     let _slices = slices.length > 64 ? slices.slice(0, 64) : slices;
@@ -2243,7 +2248,8 @@ const parseAif = (
         op1Json: chunks.json.data,
         channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
         checked: true, id: uuid,
-        slices: false
+        slices: false,
+        note: noteFromFileName(file.name)
       }
     });
     unsorted.push(uuid);
@@ -2312,7 +2318,8 @@ const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
         duration: Number(resample.outputBuffer.length / masterSR).toFixed(3),
         startFrame: 0, endFrame: resample.outputBuffer.length,
         checked: true, id: uuid,
-        slices: false
+        slices: false,
+        note: noteFromFileName(file.name)
       }
     });
     unsorted.push(uuid);
@@ -2378,7 +2385,8 @@ const parseWav = (
         startFrame: 0, endFrame: audioArrayBuffer.length,
         checked: checked, id: uuid,
         channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
-        slices: file.slices ?? slices
+        slices: file.slices ?? slices,
+        note: noteFromFileName(file.name)
       }
     });
     unsorted.push(uuid);

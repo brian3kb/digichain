@@ -184,8 +184,9 @@
           <th></th>
           <th style="width: 180px;"></th>
           <th>
-            <a title="Click to sort." onclick="digichain.sort(event, 'name')" class="has-shift-mod-i">Filename / Download</a>
-            <a title="Click to sort." onclick="digichain.sort(event, 'sliceNumber')" class="has-shift-mod-i"> - slice # - </a>
+            <a title="Click to sort." onclick="digichain.sort(event, 'name', 'file')" class="has-shift-mod-i">Filename / Download</a>
+            <a title="Click to sort." onclick="digichain.sort(event, 'sliceNumber')" class="has-shift-mod-i"> - slice # </a>
+            <a title="Click to sort." onclick="digichain.sort(event, 'note')" class="has-shift-mod-i"> - note - </a>
           </th>
           <th><a title="Click to sort." id="lengthHeaderLink" onclick="digichain.sort(event, 'length')" class="has-shift-mod-i">Length (s)</a></th>
           <th class="w-0"></th>
@@ -212,22 +213,22 @@
 </div>
 
 <script>
-  if (location.origin.startsWith('file:')) {
-    document.getElementById('alertNotServed').classList.add('show');
-  }
-
-  if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.pathname.includes('latest')) {
-    window.addEventListener('load', async () => {
-      try {
-        let reg;
-          reg = await navigator.serviceWorker.register('sw.js', {
-            type: 'module',
-          });
-      } catch (err) {
-        console.log('Service worker registration failed: ', err);
-      }
-    });
-  }
+  // if (location.origin.startsWith('file:')) {
+  //   document.getElementById('alertNotServed').classList.add('show');
+  // }
+  //
+  // if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.pathname.includes('latest')) {
+  //   window.addEventListener('load', async () => {
+  //     try {
+  //       let reg;
+  //         reg = await navigator.serviceWorker.register('sw.js', {
+  //           type: 'module',
+  //         });
+  //     } catch (err) {
+  //       console.log('Service worker registration failed: ', err);
+  //     }
+  //   });
+  // }
 </script>
 
 </body>

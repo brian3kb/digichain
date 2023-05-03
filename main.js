@@ -55,6 +55,7 @@ let metaFiles = [];
 let mergeFiles = [];
 let lastSort = '';
 let lastSelectedRow;
+let lastLastSelectedRow;
 let lastSliceFileImport = []; // [].enabledTracks = {t[x]: boolean}
 let lastOpKit = [];
 let workBuffer;
@@ -1135,21 +1136,31 @@ const playFile = (event, id, loop) => {
 
 };
 
-const toggleCheck = (event, id) => {
+const toggleCheck = (event, id, silent = false) => {
   try {
     const rowEl = getRowElementById(id);
     const el = getRowElementById(id).querySelector('.toggle-check');
     const file = getFileById(id);
     event.preventDefault();
-    file.meta.checked = !file.meta.checked;
-    file.meta.checked
-        ? el.classList.remove('button-outline')
-        : el.classList.add('button-outline');
-    file.meta.checked
-        ? rowEl.classList.add('checked')
-        : rowEl.classList.remove('checked');
-    if (!file.meta.checked) {
-      file.source?.stop();
+    if ((event.shiftKey || modifierKeys.shiftKey)) {
+      const lastRowId = getFileIndexById(lastLastSelectedRow.dataset.id);
+      const thisRowId = getFileIndexById(id);
+      const from = Math.min(lastRowId, thisRowId);
+      const to = Math.max(lastRowId, thisRowId);
+      for (let i = from; i <= to; i++) {
+        const loopRow = getRowElementById(files[i].meta.id);
+        const check  = !(event.ctrlKey || modifierKeys.ctrlKey);
+        files[i].meta.checked = check;
+        loopRow.querySelector('.toggle-check').classList[check ? 'remove' : 'add']('button-outline');
+        loopRow.classList[check ? 'add' : 'remove']('checked');
+      }
+    } else {
+      file.meta.checked = !file.meta.checked;
+      el.classList[file.meta.checked ? 'remove' : 'add']('button-outline');
+      rowEl.classList[file.meta.checked ? 'add' : 'remove']('checked');
+      if (!file.meta.checked) {
+        file.source?.stop();
+      }
     }
     lastSort = '';
     setCountValues();
@@ -1612,6 +1623,7 @@ const handleRowClick = (event, id) => {
   if (document.querySelector('.pop-up.show')) { return; }
   if (lastSelectedRow) { lastSelectedRow.classList.remove('selected'); }
   row.classList.add('selected');
+  lastLastSelectedRow = lastSelectedRow;
   lastSelectedRow = row;
   lastSelectedRow.scrollIntoViewIfNeeded();
   setCountValues();

@@ -24,6 +24,7 @@
  - G : Toggles grid-view/list-view (grid-view is now the default for narrow screen width devices like phones).
  - Column Header : Sorts the list, but will keep the selected items grouped to the top of the list.
  - Reset Button : Randomizes the order of the list.
+ - Check Sample Row Button : Will select all samples between the highlighted sample and the clicked sample (inclusive). Ctrl+Shift+Click will de-select.
 
 **Ctrl + Click**
  - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.

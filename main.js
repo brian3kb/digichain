@@ -206,10 +206,16 @@ const toggleModifier = (key) => {
 };
 
 const closePopUps = () => {
+  lastSelectedRow?.focus();
   document.querySelectorAll('.pop-up').
       forEach(w => w.classList.remove('show'));
   stopPlayFile(false, editor.getLastItem());
   renderList();
+  try {
+    lastSelectedRow = getRowElementById(lastSelectedRow.dataset.id);
+    lastSelectedRow.classList.add('selected');
+    lastSelectedRow.scrollIntoViewIfNeeded(true);
+  } catch (e) {}
 };
 
 const arePopUpsOpen = () => {
@@ -234,8 +240,8 @@ const showEditPanel = (event, id, view = 'sample') => {
   } else {
     if (id && view !== 'opExport') {
       lastSelectedRow = getRowElementById(id);
-      folderOptions = [...new Set(files.map(f => f.file.path))];
     }
+    folderOptions = [...new Set(files.map(f => f.file.path))];
     data = getFileById(id || lastSelectedRow.dataset.id);
   }
   showEditor(
@@ -1625,7 +1631,7 @@ const handleRowClick = (event, id) => {
   row.classList.add('selected');
   lastLastSelectedRow = lastSelectedRow;
   lastSelectedRow = row;
-  lastSelectedRow.scrollIntoViewIfNeeded();
+  lastSelectedRow.scrollIntoViewIfNeeded(true);
   setCountValues();
 
 };
@@ -1648,13 +1654,15 @@ const drawSliceLines = (slices, file, otMeta) => {
   if (file && otMeta) {
     let scaleSize = file.buffer.length / waveformWidth;
     lines = otMeta.slices.map((slice, idx) => `
-      <div class="line" data-idx="${idx}" ondblclick="this.classList.add('hidden')" style="margin-left:${(slice.startPoint /
+      <div class="line" data-idx="${idx}" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')" 
+      title="${slice.name}"
+      style="margin-left:${(slice.startPoint /
         scaleSize)}px; width:${(slice.endPoint / scaleSize) -
     (slice.startPoint / scaleSize)}px;"></div>
   `);
   } else {
     lines = _slices.map((slice, idx) => `
-    <div class="line" data-idx="${idx}" ondblclick="this.classList.add('hidden')" style="margin-left:${(waveformWidth /
+    <div class="line" data-idx="${idx}" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"style="margin-left:${(waveformWidth /
         _slices.length) * idx}px; width:${(waveformWidth / _slices.length)}px;"></div>
 `);
     //
@@ -1678,11 +1686,24 @@ const splitAction = (event, id, slices) => {
   const splitPanelWaveformContainerEl = document.querySelector(
       `#splitOptions .waveform-container`);
   const splitPanelWaveformEl = document.getElementById('splitPanelWaveform');
-  const excludeSlices = [...el.querySelectorAll(`div.line.hidden`)].map(
+  const excludeSlices = [...el.querySelectorAll(`div.line.fade`)].map(
       s => +s.dataset.idx);
   let item;
   let otMeta;
   let pushInPlace = (event.shiftKey || modifierKeys.shiftKey);
+  if ((event.target.className.includes('is-') || event.target.parentElement.className.includes('is-')) && (event.ctrlKey || modifierKeys.ctrlKey)) {
+    item = getFileById(id || lastSelectedRow.dataset.id);
+    const confirmClear = confirm(`Clear slice data for ${item.file.name}?`);
+    if (confirmClear) {
+      item.meta.slices = false;
+      if (item.meta.op1Json) {
+        item.meta.op1Json = false;
+      }
+      metaFiles.removeByName(item.file.name);
+      reRenderListRow(item.meta.id);
+    }
+    return;
+  }
   if (id) {
     lastSelectedRow = getRowElementById(id);
     sliceGroupEl.dataset.id = id;
@@ -1812,6 +1833,13 @@ const setCountValues = () => {
   clearModifiers();
 };
 
+function reRenderListRow(id) {
+  const item = getFileById(id);
+  const rowEl = getRowElementById(id);
+  rowEl.innerHTML = buildRowMarkupFromFile(item);
+  rowEl.querySelector('canvas.waveform').replaceWith(item.waveform);
+}
+
 const buildRowMarkupFromFile = (f, type = 'main') => {
   return type === 'main' ?
       `
@@ -1905,10 +1933,10 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
       `</td>
       <td class="split-td">
           <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(
-          f)?.cssClass}"><i class="gg-menu-grid-r"></i></button>
+          f)?.cssClass}"><i class="gg-menu-grid-r has-ctrl-mod-i"></i></button>
       </td>
       <td class="duplicate-td">
-          <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
+          <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button> 
       </td>
       <td class="toggle-edit-td">
           <button title="Edit" onclick="digichain.showEditPanel(event, '${f.meta.id}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
@@ -2619,7 +2647,7 @@ document.body.addEventListener('keyup', (event) => {
 
 document.body.addEventListener('keydown', (event) => {
   const numberKeys = ['Digit1', 'Digit2','Digit3','Digit4','Digit5','Digit6','Digit7','Digit8', 'Digit9', 'Digit0'];
-  const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyD', 'KeyG', 'KeyH', 'KeyI', 'KeyL', 'KeyP', 'KeyR', 'KeyS', 'KeyX',
+  const eventCodes = ['ArrowDown', 'ArrowUp', 'Escape', 'Enter', 'KeyD', 'KeyE', 'KeyG', 'KeyH', 'KeyI', 'KeyL', 'KeyP', 'KeyR', 'KeyS', 'KeyX',
       ...numberKeys
   ];
   if (keyboardShortcutsDisabled) { return; }
@@ -2657,6 +2685,21 @@ document.body.addEventListener('keydown', (event) => {
   if (files.length && (event.code === 'KeyI')) {
     return invertFileSelection();
   }
+  if (files.length && (event.code === 'KeyE')) {
+    const editPanelEl = document.getElementById('editPanel');
+    if ((event.shiftKey || modifierKeys.shiftKey)) {
+      setTimeout(() => {
+        if (editPanelEl.classList.contains('show')) {
+          const editFileNameEl = document.getElementById('editFileName');
+          const editFilePathEl = document.getElementById('editFilePath');
+          editFileNameEl.removeAttribute('readonly');
+          editFilePathEl.removeAttribute('readonly');
+          editFileNameEl.focus();
+        }
+      }, 100);
+    }
+    return lastSelectedRow ? showEditPanel(lastSelectedRow.dataset.id) : false;
+  }
   if (event.code === 'KeyH' && (event.shiftKey || modifierKeys.shiftKey)) {
     toggleOptionsPanel();
   }
@@ -2676,7 +2719,7 @@ document.body.addEventListener('keydown', (event) => {
       let item = files.splice(idx, 1)[0];
       files.splice(idx + 1, 0, item);
       lastSelectedRow.nextElementSibling.after(lastSelectedRow);
-      lastSelectedRow.scrollIntoViewIfNeeded();
+      lastSelectedRow.scrollIntoViewIfNeeded(true);
       setCountValues();
     } else if (event.code === 'ArrowUp' &&
         lastSelectedRow.previousElementSibling) {
@@ -2688,7 +2731,7 @@ document.body.addEventListener('keydown', (event) => {
       let item = files.splice(idx, 1)[0];
       files.splice(idx - 1, 0, item);
       lastSelectedRow.previousElementSibling.before(lastSelectedRow);
-      lastSelectedRow.scrollIntoViewIfNeeded();
+      lastSelectedRow.scrollIntoViewIfNeeded(true);
       setCountValues();
     } else if (event.code === 'Enter') {
       toggleCheck(event, lastSelectedRow.dataset.id);

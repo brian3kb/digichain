@@ -6,7 +6,8 @@
  - Escape : closes any open dialog windows and stops all sample playback.
  - Enter / Return : toggles the selection of the currently highlighted sample in the list.
  - L / S / R / D : changes the channel for stereo files being processed to mono.
- - Number keys 1 through 0 : play the selected sample in the postion of the key with 0 == 10.
+ - Number keys 1 through 0 : play the selected sample in the position of the key with 0 == 10.
+ - E: Opens the edit panel for the currently highlighted sample.
 
 **Shift + Click / Shift + Key**
  - Up / Down Keys : moves the highlighted sample up or down in the list.
@@ -25,11 +26,13 @@
  - Column Header : Sorts the list, but will keep the selected items grouped to the top of the list.
  - Reset Button : Randomizes the order of the list.
  - Check Sample Row Button : Will select all samples between the highlighted sample and the clicked sample (inclusive). Ctrl+Shift+Click will de-select.
+ - E : Opens the editor panel for the currently highlighted sample, with the file name and path inputs editable, and the filename input keyboard focused.
 
 **Ctrl + Click**
  - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.
  - Slice Grid Off Button : restores the default slice grid options.
  - Time Limit : prompts to enter a custom value for the timed chain lengths when that mode is enabled.
+ - Row Slice Icon : Clear any related slice data.
 
 **Alt + Key**
  - Number 1 - 0, P : Stops the playback and looping of the sample.

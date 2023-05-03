@@ -38,6 +38,9 @@
  - Creation of .ot meta files in 44.1 16/24 stereo non-aif audio contexts. (toggle in settings).
  - Basic note detection from filename for sorting the list.
  - Shift+Click on the row sample select box will select all the samples in-between (inclusive of the highlighted and the clicked sample). Ctrl+Shift+Click will de-select.
+ - Showing the sample name from DC slice data in title of slices on slice panel.
+ - Ctrl+Click the slice sample row icon to clear any related sample slice data.
+ - E key opens the edit panel for the currently highlighted sample. Shift+E opens the editor panel for the currently highlighted sample, with the file name and path inputs editable, and the filename input keyboard focused.
 
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)

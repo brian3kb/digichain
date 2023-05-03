@@ -213,10 +213,10 @@
 </div>
 
 <script>
-  // if (location.origin.startsWith('file:')) {
-  //   document.getElementById('alertNotServed').classList.add('show');
-  // }
-  //
+  if (location.origin.startsWith('file:')) {
+    document.getElementById('alertNotServed').classList.add('show');
+  }
+
   // if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.pathname.includes('latest')) {
   //   window.addEventListener('load', async () => {
   //     try {

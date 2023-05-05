@@ -49,6 +49,8 @@ let exportWithOtFile = JSON.parse(
     localStorage.getItem('exportWithOtFile')) ?? false;
 let darkModeTheme = JSON.parse(
     localStorage.getItem('darkModeTheme')) ?? true;
+let normalizeContrast = JSON.parse(
+    localStorage.getItem('normalizeContrast')) ?? false;
 let secondsPerFile = 0;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
@@ -504,6 +506,14 @@ function toggleSetting(param, value) {
         ]('light');
     showExportSettingsPanel();
   }
+  if (param === 'normalizeContrast') {
+    normalizeContrast = !normalizeContrast;
+    localStorage.setItem('normalizeContrast', normalizeContrast);
+    document.body.classList[
+        normalizeContrast ? 'add' : 'remove'
+        ]('normalize-contrast');
+    showExportSettingsPanel();
+  }
   if (param === 'restoreLastUsedAudioConfig') {
     restoreLastUsedAudioConfig = !restoreLastUsedAudioConfig;
     localStorage.setItem('restoreLastUsedAudioConfig',
@@ -660,6 +670,12 @@ function showExportSettingsPanel() {
 <td><button onclick="digichain.toggleSetting('darkModeTheme')" class="check ${darkModeTheme
       ? 'button'
       : 'button-outline'}">${darkModeTheme ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<td><span>Normalize text/waveform color contrast? &nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('normalizeContrast')" class="check ${normalizeContrast
+      ? 'button'
+      : 'button-outline'}">${normalizeContrast ? 'YES' : 'NO'}</button></td>
 </tr>
 </tbody>
 </table>
@@ -2751,6 +2767,9 @@ if (localStorage.getItem('darkModeTheme') === null) {
 document.body.classList[
     darkModeTheme ? 'remove' : 'add'
     ]('light');
+document.body.classList[
+    normalizeContrast ? 'add' : 'remove'
+    ]('normalize-contrast');
 if (restoreLastUsedAudioConfig) {
   changeAudioConfig({
     target: document.getElementById('audioConfigOptions')

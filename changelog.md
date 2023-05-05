@@ -43,6 +43,7 @@
  - E key opens the edit panel for the currently highlighted sample. Shift+E opens the editor panel for the currently highlighted sample, with the file name and path inputs editable, and the filename input keyboard focused.
  - Reworked CSS for smaller screen devices.
  - Added a light theme for users who don't like dark themes, toggled in the settings panel (first launch will set from the devices system color preference).
+ - Option to normalize text/waveform color contrast in the settings panel.
 
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)

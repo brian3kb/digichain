@@ -322,9 +322,11 @@ td button { margin: 0.5rem; }
     color: #40392e;
     margin-bottom: 0.2rem;
     display: inline-block;
+    opacity: .5;
 }
 .channel-options a.selected, .pan-options a.selected {
     color: #d79c4e;
+    opacity: 1;
 }
 /*.channel-options-stereo i {*/
 /*    display: inline-block;*/
@@ -1090,4 +1092,8 @@ body.light .toggle-seconds-per-file {
 }
 body.light .toggle-seconds-per-file.on {
     opacity: 1;
+}
+
+body.normalize-contrast a, body.normalize-contrast .waveform, body.normalize-contrast input {
+    filter: contrast(0.5);
 }

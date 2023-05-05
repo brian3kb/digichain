@@ -16,7 +16,8 @@ let multiplier = 1;
 let selection = {
   start: 0,
   end: 0,
-  step: 0
+  step: 0,
+  selStart: true
 };
 
 let samples = [];
@@ -33,7 +34,8 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
     multiplier = 1;
     selection.end = editing.buffer.length;
     selection.start = 0;
-    selection.step = Math.round(editing.buffer.length / (1024 * multiplier));
+    selection.step = editing.buffer.length / (1024 * multiplier);
+    selection.selStart = true;
     renderEditableItems();
     renderEditor(editing);
     updateSelectionEl();
@@ -121,11 +123,13 @@ export function renderEditor(item) {
       <canvas class="edit-panel-waveform"
         oncontextmenu="return false;"
         onclick="digichain.editor.changeSelectionPoint(event)"
-        onauxclick="digichain.editor.changeSelectionPoint(event, true)"></canvas>
+        onmouseleave="digichain.editor.setSelStart(true)"
+        ></canvas>
       <div id="editLines">
         <div class="edit-line"></div>
       </div>
     </div>
+    <div class="current-selection-text">Click / tap to set start point</div>
   </div>
   <div class="sample-op-buttons">
   <button title="Normalize the volume of the sample." class="normalize button button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
@@ -279,17 +283,22 @@ function updateSelectionEl() {
 function zoomLevel(view, level) {
   if (view === 'editor') {
     renderEditPanelWaveform(level);
-    selection.step = Math.round(editing.buffer.length / (1024 * level));
+    selection.step = editing.buffer.length / (1024 * level);
     multiplier = level;
     updateSelectionEl();
     const waveformContainerEl = document.querySelector('.waveform-container');
   }
 }
 
+function setSelStart(value) {
+  selection.selStart = value;
+  document.querySelector('.current-selection-text').textContent = `Click / tap to set ${selection.selStart === true ? 'start' : 'end'} point`
+}
+
 function changeSelectionPoint(event, shiftKey = false) {
   event.preventDefault();
   const max =  (1024 * multiplier);
-  if (event.shiftKey || shiftKey) { //set end point if shift key is down
+  if ((event.shiftKey || shiftKey) || !selection.selStart) { //set end point if shift key is down
     let end = 0;
     if (event.offsetX <= max && event.offsetX > -1) {
       end = Math.round(event.offsetX * selection.step);
@@ -298,6 +307,7 @@ function changeSelectionPoint(event, shiftKey = false) {
     }
     selection.end = end;
     selection.start = selection.start >= selection.end? selection.end - 1: selection.start;
+    setSelStart(true);
   } else {
     let start = 0;
     if (event.offsetX <= max && event.offsetX > -1) {
@@ -307,9 +317,11 @@ function changeSelectionPoint(event, shiftKey = false) {
     }
     selection.start = start;
     selection.end = selection.end <= selection.start? selection.start + 1 : selection.end;
+    setSelStart(false);
   }
-  selection.end = selection.end > editing.buffer.length? editing.buffer.length : selection.end;
+  selection.end = selection.end >= editing.buffer.length? editing.buffer.length : selection.end;
   //selection.start = selection.start >= selection.end? selection.end - 50 : selection.start;
+  selection.start = selection.start >= selection.end ? selection.end - 1 : selection.start;
   updateSelectionEl();
 }
 
@@ -345,7 +357,7 @@ function perSamplePitch(event, pitchValue, pitchSteps, id) {
       renderEditPanelWaveform(multiplier);
       selection.end = Math.round(selection.end / pitchValue);
       selection.start = Math.round(selection.start / pitchValue);
-      selection.step = Math.round(item.buffer.length / (1024 * multiplier));
+      selection.step = item.buffer.length / (1024 * multiplier);
       updateSelectionEl();
       item.waveform = false;
     });
@@ -491,7 +503,8 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
     item.meta.slices[item.meta.slices.length - 1].e = item.buffer.length;
   }
   if (renderEditPanel) {
-    renderEditPanelWaveform(multiplier);
+    showEditor(editing, conf, 'sample', folders);
+    //renderEditPanelWaveform(multiplier);
   }
   item.waveform = false;
 }
@@ -500,6 +513,7 @@ export const editor = {
   toggleReadOnlyInput,
   zoomLevel,
   changeSelectionPoint,
+  setSelStart,
   normalize,
   fade,
   trimRight,

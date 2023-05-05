@@ -24,7 +24,7 @@
   <script type="module" src="./main.js"></script>
 </head>
 
-<body>
+<body class="">
 
 <div id="alertNotServed" class="not-served-md pop-up">
   <div class="content" style="text-align: center;">
@@ -65,9 +65,9 @@
     <input title="Transient detection percentage threshold." type="number" id="transientThreshold" name="transientThreshold"
            min="1" max="100" value="80">
   </div>
-  <div class="float-left">
+  <div class="float-left" style="max-width: 44%;">
     <div class="float-left">
-      <label title="Load slices from a tape.json file." style="margin-top: 1rem;" class="button button-outline" for="uploadSliceFile">Slices from file...</label>
+      <label title="Load slices from a tape.json file." style="margin-top: 1rem; padding: 0 1rem;" class="button button-outline" for="uploadSliceFile">Slices from file...</label>
       <input id="uploadSliceFile" onchange="digichain.splitFromFile(event)" type="file" />
     </div>
     <div class="float-left slice-from-file-buttons hidden" style="margin-top: 1rem;
@@ -78,7 +78,7 @@
       <button class="button-outline check sff-button sff-t4" onclick="digichain.splitFromTrack(event, 4)">T4</button>
     </div>
   </div>
-  <button onclick="digichain.splitAction(event, false, true)" class="float-right button has-shift-mod" style="margin-top: 1rem;">Slice to samples</button>
+  <button onclick="digichain.splitAction(event, false, true)" class="float-right button has-shift-mod" style="margin-top: 1rem; padding: 0 1rem;">Slice to samples</button>
 </div>
 
 <div id="editPanel" class="edit-panel-options pop-up" data-id="">
@@ -105,7 +105,7 @@
     <div for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</div>
     <output class="float-left" id="fileNum">0/0</output>
   </div>
-  <div id="toggleOptionsButton" onclick="digichain.toggleOptionsPanel()"><i class="gg-select-r"></i></div>
+  <div id="toggleOptionsButton" class="collapsed" onclick="digichain.toggleOptionsPanel()"><i class="gg-select-r"></i></div>
   <div id="infoIndicator"></div>
 </div>
 
@@ -113,7 +113,7 @@
   <div><i class="gg-spinner"></i><span id="loadingText" class="gradient-text">Loading samples</span></div>
 </div>
 <div class="container">
-  <div id="allOptionsPanel" class="row all-options">
+  <div id="allOptionsPanel" class="row all-options hidden">
     <div class="column left-buttons">
 
       <div class="row">
@@ -207,7 +207,7 @@
   </div>
 </div>
 
-<div class="touch-buttons">
+<div class="touch-buttons hidden">
   <button id="modifierKeyshiftKey" title="Locks the shift key (useful for touch users with no keyboard access)." onclick="digichain.toggleModifier('shiftKey')" class="button-outline">SHIFT</button>
   <button id="modifierKeyctrlKey" title="Locks the ctrl key (useful for touch users with no keyboard access)." onclick="digichain.toggleModifier('ctrlKey')" class="button-outline">CTRL</button>
 </div>

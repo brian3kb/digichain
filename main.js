@@ -47,6 +47,8 @@ let showTouchModifierKeys = JSON.parse(
     localStorage.getItem('showTouchModifierKeys')) ?? true;
 let exportWithOtFile = JSON.parse(
     localStorage.getItem('exportWithOtFile')) ?? false;
+let darkModeTheme = JSON.parse(
+    localStorage.getItem('darkModeTheme')) ?? true;
 let secondsPerFile = 0;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
@@ -494,6 +496,14 @@ function toggleSetting(param, value) {
     localStorage.setItem('exportWithOtFile', exportWithOtFile);
     showExportSettingsPanel();
   }
+  if (param === 'darkModeTheme') {
+    darkModeTheme = !darkModeTheme;
+    localStorage.setItem('darkModeTheme', darkModeTheme);
+    document.body.classList[
+        darkModeTheme ? 'remove' : 'add'
+        ]('light');
+    showExportSettingsPanel();
+  }
   if (param === 'restoreLastUsedAudioConfig') {
     restoreLastUsedAudioConfig = !restoreLastUsedAudioConfig;
     localStorage.setItem('restoreLastUsedAudioConfig',
@@ -645,6 +655,12 @@ function showExportSettingsPanel() {
       ? 'button'
       : 'button-outline'}">${showTouchModifierKeys ? 'YES' : 'NO'}</button></td>
 </tr>
+<tr>
+<td><span>Use Dark theme as the default? (No = Light theme)&nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('darkModeTheme')" class="check ${darkModeTheme
+      ? 'button'
+      : 'button-outline'}">${darkModeTheme ? 'YES' : 'NO'}</button></td>
+</tr>
 </tbody>
 </table>
 <span class="settings-info">All settings here will persist when the app re-opens.</span>
@@ -702,36 +718,6 @@ function joinToMono(audioArrayBuffer, _files, largest, pad) {
 }
 
 function joinToStereo(audioArrayBuffer, _files, largest, pad) {
-  let totalWrite = 0;
-  _files.forEach((file, idx) => {
-    const bufferLength = pad ? largest : file.buffer.length;
-    let result = [
-      new Float32Array(file.buffer.length),
-      new Float32Array(file.buffer.length)];
-
-    for (let i = 0; i < file.buffer.length; i++) {
-      result[0][i] = file.buffer.getChannelData(0)[i];
-      result[1][i] = file.buffer.getChannelData(
-          file.buffer.numberOfChannels === 2 ? 1 : 0)[i];
-    }
-
-    for (let i = 0; i < bufferLength; i++) {
-      audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i];
-      audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i];
-      totalWrite++;
-    }
-  });
-}
-
-//TODO: Finish mix-down method.
-function mixDown(_files) {
-  const mixDownLength = _files.reduce(
-      (big, cur) => big > cur.buffer.length ? big : cur.buffer.length, 0);
-  const audioArrayBuffer = audioCtx.createBuffer(
-      masterChannels,
-      mixDownLength,
-      masterSR
-  );
   let totalWrite = 0;
   _files.forEach((file, idx) => {
     const bufferLength = pad ? largest : file.buffer.length;
@@ -2756,6 +2742,15 @@ pitchExports(pitchModifier, true);
 document.querySelector('.touch-buttons').classList[
     showTouchModifierKeys ? 'remove' : 'add'
     ]('hidden');
+if (localStorage.getItem('darkModeTheme') === null) {
+  darkModeTheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  localStorage.setItem('darkModeTheme',
+    JSON.stringify(darkModeTheme)
+  );
+}
+document.body.classList[
+    darkModeTheme ? 'remove' : 'add'
+    ]('light');
 if (restoreLastUsedAudioConfig) {
   changeAudioConfig({
     target: document.getElementById('audioConfigOptions')
@@ -2768,6 +2763,7 @@ if (restoreLastUsedAudioConfig) {
     masterBitDepth
   });
 }
+setTimeout(() => toggleOptionsPanel(), 250);
 
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {

@@ -30,9 +30,11 @@ body {
     margin-top: 19rem;
     color: #d79c4e30;
     text-align: center;
-    background-color: #202124;
     cursor: pointer;
     transition: margin-top .25s ease-in;
+}
+#toggleOptionsButton i {
+    background-color: #202124;
 }
 #toggleOptionsButton.collapsed {
     margin-top: 0.75rem;
@@ -201,7 +203,7 @@ td.waveform-td span.play-head.play {
     border-left: 1px solid #d79c4e30;
     border-right: 1px solid #d79c4e30;
     padding-top: 2rem;
-    margin-bottom: 1rem;
+    margin-bottom: 3rem;
     overflow-x: auto;
     overflow-y: hidden;
 }
@@ -380,7 +382,7 @@ td button { margin: 0.5rem; }
 .op-export-panel-options {
     position: fixed;
     width: 512px;
-    top: 16vh;
+    top: 10vh;
     left: 50%;
     margin: 0 -256px;
     z-index: 100;
@@ -579,6 +581,7 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     position: fixed;
     bottom: 0;
     width: 10rem;
+    z-index: 101;
 }
 .touch-buttons button {
     width: 100%;
@@ -647,6 +650,12 @@ table#mergeList td.file-path-td {
     padding-bottom: 1.25rem;
 }
 
+.current-selection-text {
+    position: absolute;
+    font-size: 1.1rem;
+    opacity: .5;
+    padding-left: 0.5rem;
+}
 
 /*OP Editor*/
 .op-key {
@@ -726,11 +735,11 @@ table#mergeList td.file-path-td {
 }
 
 @media (min-width: 430px) {
-    body.grid-view tr {
+    body.grid-view #masterList tr {
         display: none;
     }
 
-    body.grid-view tr.file-row {
+    body.grid-view #masterList tr.file-row {
         display: block;
         width: 26rem;
         height: 30rem;
@@ -741,35 +750,35 @@ table#mergeList td.file-path-td {
         margin: .5rem;
     }
 
-    body.grid-view td {
+    body.grid-view #masterList td {
         border: none;
         display: inline-block;
     }
 
 
-    body.grid-view .move-up-td {
+    body.grid-view #masterList .move-up-td {
         position: absolute;
         margin-left: 15rem;
         margin-top: -1rem;
     }
 
-    body.grid-view .move-down-td {
+    body.grid-view #masterList .move-down-td {
         position: absolute;
         margin-left: 15rem;
         margin-top: 2rem;
     }
 
-    body.grid-view .waveform-td {
+    body.grid-view #masterList .waveform-td {
         margin-left: 4rem;
     }
 
-    body.grid-view td.file-path-td {
+    body.grid-view #masterList td.file-path-td {
         width: 85%;
         height: 13rem;
         overflow-y: auto;
     }
 
-    body.grid-view td.duration-td {
+    body.grid-view #masterList td.duration-td {
         width: 100%;
         margin-top: .5rem;
         padding-right: 4rem;
@@ -777,41 +786,41 @@ table#mergeList td.file-path-td {
         margin-left: 8rem;
     }
 
-    body.grid-view td.toggle-edit-td {
+    body.grid-view #masterList td.toggle-edit-td {
         position: absolute;
         margin-left: 21rem;
         margin-top: -14.5rem;
     }
 
-    body.grid-view td.split-td {
+    body.grid-view #masterList td.split-td {
         position: absolute;
         margin-left: 17.5rem;
         margin-top: -10rem;
     }
 
-    body.grid-view td.duplicate-td {
+    body.grid-view #masterList td.duplicate-td {
         position: absolute;
         margin-left: 21rem;
         margin-top: -7.5rem;
     }
 
-    body.grid-view td.remove-td {
+    body.grid-view #masterList td.remove-td {
         position: absolute;
         margin-left: 21rem;
         margin-top: -3.5rem;
     }
 
-    body.grid-view td.channel-options-td {
+    body.grid-view #masterList td.channel-options-td {
         margin-top: -3rem;
         position: absolute;
         margin-left: 0rem;
     }
 
-    body.grid-view tr.end-of-grid {
+    body.grid-view #masterList tr.end-of-grid {
         border-bottom: 2px solid #4ed75f40;
         border-right: 2px solid #4ed75f40;
     }
-    body.grid-view tr.end-of-grid::after {
+    body.grid-view #masterList tr.end-of-grid::after {
         margin-left: 9rem;
         margin-top: 0.7rem;
     }
@@ -846,26 +855,29 @@ table#mergeList td.file-path-td {
         padding-left: 2.5rem;
         margin: -2rem;
     }
+
     .end-of-grid td {
         border-bottom: none;
     }
+
     .end-of-grid .waveform-td {
         border-bottom: 0.1rem solid #d79c4e30;
     }
-    table {
+
+    table#masterList {
         overflow-x: hidden;
         padding-top: 2.5rem;
     }
+
     #toggleOptionsButton {
         margin-top: 34rem;
     }
-    .waveform-container {
+
+    #masterList tr {
         display: none;
     }
-    tr {
-        display: none;
-    }
-    tr.file-row {
+
+    #masterList tr.file-row {
         display: block;
         width: 98%;
         height: 20rem;
@@ -875,78 +887,87 @@ table#mergeList td.file-path-td {
         padding: .7rem 1rem;
         margin: .5rem
     }
-    td { border: none; display: inline-block;}
+
+    #masterList td {
+        border: none;
+        display: inline-block;
+    }
 
 
-    .move-up-td {
+    #masterList .move-up-td {
         position: absolute;
         margin-left: 24rem;
         margin-top: -1rem;
     }
-    .move-down-td {
+
+    #masterList .move-down-td {
         position: absolute;
         margin-left: 24rem;
         margin-top: 2rem;
     }
-    .waveform-td {
+
+    #masterList .waveform-td {
         margin-left: 3rem;
         border: 0.1rem solid #d79c4e30;
         padding: 0 1rem;
         border-radius: .5rem;
     }
-    td.file-path-td {
+
+    #masterList td.file-path-td {
         width: 70%;
         height: 5rem;
         text-overflow: ellipsis;
         margin-right: -13rem;
         overflow: hidden;
     }
-    td.file-path-td span, td.file-path-td a {
+
+    #masterList td.file-path-td span, #masterList td.file-path-td a {
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
-    td.duration-td {
+    #masterList td.duration-td {
         width: 100%;
         margin-top: 3rem;
         margin-left: 8rem;
         opacity: .7;
     }
 
-    td.toggle-edit-td {
+    #masterList td.toggle-edit-td {
         position: absolute;
         margin-left: 30.25rem;
         margin-top: -12.25rem;
     }
 
-    td.split-td {
+    #masterList td.split-td {
         position: absolute;
         margin-left: 27rem;
         margin-top: -8rem;
     }
 
-    td.duplicate-td {
+    #masterList td.duplicate-td {
         position: absolute;
         margin-left: 30.5rem;
         margin-top: -6rem;
     }
 
-    td.remove-td {
+    #masterList td.remove-td {
         position: absolute;
         margin-left: 30.5rem;
         margin-top: -3rem;
     }
 
-    td.channel-options-td {
+    #masterList td.channel-options-td {
         margin-top: -3rem;
         position: absolute;
         margin-left: 0rem;
     }
-    body.grid-view tr.end-of-grid {
+
+    body.grid-view #masterList tr.end-of-grid {
         border-bottom: 2px solid #4ed75f40;
     }
 
-    tr.file-row.end-of-grid::after {
+    #masterList tr.file-row.end-of-grid::after {
         content: 'end joined file';
         position: absolute;
         margin-left: 15rem;
@@ -954,6 +975,45 @@ table#mergeList td.file-path-td {
         font-size: 0.8rem;
         text-align: center;
         opacity: .75;
+    }
+}
+
+@media (max-width: 430px), (max-height:650px) {
+    .info-panel-md, .split-panel-options, .edit-panel-options, .merge-panel-options, .not-served-md, .export-settings-panel-md, .op-export-panel-options {
+        position: fixed;
+        top: 1vh;
+        max-height: 98vh;
+        left: 0;
+        margin: 0;
+        z-index: 100;
+        background-color: #202124;
+        border: 1px solid orange;
+        padding: 2rem;
+        border-radius: 5px;
+        box-shadow: 0 0 4px #cf8600;
+        box-sizing: border-box;
+        max-width: 99vw;
+        height: 98vh;
+        width: 99vw;
+        transition: opacity .33s ease-in;
+        overflow: auto;
+    }
+
+    .input-set button {
+        padding: 0 0 0 1.5rem;
+    }
+    .input-set input {
+        width: 85%;
+    }
+    .sample-op-buttons span {
+        font-size: 1.4rem;
+    }
+
+    .merge-info, .edit-info, .settings-info {
+        float: left;
+        width: 100%;
+        font-size: 1.15rem;
+        margin-top: 2rem;
     }
 
 }
@@ -991,3 +1051,43 @@ table#mergeList td.file-path-td {
 /*    .touch-buttons { display: block; }*/
 /*}*/
 
+body.light,
+body.light #allOptionsPanel,
+body.light .slice-group,
+body.light .pop-up,
+body.light select,
+body.light #toggleOptionsButton i,
+*[class*=is-]:after,
+*[class*=sff-]:after
+{
+    background-color: #f5f5f5;
+}
+
+body.light .header-menu {
+    background-color: #dddddd;
+}
+
+body.light .button-clear.remove {
+    color: #c5c5c5;
+}
+
+body.light .button-clear.remove:hover {
+    color: #e77d7d;
+}
+
+body.light .right-buttons:has(.toggle-seconds-per-file.on) button.check:not(.slice-grid-off),
+body.light .right-buttons:has(.toggle-seconds-per-file.on) button.dl-spaced {
+    pointer-events: none;
+    color: #2f3234;
+    border-color: #2f3234 !important;
+    background-color: transparent !important;
+    opacity: .15;
+}
+
+body.light .toggle-seconds-per-file {
+    opacity: .15;
+    transition: all .25s ease;
+}
+body.light .toggle-seconds-per-file.on {
+    opacity: 1;
+}

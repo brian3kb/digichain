@@ -12,6 +12,7 @@ body {
     position: fixed;
     bottom: 0;
     right: 1rem;
+    height: 2rem;
     opacity: 0.35;
 }
 .pop-up.show ~ .pop-up-blind {
@@ -162,6 +163,20 @@ canvas.waveform {
 }
 canvas.waveform:hover { opacity: .98; }
 
+.chain-name-toggle {
+    padding: 0;
+    margin-left: -1.5rem;
+    height: 0;
+    transition: all .25s ease;
+}
+.chain-name-toggle:hover {
+    color: #d79c4e;
+    opacity: 1 !important;
+}
+.chain-file-name-option.used {
+    opacity: .5;
+    text-decoration: line-through;
+}
 @keyframes waveformPlayHead {
     from { margin-left: 0; }
     to { margin-left: 150px; }
@@ -240,7 +255,7 @@ td button { margin: 0.5rem; }
     width: 4.2rem;
 }
 .waveform-td { padding: 0 1rem; }
-.is-ot-file::after, .is-op-file::after, .is-dc-file::after, .sff-button::after {
+.is-ot-file::after, .is-op-file::after, .is-dc-file::after, .sff-button::after, .is-chain-count::after {
     text-align: center;
     content: 'OT';
     color: #b91c1c;
@@ -269,9 +284,12 @@ td button { margin: 0.5rem; }
 .sff-t4::after {
     content: 'T4';
 }
+.is-chain-count::after {
+    content: attr(data-count);
+}
 .file-path { display: block; }
 .toggle-check, .sort-check {
-    outline: 0.1rem solid #d79c4e;
+    /*outline: 0.1rem solid #d79c4e;*/
     border: 0.2rem solid #202124;
     width: 3.25rem;
     height: 3.25rem;
@@ -381,7 +399,7 @@ td button { margin: 0.5rem; }
 }
 .info-panel-md, .split-panel-options, .edit-panel-options,
 .merge-panel-options, .not-served-md, .export-settings-panel-md,
-.op-export-panel-options {
+.op-export-panel-options, .chain-name-list-panel-md {
     position: fixed;
     width: 512px;
     top: 10vh;
@@ -429,6 +447,7 @@ td button { margin: 0.5rem; }
     cursor: pointer;
 }
 .w-0 { width: 0; }
+.p-0 { padding: 0; }
 #fileList tr:has(.check.button-outline) {
     opacity: 0.55;
 }
@@ -455,7 +474,7 @@ td button { margin: 0.5rem; }
 }
 .toggle-seconds-per-file {
     margin: 0.7rem 1rem 0 0;
-    color: #2f3234 !important;
+    color: #d79c4e;
 }
 .toggle-seconds-per-file.on { color: #d79c4e !important;}
 .slice-group {
@@ -981,7 +1000,7 @@ table#mergeList td.file-path-td {
 }
 
 @media (max-width: 430px), (max-height:650px) {
-    .info-panel-md, .split-panel-options, .edit-panel-options, .merge-panel-options, .not-served-md, .export-settings-panel-md, .op-export-panel-options {
+    .info-panel-md, .split-panel-options, .edit-panel-options, .merge-panel-options, .not-served-md, .export-settings-panel-md, .op-export-panel-options, .chain-name-list-panel-md {
         position: fixed;
         top: 1vh;
         max-height: 98vh;
@@ -1059,8 +1078,8 @@ body.light .slice-group,
 body.light .pop-up,
 body.light select,
 body.light #toggleOptionsButton i,
-*[class*=is-]:after,
-*[class*=sff-]:after
+body.light *[class*=is-]:after,
+body.light *[class*=sff-]:after
 {
     background-color: #f5f5f5;
 }
@@ -1086,14 +1105,59 @@ body.light .right-buttons:has(.toggle-seconds-per-file.on) button.dl-spaced {
     opacity: .15;
 }
 
-body.light .toggle-seconds-per-file {
+.toggle-seconds-per-file {
     opacity: .15;
     transition: all .25s ease;
 }
-body.light .toggle-seconds-per-file.on {
+.toggle-seconds-per-file.on {
     opacity: 1;
 }
 
 body.normalize-contrast a, body.normalize-contrast .waveform, body.normalize-contrast input {
     filter: contrast(0.5);
 }
+
+.toggle-help-panel {
+    padding: 0;
+    font-size: 1.5rem;
+    border: 2px solid;
+    box-sizing: content-box;
+    width: 2.5rem;
+    height: 2.5rem;
+    line-height: 2.5rem;
+    border-radius: 5rem;
+    float: right;
+    margin-right: 1rem;
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+body.show-help .help-text {
+    font-family: 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    text-decoration: none;
+    text-transform: uppercase;
+    display: block;
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    white-space: break-spaces;
+    line-height: 1.5rem;
+    text-align: left;
+    border: 1px solid #606c76;
+    border-radius: 5px;
+    padding: 1rem;
+    background-color: #202124;
+    min-height: 6.5rem;
+    font-size: 1.1rem;
+    color: #606c76;
+    transition: all 1s ease;
+    min-width: 16.5rem;
+    max-width: 30vw;
+    z-index: 105;
+}
+
+body.light.show-help .help-text {
+    background-color: #ede5d8;
+}
+
+

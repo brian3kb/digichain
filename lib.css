@@ -44,6 +44,34 @@
     left: 6px;
     top: 5px
 }
+.gg-stack,
+.gg-stack::after,
+.gg-stack::before {
+    display: block;
+    box-sizing: border-box;
+    width: 14px;
+    height: 14px;
+    border: 2px solid
+}
+.gg-stack {
+    margin-right: 8px;
+    margin-top: 8px;
+    transform: scale(1);
+    position: relative
+}
+.gg-stack::after,
+.gg-stack::before {
+    content: "";
+    position: absolute;
+    border-left: 0;
+    border-bottom: 0;
+    right: -5px;
+    top: -5px
+}
+.gg-stack::before {
+    right: -8px;
+    top: -8px
+}
 .gg-info {
     box-sizing: border-box;
     position: relative;
@@ -579,6 +607,52 @@
 .gg-alarm::after {
     transform: rotate(42deg);
     right: -5px
+}
+.gg-undo {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(1);
+    width: 14px;
+    height: 14px;
+    border: 2px solid;
+    border-left-color: transparent;
+    border-radius: 100px
+}
+.gg-undo::before {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-top: 2px solid;
+    border-left: 2px solid;
+    top: -3px;
+    left: -1px;
+    transform: rotate(-68deg)
+}
+.gg-remove {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(1);
+    width: 22px;
+    height: 22px;
+    border: 2px solid;
+    border-radius: 22px
+}
+.gg-remove::before {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    width: 10px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 5px;
+    top: 8px;
+    left: 4px
 }
 /*!
   * Milligram v1.4.1

@@ -57,6 +57,7 @@ let files = [];
 let unsorted = [];
 let metaFiles = [];
 let mergeFiles = [];
+let chainFileNames = []; //{ name: '', used: false }
 let lastSort = '';
 let lastSelectedRow;
 let lastLastSelectedRow;
@@ -235,6 +236,109 @@ const toggleOptionsPanel = () => {
   buttonsEl.classList.contains('hidden') ? toggleButtonEl.classList.add(
       'collapsed') : toggleButtonEl.classList.remove('collapsed');
 };
+
+function chainFileNamesAvailable(getCount = false) {
+  const count = chainFileNames.filter(f => !f.used).length;
+  return getCount ? count : count > 0;
+}
+
+function getNextChainFileName(length) {
+  const chainNameBtnEl = document.querySelector('.chain-name-toggle');
+  let item = chainFileNames.filter(f => !f.used)[0];
+  item.used = true;
+  chainNameBtnEl.dataset.count = `${chainFileNamesAvailable() ? chainFileNamesAvailable(true) : ''}`;
+  chainNameBtnEl.classList[chainNameBtnEl.dataset.count ? 'remove' : 'add']('fade');
+  return `${item.name}--[${length}].wav`;
+}
+
+function generateChainNames() {
+  chainFileNames = [...new Set(files.filter(f => f.file.path).map(f => f.file.path))].map(p => ({ name: p.replace(/\W+/gi, ''), used: false}));
+  renderChainNamePanelContent();
+}
+
+function changeChainName(event, index, action) {
+  let item;
+  if (action === 'remove-all') {
+    event.preventDefault();
+    let confirmRemove = confirm(`Are you sure you want to remove all the chain names below?`);
+    if (confirmRemove) {
+      chainFileNames = [];
+    }
+    return renderChainNamePanelContent();
+  }
+  if (index === undefined) {
+    item = { name: '', used: false };
+  } else {
+    item = chainFileNames[index];
+  }
+  if ((index > -1) && action === 'remove') {
+    event.preventDefault();
+    let confirmRemove = confirm(`Are you sure you want to remove the chain name '${item.name}'?`);
+    if (confirmRemove) {
+      chainFileNames.splice(index, 1);
+    }
+    return renderChainNamePanelContent();
+  } else if ((index > -1) && action === 'reuse') {
+    event.preventDefault();
+    item.used = false;
+    return renderChainNamePanelContent();
+  }
+
+  let newName = prompt('Please enter a name for the chain, names must be unique', item.name);
+  if (newName) {
+    item.name = newName;
+    if (index === undefined && chainFileNames.findIndex(n => n.name.toLowerCase() === newName.toLowerCase()) === -1) {
+      chainFileNames.push(item);
+    }
+    renderChainNamePanelContent();
+  }
+}
+function renderChainNamePanelContent() {
+  const chainNameBtnEl = document.querySelector('.chain-name-toggle');
+  const chainFileNameListPanelEl = document.getElementById('chainFileNameListPanel');
+  const contentEl = chainFileNameListPanelEl.querySelector('.content');
+  const namesHtml = chainFileNames.sort((a, b) => a.used - b.used).reduce((a, v, i) => a+= `
+        <tr>
+        <td
+            class="chain-file-name-option ${v.used ? 'used' : ''}"
+            onclick="digichain.changeChainName(event, ${i})"
+        >${v.name} </td>
+        <td>
+        <button title="Remove this name from the list." class="remove-chain float-right button-clear" onclick="digichain.changeChainName(event, ${i}, 'remove')"><i class="gg-remove"></i></button>
+        <button title="Reset this name so it can be reused for a sample chain name." class="reuse-chain p-0 float-right button-clear ${v.used ? '' : 'hidden'}" onclick="digichain.changeChainName(event, ${i}, 'reuse')"><i class="gg-undo"></i></button>
+        </td>
+        </tr>
+`, '');
+  chainNameBtnEl.dataset.count = `${chainFileNamesAvailable() ? chainFileNamesAvailable(true) : ''}`;
+  chainNameBtnEl.classList[chainNameBtnEl.dataset.count ? 'remove' : 'add']('fade');
+  contentEl.innerHTML =`
+    <div class="row">
+      <div class="column mh-60vh">
+          <table>
+              <tr>
+                  <th class="p-0"><h5>Sample Chain Names</h5></th>
+                  <th class="p-0"><button title="Remove all names from the list." class="remove-chain float-right button-clear" style="transform: translateX(-0.5rem);" onclick="digichain.changeChainName(event, -1, 'remove-all')"><i class="gg-remove"></i></button></th>
+              </tr>
+              <tbody>
+                  ${namesHtml}
+              </tbody>
+          </table>
+      </div>
+    </div>
+    <div style="padding-top:1rem;">
+        <button title="Generates a list of filenames based on the folder path of the files in the list. This will replace all other names in the sample names list." class="button-outline float-left" onclick="digichain.generateChainNames()">Generate</button>
+        <button title="Add a name to use for sample chains, if the list is empty, or all the names have already been used, the DigiChain default naming convention will be used. (Names must be unique, caps are ignored.)" class="button float-right" onclick="digichain.changeChainName(event)">Add Name</button>
+    </div>
+    `;
+}
+
+function toggleChainNamePanel() {
+  const chainFileNameListPanelEl = document.getElementById('chainFileNameListPanel');
+  chainFileNameListPanelEl.classList[chainFileNameListPanelEl.classList.contains('show') ? 'remove' : 'add']('show');
+  if (chainFileNameListPanelEl.classList.contains('show')) {
+    renderChainNamePanelContent();
+  }
+}
 
 const showEditPanel = (event, id, view = 'sample') => {
   let data, folderOptions;
@@ -540,7 +644,7 @@ function setCustomSecondsPerFileValue(targetEl, size, silent = false) {
   let newValue = size;
   if (!silent) {
     newValue = prompt(
-        `Change max seconds per file "${size}" to what new value?`);
+        `Change max seconds per file "${size}" to what new value?`, size);
   }
   if (newValue && !isNaN(newValue)) {
     newValue = Math.abs(Math.ceil(+newValue));
@@ -579,6 +683,27 @@ function toggleSecondsPerFile(event, value) {
   setCountValues();
 }
 
+function toggleHelp() {
+  const helpToggleEl = document.querySelector('.toggle-help-panel');
+  const helpEnabled = document.body.classList.contains('show-help');
+  document.body.classList[helpEnabled ? 'remove' : 'add']('show-help');
+  document.querySelector('.help-text').classList[helpEnabled ? 'add' : 'remove']('hidden');
+  helpToggleEl.classList[helpEnabled ? 'add' : 'remove']('fade');
+  if (helpToggleEl.dataset.interval) {
+    clearInterval(+helpToggleEl.dataset.interval);
+    helpToggleEl.dataset.interval = null;
+  }
+  if (!helpEnabled) {
+    const intervalId = setInterval(() => {
+      const helpTextEl = document.querySelector('.help-text');
+      const activeEl = document.activeElement;
+      helpTextEl.textContent = activeEl.title;
+      helpTextEl.classList[activeEl.title ? 'remove' : 'add']('fade');
+    }, 500);
+    helpToggleEl.dataset.interval = `${intervalId}`;
+  }
+}
+
 function changeOpParam(event, id, param, value) {
   const rowEl = getRowElementById(id);
   const item = getFileById(id);
@@ -603,7 +728,7 @@ function showExportSettingsPanel() {
   const panelContentEl = document.querySelector(
       '.export-settings-panel-md .content');
   panelContentEl.innerHTML = `
-  <h4>Settings</h4>
+  <h5>Settings</h5>
   <table style="padding-top:0;">
   <thead>
   <tr>
@@ -967,11 +1092,11 @@ async function joinAll(
       /\//gi, '-')}` : '';
   const fileData = {
     file: {
-      name: _files.length === 1 ?
-          `${path}joined_${pad ? 'spaced_' : ''}${getNiceFileName('',
+      name: chainFileNamesAvailable() ? getNextChainFileName(_files.length) : (_files.length === 1 ?
+          `${path}chain_${pad ? 'spaced_' : ''}${getNiceFileName('',
               _files[0], true)}_${fileCount + 1}--[${_files.length}].wav` :
-          `${path}joined_${pad ? 'spaced_' : ''}${fileCount +
-          1}--[${_files.length}].wav`
+          `${path}chain_${pad ? 'spaced_' : ''}${fileCount +
+          1}--[${_files.length}].wav`)
     }, buffer: audioArrayBuffer, meta: {slices}
   };
   if (toInternal) {
@@ -987,12 +1112,13 @@ async function joinAll(
         parseWav(buffer, fb, {
           lastModified: new Date().getTime(),
           slices: embedSliceData ? slices : false,
-          name: _files.length === 1 ?
-              `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('',
-                  _files[0], true)}_${fileReader.fileCount +
-              1}--[${_files.length}].wav` :
-              `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount +
-              1}--[${_files.length}].wav`,
+          name: fileData.file.name,
+          // name: _files.length === 1 ?
+          //     `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('',
+          //         _files[0], true)}_${fileReader.fileCount +
+          //     1}--[${_files.length}].wav` :
+          //     `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount +
+          //     1}--[${_files.length}].wav`,
           size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) /
               8) * buffer.numberOfChannels / 1024,
           type: 'audio/wav'
@@ -1233,7 +1359,7 @@ const invertFileSelection = () => {
 const changeSliceOption = (targetEl, size, silent = false) => {
   let newValue = size;
   if (!silent) {
-    newValue = prompt(`Change slice value "${size}" to what new value?`);
+    newValue = prompt(`Change slice value "${size}" to what new value?`, size);
   }
   if (newValue && !isNaN(newValue)) {
     newValue = Math.abs(Math.ceil(+newValue));
@@ -2825,5 +2951,9 @@ window.digichain = {
   toggleSetting,
   toggleSecondsPerFile,
   changeOpParam,
+  toggleHelp,
+  toggleChainNamePanel,
+  changeChainName,
+  generateChainNames,
   editor
 };

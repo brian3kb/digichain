@@ -1,6 +1,5 @@
 export function buildOpData(slices = [], returnTemplate = false) {
-  //TODO Convert DCSD slices into the OP-X json format as in the template.
-  const template = {
+  const template = slices?.length ? {
     attack: new Array(24).fill(0),
     drum_version: 2,
     dyna_env: [0, 8192, 0, 8192, 0, 0, 0, 0],
@@ -24,9 +23,30 @@ export function buildOpData(slices = [], returnTemplate = false) {
     stereo: true,
     type: 'drum',
     volume:new Array(24).fill(8192)
+  } : {
+    adsr: [64, 10746, 32767, 10000, 4000, 64, 4000, 18021],
+    base_freq: 440,
+    fade: 0,
+    fx_active: false,
+    fx_params: [8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
+    fx_type: 'delay',
+    knobs: [0, 0, 0, 8600, 12000, 0, 0, 8192],
+    lfo_active: false,
+    lfo_params: [16000, 0, 0, 16000, 0, 0, 0, 0],
+    lfo_type: 'tremolo',
+    mtime: 1683144375,
+    name: 'DigiChain Sample',
+    octave: 0,
+    original_folder: 'DigiChain',
+    stereo: true,
+    synth_version: 3,
+    type: 'sampler'
   };
   if (returnTemplate) { return template; }
   const opData = JSON.parse(JSON.stringify(template));
+  if (!slices?.length || slices?.length === 0) {
+    return opData; /*Return single synth sampler template*/
+  }
   const scale = 2434; //chunks.form.type === 'AIFC' && chunks.comm.numberOfChannels === 2 ? 2434 : 4058;
 
   const s = slices.map((slice, idx) => ({

@@ -15,7 +15,7 @@ body {
     height: 2rem;
     opacity: 0.35;
 }
-.pop-up.show ~ .pop-up-blind {
+.pop-up.show ~ .pop-up-blind, *::backdrop {
     display: block;
     position: fixed;
     top: 0;
@@ -417,6 +417,19 @@ td button { margin: 0.5rem; }
     display: none;
 }
 
+dialog {
+    color: #606c76;
+    font-family: 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+    width: 512px;
+    background-color: #202124;
+    border: 1px solid orange;
+    padding: 2rem;
+    border-radius: 5px;
+    box-shadow: 0 0 4px #cf8600;
+    box-sizing: content-box;
+    transition: opacity .33s ease-in;
+}
+
 .op-export-panel-options { top: 1vh;}
 .op-export-side-panel-options {
     width: 50rem;
@@ -429,7 +442,8 @@ td button { margin: 0.5rem; }
     max-width: 50%;
     transition: right .33s ease-in;
     padding: 1rem;
-    background: #202124c7;
+    /*background: #202124c7;*/
+    background-color: #202124;
 }
 .op-export-side-panel-options.show {
     right: 0;
@@ -452,18 +466,18 @@ td button { margin: 0.5rem; }
     opacity: 0.55;
 }
 .download-buttons {
-    width: 33rem;
+    width: 35rem;
 }
 .btn-download {
     padding: 0;
-    width: 16rem;
+    width: 15.5rem;
 }
 .btn-download-all {
     margin-left: 1rem;
 }
 .dl-single-files { width: 10rem; }
 .dl-spaced{
-    width: 16rem;
+    width: 15.5rem;
     padding: 0;
     float: left;
 }
@@ -473,7 +487,7 @@ td button { margin: 0.5rem; }
     transform: translateY(-0.75rem);
 }
 .toggle-seconds-per-file {
-    margin: 0.7rem 1rem 0 0;
+    margin: 0.7rem 0 0 0;
     color: #d79c4e;
 }
 .toggle-seconds-per-file.on { color: #d79c4e !important;}
@@ -849,8 +863,8 @@ table#mergeList td.file-path-td {
 
 @media (max-width: 40.0rem) {
     .container { margin-top: 2.5rem; }
-    .min-width-20, .column-33, .column-33 .download-buttons, .column-33 .slice-group { width: 100%; }
-    .column-33 .btn-download { width: 49.3%;}
+    .min-width-20, .column-33, .column-33 .download-buttons, .column-33 .slice-group { width: 99%; }
+    .column-33 .btn-download:not(:first-of-type) { width: 49.3%;}
     .column-33 .check { width: 13.1%; }
     .left-buttons .row { display: block; }
     .left-buttons .button { width: 48.5%; margin-right: 0.1rem; }
@@ -1019,12 +1033,18 @@ table#mergeList td.file-path-td {
         transition: opacity .33s ease-in;
         overflow: auto;
     }
+    dialog {
+        max-width: 98vw;
+        height: 89vh;
+        width: 88vw;
+        max-height: 89vh;
+    }
 
     .input-set button {
         padding: 0 0 0 1.5rem;
     }
     .input-set input {
-        width: 85%;
+        width: 58%;
     }
     .sample-op-buttons span {
         font-size: 1.4rem;
@@ -1056,11 +1076,20 @@ table#mergeList td.file-path-td {
         box-sizing: content-box;
         max-width: 1030px;
     }
+    dialog {
+        width: 1030px;
+        max-width: 1030px;
+    }
     .op-export-panel-options { top: 1vh;}
     #exportSettingsPanel {
         width: 768px;
-        margin: 0 -384px;
+        /*margin: 0 -384px;*/
         max-width: 768px;
+    }
+
+    #chainFileNameListPanel {
+        width: 512px;
+        max-width: 512px;
     }
 }
 
@@ -1076,6 +1105,7 @@ body.light,
 body.light #allOptionsPanel,
 body.light .slice-group,
 body.light .pop-up,
+body.light .dialog-pop-up,
 body.light select,
 body.light #toggleOptionsButton i,
 body.light *[class*=is-]:after,

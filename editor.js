@@ -39,7 +39,7 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
     renderEditableItems();
     renderEditor(editing);
     updateSelectionEl();
-    editPanelEl.classList.add('show');
+    if (!editPanelEl.open) { editPanelEl.showModal(); }
     renderEditPanelWaveform();
     return;
   }

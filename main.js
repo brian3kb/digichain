@@ -334,8 +334,8 @@ function renderChainNamePanelContent() {
 
 function toggleChainNamePanel() {
   const chainFileNameListPanelEl = document.getElementById('chainFileNameListPanel');
-  chainFileNameListPanelEl.classList[chainFileNameListPanelEl.classList.contains('show') ? 'remove' : 'add']('show');
-  if (chainFileNameListPanelEl.classList.contains('show')) {
+  chainFileNameListPanelEl.open ? chainFileNameListPanelEl.close() : chainFileNameListPanelEl.showModal();
+  if (chainFileNameListPanelEl.open) {
     renderChainNamePanelContent();
   }
 }
@@ -556,14 +556,14 @@ function showInfo() {
   const description = document.querySelector(
       'meta[name=description]').content;
   const infoPanelContentEl = document.querySelector(
-      '.info-panel-md .content');
+      '#infoPanelMd .content');
   infoPanelContentEl.innerHTML = `
   <h3>DigiChain</h3>
   <p>${description}</p>
   <p class="float-right"><a href="https://brianbar.net/" target="_blank">Brian Barnett</a>
   (<a href="https://www.youtube.com/c/sfxBrian" target="_blank">sfxBrian</a> / <a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>
 `;
-  document.querySelector('.info-panel-md').classList.add('show');
+  document.querySelector('#infoPanelMd').showModal();
 }
 
 function pitchExports(value, silent) {
@@ -725,8 +725,9 @@ function changeOpParam(event, id, param, value) {
 }
 
 function showExportSettingsPanel() {
+  const panelEl = document.querySelector('#exportSettingsPanel');
   const panelContentEl = document.querySelector(
-      '.export-settings-panel-md .content');
+      '#exportSettingsPanel .content');
   panelContentEl.innerHTML = `
   <h5>Settings</h5>
   <table style="padding-top:0;">
@@ -806,7 +807,9 @@ function showExportSettingsPanel() {
 </table>
 <span class="settings-info">All settings here will persist when the app re-opens.</span>
 `;
-  document.querySelector('.export-settings-panel-md').classList.add('show');
+  if (!panelEl.open) {
+    panelEl.showModal();
+  }
 }
 
 function getMonoFloat32ArrayFromBuffer(
@@ -912,7 +915,7 @@ function showMergePanel() {
 <span class="merge-info">Merging flattens each source sample to mono based on the mixdown choice and pans that mono file hard left/right or centers. If you want to retain a stereo files stereo field in the merge, duplicate it first and choose its L/R mix.</span>
 <button class="float-right" onclick="digichain.performMergeUiCall()">Merge Files</button>
 `;
-  mergePanelEl.classList.add('show');
+  mergePanelEl.showModal();
 }
 
 function performMergeUiCall() {
@@ -922,7 +925,7 @@ function performMergeUiCall() {
   if (files.filter(f => f.meta.checked).length === 0) {
     return;
   }
-  mergePanelEl.classList.remove('show');
+  mergePanelEl.close();
   setTimeout(() => performMerge(mergeFiles), 100);
 }
 
@@ -1471,7 +1474,7 @@ function splitFromFile(input) {
 
 function splitFromTrack(event, track) {
   const sliceGroupEl = document.querySelector(
-      `.split-panel-options .slice-group`);
+      `#splitOptions .slice-group`);
   const file = getFileById(sliceGroupEl.dataset.id);
   file.meta.customSlices = {
     slices: lastSliceFileImport.filter(slice => slice.track === track)
@@ -1656,9 +1659,9 @@ const splitByTransient = (file, threshold = .5) => {
 const splitSizeAction = (event, slices, threshold) => {
   let file, otMeta;
   const sliceGroupEl = document.querySelector(
-      `.split-panel-options .slice-group`);
+      `#splitOptions .slice-group`);
   const optionsEl = document.querySelectorAll(
-      `.split-panel-options .slice-group button`);
+      `#splitOptions .slice-group button`);
 
   if (slices === 'ot' && sliceGroupEl.dataset.id) {
     file = getFileById(sliceGroupEl.dataset.id);
@@ -1805,7 +1808,7 @@ const splitAction = (event, id, slices) => {
   const el = document.getElementById('splitOptions');
   const fileNameEl = document.getElementById('splitFileName');
   const sliceGroupEl = document.querySelector(
-      `.split-panel-options .slice-group`);
+      `#splitOptions .slice-group`);
   const sliceByOtButtonEl = document.getElementById('sliceByOtButton');
   const sliceByTransientButtonEl = document.getElementById(
       'sliceByTransientButton');
@@ -1853,7 +1856,7 @@ const splitAction = (event, id, slices) => {
         splitEvenly(event, id, slices, pushInPlace, excludeSlices);
       }
     }
-    return el.classList.remove('show');
+    return el.close();
   }
   otMeta = metaFiles.getByFile(item);
   fileNameEl.textContent = getNiceFileName('', item, true);
@@ -1873,7 +1876,7 @@ const splitAction = (event, id, slices) => {
     sliceByOtButtonEl.classList.remove('is-dc-file');
   }
   splitSizeAction(false, 0);
-  el.classList.add('show');
+  el.showModal();
   drawWaveform(item, splitPanelWaveformEl, item.meta.channel, {
     width: +splitPanelWaveformContainerEl.dataset.waveformWidth, height: 128
   });
@@ -2077,8 +2080,8 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
 <tr class="file-row" data-id="${f.meta.id}">
   <td class="file-path-td">
     <span class="file-path">${f.file.path}</span>
-    <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true)">${getNiceFileName(
-          f.file.name)}</a>
+    <span>${getNiceFileName(
+          f.file.name)}</span>
     ${f.meta.dupeOf ? ' d' : ''}
     ${f.meta.editOf ? ' e' : ''}
     ${f.meta.isMerge ? ' m' : ''}
@@ -2817,7 +2820,7 @@ document.body.addEventListener('keydown', (event) => {
     const editPanelEl = document.getElementById('editPanel');
     if ((event.shiftKey || modifierKeys.shiftKey)) {
       setTimeout(() => {
-        if (editPanelEl.classList.contains('show')) {
+        if (editPanelEl.open) {
           const editFileNameEl = document.getElementById('editFileName');
           const editFilePathEl = document.getElementById('editFilePath');
           editFileNameEl.removeAttribute('readonly');

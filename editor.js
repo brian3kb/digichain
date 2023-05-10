@@ -412,21 +412,27 @@ function fade(type, item, renderEditPanel = true) {
 
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel);
-    for (let i = selection.start; i < selection.end; i++) {
-      if (type === 'out') {
-        data[i] = data[i] * ((fadeDuration - i) / fadeDuration);
-      } else if (type === 'in') {
-        data[i] = data[i] * (i / fadeDuration);
-        if (data[i] > data[selection.end]) {
-          data[i] = data[selection.end];
-        }
-      } else if (type === 'curse') {
+    if (type === 'out') {
+      for (let i = selection.start; i < selection.end; i++) {
+          data[i] = data[i] *
+              ((fadeDuration - (i - selection.start)) / fadeDuration);
+      }
+    } else if (type === 'in') {
+      for (let i = selection.end; i > selection.start; i--) {
+          data[i] = data[i] /
+              ((fadeDuration - (i - selection.end)) / fadeDuration);
+      }
+    } else if (type === 'curse') {
+      for (let i = selection.start; i < selection.end; i++) {
         data[i] = ((fadeDuration - i) / fadeDuration) / data[i];
-      } else {
+      }
+    } else {
+      for (let i = selection.end; i > selection.start; i--) {
         data[i] = 0;
       }
     }
   }
+
   if (renderEditPanel) {
     renderEditPanelWaveform(multiplier);
   }

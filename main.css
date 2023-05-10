@@ -289,8 +289,7 @@ td button { margin: 0.5rem; }
 }
 .file-path { display: block; }
 .toggle-check, .sort-check {
-    /*outline: 0.1rem solid #d79c4e;*/
-    border: 0.2rem solid #202124;
+    border: 0.2rem solid #40392e;
     width: 3.25rem;
     height: 3.25rem;
 }

@@ -206,11 +206,18 @@ export function drawWaveform(file, el, channel, dimensions) {
 export function getNiceFileName(name, file, excludeExtension, includePath) {
   let fname = file ? `${file.file.name.replace(/\.[^.]*$/,'')}${file.meta?.dupeOf ? '-d' : ''}${file.meta?.sliceNumber ? '-s' + file.meta.sliceNumber : ''}.wav`:
       name.replace(
-          /\.syx$|\.wav$|\.aif$|\.flac$/, '');
+          /\.syx$|\.wav$|\.aif$|\.flac$|\.webm$|\.m4a$/, '');
   fname = (includePath && file.file.path) ? `${file.file.path.replace(/\//gi, '-')}` + fname : fname;
   return excludeExtension ? fname.replace(/\.[^.]*$/,'') : fname;
 }
 
+export function getUniqueName(files, name) {
+  const count = files.filter(f => f.file.filename === name).length;
+  const parts = name.split('.');
+  const ext = parts.pop();
+  const fname = parts.join('.');
+  return count > 0 ? `${fname}_${count + 1}.${ext}` : name;
+}
 
 function draw(normalizedData, id, canvas, dimensions) {
   const drawLineSegment = (ctx, x, height, width, isEven) => {

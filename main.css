@@ -1189,4 +1189,9 @@ body.light.show-help .help-text {
     background-color: #ede5d8;
 }
 
+html.scaled {
+    font-size: 54%;
+    overflow-x: hidden;
+}
+
 

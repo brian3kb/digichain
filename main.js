@@ -4,7 +4,7 @@ import {
   showEditor,
   drawWaveform,
   getNiceFileName,
-  setEditorConf
+  setEditorConf, getUniqueName,
 } from './editor.js';
 
 const uploadInput = document.getElementById('uploadInput');
@@ -188,6 +188,18 @@ function changeAudioConfig(event, option) {
     masterBitDepth
   });
   renderList();
+}
+
+function checkAudioContextState() {
+  if (audioCtx.state === 'closed') {
+    document.body.classList.remove('loading');
+    alert('ERROR: The Audio Context has been closed, please refresh the browser tab.');
+    return true;
+  }
+  if (['interrupted', 'suspended'].includes(audioCtx.state)) {
+    audioCtx.resume();
+  }
+  return false;
 }
 
 const getFileById = (id) => {
@@ -430,7 +442,9 @@ async function downloadAll(event) {
           fileName.replace('.wav', '.aif') :
           fileName;
       if (flattenFolderStructure) {
-        let fileName = getNiceFileName('', file, false, true);
+        fileName = getNiceFileName(
+            '', file, false, true
+        );
         fileName = lastUsedAudioConfig.includes('a') ?
             fileName.replace('.wav', '.aif') :
             fileName;
@@ -501,6 +515,10 @@ function removeSelected() {
   files = files.filter(f => !f.meta.checked);
   unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
   setCountValues();
+  if (files.length === 0 || unsorted.length === 0) {
+    files = [];
+    unsorted = [];
+  }
   //renderList();
 }
 
@@ -1202,9 +1220,9 @@ const playFile = (event, id, loop) => {
 
   stopPlayFile(false, (id || file.meta.id));
 
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+  const isAudioCtxClosed = checkAudioContextState();
+  if (isAudioCtxClosed) { return; }
+
   file.source = audioCtx.createBufferSource();
   let buffer = file.meta.channel && masterChannels === 1 ?
       getMonoFloat32ArrayFromBuffer(file.buffer, file.meta.channel, true) :
@@ -1295,7 +1313,7 @@ const toggleCheck = (event, id, silent = false) => {
       file.meta.checked = !file.meta.checked;
       el.classList[file.meta.checked ? 'remove' : 'add']('button-outline');
       rowEl.classList[file.meta.checked ? 'add' : 'remove']('checked');
-      if (!file.meta.checked) {
+      if (!file.meta.checked && silent) {
         file.source?.stop();
       }
     }
@@ -1437,6 +1455,7 @@ const duplicate = (event, id, prepForEdit = false) => {
     };
   }
   item.meta.dupeOf = id;
+  item.file.name = getUniqueName(files, item.file.filename);
   files.splice(
       ((event.shiftKey || modifierKeys.shiftKey) ? files.length : fileIdx), 0,
       item);
@@ -2407,7 +2426,8 @@ const parseAif = (
     files[pushToTop ? 'unshift' : 'push']({
       file: {
         lastModified: file.lastModified,
-        name: file.name,
+        name: getUniqueName(files, file.name),
+        filename: file.name,
         path: fullPath.replace(file.name, ''),
         size: file.size,
         type: file.type
@@ -2479,7 +2499,8 @@ const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
     files[pushToTop ? 'unshift' : 'push']({
       file: {
         lastModified: file.lastModified,
-        name: file.name,
+        name: getUniqueName(files, file.name),
+        filename: file.name,
         path: fullPath.replace(file.name, ''),
         size: file.size,
         type: file.type
@@ -2545,7 +2566,8 @@ const parseWav = (
     files[pushToTop ? 'unshift' : 'push']({
       file: {
         lastModified: file.lastModified,
-        name: file.name,
+        name: getUniqueName(files, file.name),
+        filename: file.name,
         path: fullPath.replace(file.name, ''),
         size: file.size,
         type: file.type
@@ -2586,8 +2608,10 @@ const setLoadingProgress = (count, total) => {
 const consumeFileInput = (inputFiles) => {
   document.getElementById('loadingText').textContent = 'Loading samples';
   document.body.classList.add('loading');
+  const isAudioCtxClosed = checkAudioContextState();
+  if (isAudioCtxClosed) { return; }
   const _files = [...inputFiles].filter(
-      f => ['syx', 'wav', 'flac', 'aif'].includes(
+      f => ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a'].includes(
           f?.name?.split('.')?.reverse()[0].toLowerCase())
   );
   const _mFiles = [...inputFiles].filter(
@@ -2647,8 +2671,13 @@ const consumeFileInput = (inputFiles) => {
         checkCount(idx, _files.length);
       }
 
-      if ((file.name.toLowerCase().endsWith('.wav') || file.type ===
-          'audio/wav') || file.name.toLowerCase().endsWith('.flac')) {
+      if ((
+          file.name.toLowerCase().endsWith('.wav') ||
+          file.type === 'audio/wav') ||
+          file.name.toLowerCase().endsWith('.flac') ||
+          file.name.toLowerCase().endsWith('.webm') ||
+          file.name.toLowerCase().endsWith('.m4a')
+      ) {
         count.push(file.uuid);
         const fb = buffer.slice(0);
         audioCtx.decodeAudioData(buffer, data => {
@@ -2880,6 +2909,13 @@ document.body.addEventListener('keydown', (event) => {
       }
     }
   }
+});
+
+window.addEventListener('beforeunload', (event) => {
+  files = [];
+  unsorted = [];
+  metaFiles = [];
+  audioCtx.close();
 });
 
 /*Actions based on restored local storage states*/

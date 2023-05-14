@@ -231,7 +231,11 @@
     document.getElementById('alertNotServed').classList.add('show');
   }
 
-  // if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.pathname.includes('latest')) {
+  if ( window.location !== window.parent.location ) {
+    document.documentElement.classList.add('scaled');
+  }
+
+  // if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.pathname.includes('latest') && window.location === window.parent.location) {
   //   window.addEventListener('load', async () => {
   //     try {
   //       let reg;

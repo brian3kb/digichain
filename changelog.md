@@ -1,3 +1,69 @@
+2023-05-15 1.4.0
+- Workflow to support reading slices from and creating chains for the Teenage Engineering OP-1 Field / OP-Z
+    - OP-1 / OP-1 Field / OP-Z aif file imports, mono and stereo.
+    - Slice from OP-1 / OP-1 Field / OP-Z drum-kit aif files.
+    - OP-1 Field and OP-Z drum kit and single file exports with the aif 44.1/16 mono/stereo options.
+    - OP-1 Field L/R A/B toggle and value setting from the list when in 44.1/16 Stereo Aif context. (double-click to toggle).
+    - Slice from tape.json (OP-1 Field tape file slice markers) in the slice panel.
+    - Merge All Selected action - mixes down all the selected items into one sample (enables creating files with different samples on the L/R for use with OP-1 Field's A/B drum kit option.
+
+- Automatic creation of Octatrack .ot meta files in 44.1 16/24 stereo non-aif audio contexts. (toggle in settings).
+
+- Audio editor panel overhaul.
+    - Added 1x, 2x, 4x zoom levels for the waveform.
+    - Added loop playback button to editor panel.
+    - Fade in/out/silence tools.
+
+- UI Improvements
+    - Added playback indicator icon and play-head marker to waveforms in the list view.
+    - Shift+Click on the row sample select box will select all the samples in-between (inclusive of the highlighted and the clicked sample). Ctrl+Shift+Click will de-select.
+    - Shift+Click Column Header : Sorts the list, but will keep the selected items grouped to the top of the list.
+    - Shift+Click Reset Button : Randomizes the order of the list.
+    - Numeric keys 1 - 0 play the first 10 selected samples from the list.
+    - Alt + numeric key / P key stops the playback and looping of that single sample.
+    - Showing the sample name from DC slice data in title of slices on slice panel.
+    - Double-click to remove a slice before processing slices on the slice panel.
+    - Ctrl+Click the slice sample row icon to clear any related sample slice data.
+    - E key opens the edit panel for the currently highlighted sample. Shift+E opens the editor panel for the currently highlighted sample, with the file name and path inputs editable, and the filename input keyboard focused.
+    - Basic note detection from filename for sorting the list.
+    - Reworked layout for better rendering on smaller screen devices.
+    - Added a light theme for users who don't like dark themes, toggled in the settings panel (first launch will set from the devices system color preference).
+    - Custom filenames panel, add a list of custom filenames to use - once all names have been used, DigiChain will fall back to the default naming convention.
+
+- Settings on the settings panel are saved to local-storage and will persist when the app re-opens.
+    - Allow disabling slice embed in settings.
+    - Option to play pop-markers at the start and end of the sample for direct sampling to the Digitakt audio inputs. Two options, 0db markers (which prevents the DT's auto normalization from changing the recorded sample volume), and peak, which sets the pop-marker volumes to match the loudest peak in the sample.
+    - Show/hide touch modifier buttons in options panel.
+    - Restore last used sample rate/bit depth/channel selection in options.
+    - Option to normalize text/waveform color contrast in the settings panel.
+
+- DC slice format embedded in output chain wav file so user can restore the chains to slices retaining the input filename.
+- Support for importing webm and m4a audio files.
+- Added 'Difference (Side)' stereo -> mono processing option.
+- Trim All Selected action.
+- Reverse All Selected action.
+- Normalize All Selected action.
+- Pitch Up by an Octave All Selected action.
+- Enabled 32bit float wav exports.
+- Allow importing of 16bit aif files (parser written to accomodate importing from TE devices, but should be ok on other exported aif files, testing with Ableton Live exports and worked as expected, ymmv).
+- Split chained files at 12s (mono) or 20s (stereo) lengths mode. Sample order will loosely follow the list order, but it will try to fit smaller samples into the chain up to the max limit from further down the selected items in the list, so some samples may be out of order depending on their length and where they could be slotted into each chain to use up the time in the best way possible.
+- Removing arraybuffers before removal of files to help free memory usage sooner.
+- Ctrl+Click on the max length per chain in seconds to set a custom limit.
+
+- Bugfixes
+    - Fixed bug where file path changes were not persisted.
+    - Prevent pitch-up crashing when doubling a very small audio buffer.
+    - Checking for suspended audio-context and resuming if suspended before playback.
+    - Checking audio context state before importing files, resuming if possible.
+    - Fixed bug where joining chains together with single additional sample between caused the slice offsets to be incorrect.
+    - Removing multiple and sorts will stop sample playback (audioCtx caused pops when in these situations previously).
+    - Fixed bug where a non-standard wav file PAD chunk caused a page crash.
+    - Adding a _n char/number to the end of duplicated files name (as exporting to zip overwrites same filename files).
+      Importing the same file will also increment the filename.
+    - Fixed bug where resampling a new chain with a global pitch modifier and embed slices disabled would cause the new pitched audio buffer to fail rendering.
+    - Fixed bug in the reading of AIFC aif files.
+    - Don't mute samples when toggling selection.
+
 2023-04-07 1.3.1
  - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)
  - Simplified the transient detection method, enabled it for longer sample lengths as this approach is better suited to longer samples.

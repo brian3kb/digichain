@@ -1,4 +1,4 @@
-1.4.0 latest
+2023-05-15 1.4.0
 - Workflow to support reading slices from and creating chains for the Teenage Engineering OP-1 Field / OP-Z
     - OP-1 / OP-1 Field / OP-Z aif file imports, mono and stereo.
     - Slice from OP-1 / OP-1 Field / OP-Z drum-kit aif files.
@@ -42,8 +42,12 @@
 - Added 'Difference (Side)' stereo -> mono processing option.
 - Trim All Selected action.
 - Reverse All Selected action.
+- Normalize All Selected action.
+- Pitch Up by an Octave All Selected action.
 - Enabled 32bit float wav exports.
+- Allow importing of 16bit aif files (parser written to accomodate importing from TE devices, but should be ok on other exported aif files, testing with Ableton Live exports and worked as expected, ymmv).
 - Split chained files at 12s (mono) or 20s (stereo) lengths mode. Sample order will loosely follow the list order, but it will try to fit smaller samples into the chain up to the max limit from further down the selected items in the list, so some samples may be out of order depending on their length and where they could be slotted into each chain to use up the time in the best way possible.
+- Removing arraybuffers before removal of files to help free memory usage sooner.
 - Ctrl+Click on the max length per chain in seconds to set a custom limit.
 
 - Bugfixes
@@ -56,6 +60,8 @@
     - Fixed bug where a non-standard wav file PAD chunk caused a page crash.
     - Adding a _n char/number to the end of duplicated files name (as exporting to zip overwrites same filename files).
       Importing the same file will also increment the filename.
+    - Fixed bug where resampling a new chain with a global pitch modifier and embed slices disabled would cause the new pitched audio buffer to fail rendering.
+    - Fixed bug in the reading of AIFC aif files.
     - Don't mute samples when toggling selection.
 
 2023-04-07 1.3.1

@@ -148,11 +148,14 @@
         <button title="Reset list to the order in which files were added to the pool. Shift-click to randomize list." class="button button-outline has-shift-mod" onclick="digichain.sort(event, 'id')">Reset Sort/Order</button>
       </div>
       <div class="row">
-        <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline check">TRS</button>&nbsp;
-        <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)" class="button-outline check">NMS</button>&nbsp;
-        <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline check">RVS</button>&nbsp;
-        <button title="Pitch all selected up by 1 octave." onclick="digichain.pitchUpSelected(event)" class="button-outline check">+PS</button>&nbsp;
-        <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)" class="button-outline check">MRG</button>
+        <button title="Show actions that will affect all the currently selected samples." onclick="digichain.toggleSelectedActionsList(event)" class="button">Selected Actions</button>
+        <div class="selected-actions-button-list" style="display: none;">
+        <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline">Trim Right</button><br>
+        <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)" class="button-outline">Normalize</button><br>
+        <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline">Reverse</button><br>
+        <button title="Pitch all selected up by 1 octave." onclick="digichain.pitchUpSelected(event)" class="button-outline">Pitch Up an Octave</button>
+        </div>
+        <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)" class="button button-outline">Merge Selected</button>
       </div>
     </div>
     <div class="column">

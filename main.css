@@ -530,6 +530,20 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
 .left-buttons .button:last-child {
     margin-right: 0;
 }
+
+.selected-actions-button-list {
+    position: absolute;
+    margin-top: 4.25rem;
+    border: 1px solid #d79c4e30;
+    padding: 0.5rem 0.5rem 0 0.5rem;
+    border-radius: 0.4rem;
+    background-color: #202124;
+}
+.selected-actions-button-list .button-outline {
+    width: 16.5rem;
+    padding: 0;
+}
+
 .right-buttons i, .left-buttons i {
     display: inline-block;
     margin-top: 0;
@@ -1107,6 +1121,7 @@ body.light .pop-up,
 body.light .dialog-pop-up,
 body.light select,
 body.light #toggleOptionsButton i,
+body.light .selected-actions-button-list,
 body.light *[class*=is-]:after,
 body.light *[class*=sff-]:after
 {

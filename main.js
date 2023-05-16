@@ -513,6 +513,11 @@ async function downloadFile(id, fireLink = false) {
   return el;
 }
 
+function toggleSelectedActionsList() {
+  const actionListEl = document.querySelector(`.selected-actions-button-list`);
+  actionListEl.style.display = actionListEl.style.display === 'none' ? 'block' : 'none';
+}
+
 function removeSelected() {
   metaFiles.removeSelected();
   //files.forEach(f => stopPlayFile(false, f.meta.id));
@@ -2983,6 +2988,7 @@ window.digichain = {
   sliceOptions,
   changeAudioConfig,
   removeSelected,
+  toggleSelectedActionsList,
   trimRightSelected,
   normalizeSelected,
   reverseSelected,

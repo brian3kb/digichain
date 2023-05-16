@@ -24,7 +24,7 @@
   <script type="module" src="./main.js"></script>
 </head>
 
-<body ontouchstart="" class="">
+<body ontouchstart="" class="scaled">
 
 <div id="alertNotServed" class="not-served-md pop-up">
   <div class="content" style="text-align: center;">
@@ -151,6 +151,7 @@
         <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline check">TRS</button>&nbsp;
         <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)" class="button-outline check">NMS</button>&nbsp;
         <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline check">RVS</button>&nbsp;
+        <button title="Pitch all selected up by 1 octave." onclick="digichain.pitchUpSelected(event)" class="button-outline check">+PS</button>&nbsp;
         <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)" class="button-outline check">MRG</button>
       </div>
     </div>
@@ -162,7 +163,7 @@
         <button title="Export settings" onclick="digichain.showExportSettingsPanel(event)" class="button-clear toggle-export-settings"><i class="gg-options"></i></button>
         <button title="Help info enabled" onclick="digichain.toggleHelp()" class="button-clear toggle-help-panel fade">?</button>
 
-        <button title="OP-x Export" onclick="digichain.showEditPanel(event, false, 'opExport')" class="button-clear toggle-export-settings hidden" style="line-height: 5rem;">OP</button>
+<!--<button title="OP-x Export" onclick="digichain.showEditPanel(event, false, 'opExport')" class="button-clear toggle-export-settings hidden" style="line-height: 5rem;">OP</button>-->
 
         <button title="Seconds per file. Enabling will disable the slice grid options. Samples longer than seconds per file will not be included in the output chains." onclick="digichain.toggleSecondsPerFile(event)" class="button-clear toggle-seconds-per-file"><i class="gg-alarm"></i><span>off</span></button>
 

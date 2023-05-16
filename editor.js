@@ -332,8 +332,8 @@ function changeSelectionPoint(event, shiftKey = false) {
   updateSelectionEl();
 }
 
-function perSamplePitch(event, pitchValue, pitchSteps, id) {
-  const item = editing;
+function perSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = true) {
+  item = item || editing;
 
   if (item.buffer.length < 1024 && pitchValue > 1) {
     return alert('Sample too small to be pitched up further.');
@@ -361,12 +361,14 @@ function perSamplePitch(event, pitchValue, pitchSteps, id) {
           e: Math.round(slice.e / pitchValue)
         })) : false
       };
-      renderEditPanelWaveform(multiplier);
-      selection.end = Math.round(selection.end / pitchValue);
-      selection.start = Math.round(selection.start / pitchValue);
-      selection.step = item.buffer.length / (1024 * multiplier);
-      updateSelectionEl();
-      item.waveform = false;
+      if (renderEditPanel) {
+        renderEditPanelWaveform(multiplier);
+        selection.end = Math.round(selection.end / pitchValue);
+        selection.start = Math.round(selection.start / pitchValue);
+        selection.step = item.buffer.length / (1024 * multiplier);
+        updateSelectionEl();
+        item.waveform = false;
+      }
     });
   })();
 }

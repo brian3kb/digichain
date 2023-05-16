@@ -1,4 +1,9 @@
-import {Resampler, audioBufferToWav, encodeOt} from './resources.js';
+import {
+  Resampler,
+  audioBufferToWav,
+  encodeOt,
+  getAifSampleRate,
+} from './resources.js';
 import {
   editor,
   showEditor,
@@ -406,7 +411,7 @@ async function setWavLink(file, linkEl, renderAsAif) {
     }));
     wav = audioBufferToWav(
         pitchedBuffer, meta, masterSR, masterBitDepth, masterChannels,
-        renderAsAif, embedSliceData
+        renderAsAif, 1, embedSliceData
     );
     blob = new window.Blob([new DataView(wav)], {
       type: renderAsAif ? 'audio/aiff' : 'audio/wav',
@@ -516,6 +521,7 @@ function removeSelected() {
   unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
   setCountValues();
   if (files.length === 0 || unsorted.length === 0) {
+    files.forEach(f => f.buffer ? delete f.buffer : false);
     files = [];
     unsorted = [];
   }
@@ -562,6 +568,22 @@ function reverseSelected(event) {
     const selected = files.filter(f => f.meta.checked);
     selected.forEach((f, idx) => {
       editor.reverse(event, f, false);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
+}
+
+function pitchUpSelected(event) {
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked);
+    selected.forEach((f, idx) => {
+      editor.perSamplePitch(event, 2, -12, f, false);
       if (idx === selected.length - 1) {
         document.body.classList.remove('loading');
       }
@@ -1132,8 +1154,8 @@ async function joinAll(
       audioCtx.decodeAudioData(e.target.result, function(buffer) {
         parseWav(buffer, fb, {
           lastModified: new Date().getTime(),
-          slices: embedSliceData ? slices : false,
           name: fileData.file.name,
+          embedSliceData: embedSliceData,
           // name: _files.length === 1 ?
           //     `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('',
           //         _files[0], true)}_${fileReader.fileCount +
@@ -1723,6 +1745,7 @@ const remove = (id) => {
   unsorted.splice(unsortIdx, 1);
   if (removed[0]) {
     metaFiles.removeByName(removed[0].file.name);
+    removed.buffer ? delete removed.buffer : false;
   }
   rowEl.classList.add('hide');
   rowEl.remove();
@@ -2253,7 +2276,7 @@ const parseOt = (fd, file, fullPath) => {
     return {uuid, failed: true};
   }
 };
-const parseAif = (
+const parseAif = async (
     arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
   const uuid = file.uuid || crypto.randomUUID();
   let result;
@@ -2286,14 +2309,20 @@ const parseAif = (
             channels: dv.getUint16(offset + 8),
             frames: dv.getUint32(offset + 10),
             bitDepth: dv.getUint16(offset + 14),
-            //sampleRate: dv.getFloat32(offset + 16, true)
+            sampleRate: ((os) => {
+              const srArr = [];
+              for (let x = os; x < os + 10; x++) {
+                srArr.push(dv.getUint8(x));
+              }
+              return getAifSampleRate(srArr);
+            })(offset + 16)
           };
           break;
         case 'APPL'://'op-1':
           const utf8Decoder = new TextDecoder('utf-8');
           //let maxSize = chunks.form.type === 'AIFC' ? 44100 * 20 : 44100 * 12;
           let scale = chunks.form.type === 'AIFC' &&
-          chunks.comm.numberOfChannels === 2 ? 2434 : 4058;
+          chunks.comm.channels === 2 ? 2434 : 4058;
           chunks.json = {
             id: String.fromCharCode(dv.getUint8(offset),
                 dv.getUint8(offset + 1), dv.getUint8(offset + 2),
@@ -2325,8 +2354,15 @@ const parseAif = (
         chunkKeys = chunkKeys.filter(k => k !== code);
       }
     }
-    if (!chunks.json) {
-      // Not an OP-1 aif, which is the only type of aif file supported.
+
+    /*Only supporting 16bit Aif files, other bit-depths will be skipped.*/
+    if (+chunks.comm.bitDepth !== 16) {
+      const loadingEl = document.getElementById('loadingText');
+      loadingEl.textContent = `Skipping unsupported ${chunks.comm.bitDepth}bit aif file '${file.name}'...`;
+      delete chunks.buffer;
+      delete chunks.bufferDv;
+      dv = false;
+      arrayBuffer = false;
       return {uuid, failed: true};
     }
 
@@ -2359,13 +2395,13 @@ const parseAif = (
       }
     }
 
-    const resample = new Resampler(44100, masterSR, 1,
+    let resample, resampleR;
+    resample = new Resampler(chunks.comm.sampleRate, masterSR, 1,
         channels[0]);
-    let resampleR;
     resample.resampler(resample.inputBuffer.length);
 
     if (chunks.comm.channels === 2) {
-      resampleR = new Resampler(44100, masterSR, 1,
+      resampleR = new Resampler(chunks.comm.sampleRate, masterSR, 1,
           channels[1]);
       resampleR.resampler(resampleR.inputBuffer.length);
     }
@@ -2390,35 +2426,14 @@ const parseAif = (
       //return Math.round((chunks.comm.frames * 44100) / chunks.json.bytesInLength * cVal * 2);
       //return v / (chunks.json.bytesInLength / chunks.comm.frames);
       return (v / chunks.json.scale) - (i * 13);
-      //return rightRotate(v, i);
     };
 
-    let INT_BITS = 16;
-
-    /*Function to left rotate n by d bits*/
-    function leftRotate(n, d) {
-      /* In n<<d, last d bits are 0. To
-       put first 3 bits of n at
-      last, do bitwise or of n<<d
-      with n >>(INT_BITS - d) */
-      return (n << d) | (n >> (INT_BITS - d));
-    }
-
-    /*Function to right rotate n by d bits*/
-    function rightRotate(n, d) {
-      /* In n>>d, first d bits are 0.
-      To put last 3 bits of at
-      first, do bitwise or of n>>d
-      with n <<(INT_BITS - d) */
-      return (n >> d) | (n << (INT_BITS - d));
-    }
-
-    /*Update the slice points to masterSR*/
-    if (chunks.json.data.start) {
+    /*Update the slice points to masterSR - hardcoded to 44100 as OP sample rate will always be this.*/
+    if (chunks.json && chunks.json.data.start) {
       chunks.json.data.start = chunks.json.data.start.map(
           (s, i) => Math.floor((getRelPosition(s, i) / 44100) * masterSR));
     }
-    if (chunks.json.data.end) {
+    if (chunks.json && chunks.json.data.end) {
       chunks.json.data.end = chunks.json.data.end.map(
           (s, i) => Math.floor((getRelPosition(s, i) / 44100) * masterSR));
     }
@@ -2436,7 +2451,7 @@ const parseAif = (
         length: audioArrayBuffer.length,
         duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
         startFrame: 0, endFrame: audioArrayBuffer.length,
-        op1Json: chunks.json.data,
+        op1Json: chunks.json ? chunks.json.data : false,
         channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
         checked: true, id: uuid,
         slices: false,
@@ -2578,7 +2593,7 @@ const parseWav = (
         startFrame: 0, endFrame: audioArrayBuffer.length,
         checked: checked, id: uuid,
         channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
-        slices: file.slices ?? slices,
+        slices: slices,
         note: noteFromFileName(file.name)
       }
     });
@@ -2610,11 +2625,11 @@ const consumeFileInput = (inputFiles) => {
   document.body.classList.add('loading');
   const isAudioCtxClosed = checkAudioContextState();
   if (isAudioCtxClosed) { return; }
-  const _files = [...inputFiles].filter(
+  let _files = [...inputFiles].filter(
       f => ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a'].includes(
           f?.name?.split('.')?.reverse()[0].toLowerCase())
   );
-  const _mFiles = [...inputFiles].filter(
+  let _mFiles = [...inputFiles].filter(
       f => ['ot'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
   );
 
@@ -2651,7 +2666,7 @@ const consumeFileInput = (inputFiles) => {
 
   _files.forEach((file, idx) => {
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
       file.uuid = crypto.randomUUID();
       file.fullPath = file.fullPath || '';
       const buffer = e.target.result;
@@ -2662,7 +2677,7 @@ const consumeFileInput = (inputFiles) => {
         const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
         count.push(file.uuid);
         let result = file.name.toLowerCase().endsWith('.aif') ?
-            parseAif(buffer, bufferUint8Array, file, file.fullPath) :
+            await parseAif(buffer, bufferUint8Array, file, file.fullPath) :
             parseSds(bufferUint8Array, file, file.fullPath);
         if (result.failed) {
           count.splice(count.findIndex(c => c === result.uuid), 1);
@@ -2680,11 +2695,15 @@ const consumeFileInput = (inputFiles) => {
       ) {
         count.push(file.uuid);
         const fb = buffer.slice(0);
-        audioCtx.decodeAudioData(buffer, data => {
+        await audioCtx.decodeAudioData(buffer, data => {
           let result = parseWav(data, fb, file, file.fullPath);
           if (result.failed) {
             count.splice(count.findIndex(c => c === result.uuid), 1);
           }
+          setLoadingProgress(idx + 1, _files.length);
+          checkCount(idx, _files.length);
+        }, (error) => {
+          count.splice(count.findIndex(c => c === file.uuid), 1);
           setLoadingProgress(idx + 1, _files.length);
           checkCount(idx, _files.length);
         });
@@ -2692,6 +2711,16 @@ const consumeFileInput = (inputFiles) => {
     };
     reader.readAsArrayBuffer(file);
   });
+  if (digichain.importInt) { clearInterval(digichain.importInt); }
+  digichain.importInt = setInterval(() => {
+    if (!document.body.classList.contains('loading')) {
+      _files.forEach((v, i) => delete _files[i]);
+      _files = [];
+      _mFiles = [];
+      count = [];
+      clearInterval(digichain.importInt);
+    }
+  }, 10000);
 };
 
 uploadInput.addEventListener(
@@ -2957,6 +2986,7 @@ window.digichain = {
   trimRightSelected,
   normalizeSelected,
   reverseSelected,
+  pitchUpSelected,
   showMergePanel,
   sort,
   renderList,

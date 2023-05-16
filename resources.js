@@ -158,7 +158,7 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
   let buffer;
   let riffSize;
 
-  if (embedSliceData && slices && slices.length !== 0) {
+  if (embedSliceData && slices && Array.isArray(slices) && slices.length !== 0) {
     let _slices = pitchModifier === 1 ? slices : slices.map(slice => ({
       n: slice.n, s: Math.round(slice.s / pitchModifier),
       e: Math.round(slice.e / pitchModifier)
@@ -219,8 +219,42 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
   return buffer;
 }
 
-function addSampleRateToAiffData(view, offset) {
-  const sampleRate = [64, 14, 172, 68, 0, 0, 0, 0, 0, 0];
+export function getAifSampleRate(input) {
+  const sampleRateTable = {
+    8000: [64, 11, 250, 0, 0, 0, 0, 0, 0, 0],
+    11025: [64, 12, 172, 68, 0, 0, 0, 0, 0, 0],
+    16000: [64, 12, 250, 0, 0, 0, 0, 0, 0, 0],
+    22050: [64, 13, 172, 68, 0, 0, 0, 0, 0, 0],
+    32000: [64, 13, 250, 0, 0, 0, 0, 0, 0, 0],
+    37800: [64, 14, 147, 168, 0, 0, 0, 0, 0, 0],
+    44056: [64, 14, 172, 24, 0, 0, 0, 0, 0, 0],
+    44100: [64, 14, 172, 68, 0, 0, 0, 0, 0, 0],
+    47250: [64, 14, 184, 146, 0, 0, 0, 0, 0, 0],
+    48000: [64, 14, 187, 128, 0, 0, 0, 0, 0, 0],
+    50000: [64, 14, 195, 80, 0, 0, 0, 0, 0, 0],
+    50400: [64, 14, 196, 224, 0, 0, 0, 0, 0, 0],
+    88200: [64, 15, 172, 68, 0, 0, 0, 0, 0, 0],
+    96000: [64, 15, 187, 128, 0, 0, 0, 0, 0, 0],
+    176400: [64, 16, 172, 68, 0, 0, 0, 0, 0, 0],
+    192000: [64, 16, 187, 128, 0, 0, 0, 0, 0, 0],
+    352800: [64, 17, 172, 68, 0, 0, 0, 0, 0, 0],
+    2822400: [64, 20, 172, 68, 0, 0, 0, 0, 0, 0],
+    5644800: [64, 21, 172, 68, 0, 0, 0, 0, 0, 0]
+  };
+  if (typeof input === 'number') {
+    return sampleRateTable[input]??false;
+  }
+  if (Array.isArray(input) && input.length === 10) {
+    for (let sr in sampleRateTable) {
+      if (sampleRateTable[sr].every((v, i) => v === input[i])) {
+        return +sr;
+      }
+    }
+  }
+}
+
+function addSampleRateToAiffData(view, offset, sr = 44100) {
+  const sampleRate = getAifSampleRate(sr);
   for (let i = 0; i < 10; i++) {
     view.setUint8(offset + i, sampleRate[i]);
   }

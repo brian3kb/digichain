@@ -1,4 +1,4 @@
-const cacheName = 'cache-v140' + new Date().toJSON();
+const cacheName = 'cache-v140-231505';
 const precacheResources = [
   './',
   'index.html',
@@ -22,7 +22,6 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  //const cachesToKeep = ['cache-v140'];
   const cachesToKeep = [cacheName];
 
   event.waitUntil(

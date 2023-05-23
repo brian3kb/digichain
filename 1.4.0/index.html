@@ -4,10 +4,10 @@
   <meta charset="UTF-8"/>
   <meta name = "viewport" content = "width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
   <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]">
-  <meta name="version" content="v 1.4.1">
+  <meta name="version" content="v 1.4.0">
   <meta
           name="description"
-          content="DigiChain aims to make the creation of sample chains as easy as possible; it loads uncompressed wav, syx (MachineDrum), aif (OP-1 Field/OP-Z), flac, and converts them to wav files for transfer via the Transfer app, or to aif files for use on Teenage Engineering OP-1 Field / OP-Z, or direct playback. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size. All processing is done in the browser, on *your* computer, no data is sent to a server, and there is no, and never will be any user tracking. The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
+          content="DigiChain aims to make the creation of sample chains as easy as possible; it loads uncompressed wav, syx (MachineDrum), aif (OP-1 Field/OP-Z), flac (if supported by the browser) and converts them to wav files for transfer via the Transfer app, or to aif files for use on Teenage Engineering OP-1 Field / OP-Z. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size. All processing is done in the browser, on *your* computer, no data is sent to a server, and there is no, and never will be any user tracking. The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
   >
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
@@ -24,7 +24,7 @@
   <script type="module" src="./main.js"></script>
 </head>
 
-<body ontouchstart="">
+<body ontouchstart="" class="scaled">
 
 <div id="alertNotServed" class="not-served-md pop-up">
   <div class="content" style="text-align: center;">
@@ -145,34 +145,17 @@
         <button class="button" onclick="digichain.removeSelected()">Remove Selected</button>
 <!--      </div>-->
 <!--      <div class="row">-->
-        <button title="Reset list to the order in which files were added to the pool. Shift+click to randomize list." class="button button-outline has-shift-mod" onclick="digichain.sort(event, 'id')">Reset Sort/Order</button>
+        <button title="Reset list to the order in which files were added to the pool. Shift-click to randomize list." class="button button-outline has-shift-mod" onclick="digichain.sort(event, 'id')">Reset Sort/Order</button>
       </div>
       <div class="row">
         <button title="Show actions that will affect all the currently selected samples." onclick="digichain.toggleSelectedActionsList(event)" class="button">Selected Actions</button>
         <div class="selected-actions-button-list" style="display: none;">
-          <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline">
-            Trim Right
-          </button>
-          <br>
-          <button title="Truncate all selected. 3 seconds is the default, shift+click to set custom length." onclick="digichain.truncateSelected(event)" class="button-outline has-shift-mod">
-            Truncate
-          </button>
-          <br>
-          <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)" class="button-outline">
-            Normalize
-          </button>
-          <br>
-          <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline">
-            Reverse
-          </button>
-          <br>
-          <button title="Pitch all selected up by 1 octave." onclick="digichain.pitchUpSelected(event)"
-                  class="button-outline">Pitch Up an Octave
-          </button>
+        <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline">Trim Right</button><br>
+        <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)" class="button-outline">Normalize</button><br>
+        <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline">Reverse</button><br>
+        <button title="Pitch all selected up by 1 octave." onclick="digichain.pitchUpSelected(event)" class="button-outline">Pitch Up an Octave</button>
         </div>
-        <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)"
-                class="button button-outline">Merge Selected
-        </button>
+        <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)" class="button button-outline">Merge Selected</button>
       </div>
     </div>
     <div class="column">
@@ -235,7 +218,7 @@
   </div>
   <div class="row info-panel">
     <div class="column column-35 column-offset-75 logo">
-      <h3 class="float-right" style="margin-top: -4rem;" data-version="development">DigiChain <i class="gg-info float-right" style="cursor: pointer;" onclick="digichain.showInfo()"></i> </h3>
+      <h3 class="float-right" style="margin-top: -4rem;">DigiChain <i class="gg-info float-right" style="cursor: pointer;" onclick="digichain.showInfo()"></i> </h3>
     </div>
   </div>
 </div>
@@ -256,18 +239,18 @@
     document.documentElement.classList.add('scaled');
   }
 
-  if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.pathname.includes('latest') && window.location === window.parent.location) {
-    window.addEventListener('load', async () => {
-      try {
-        let reg;
-          reg = await navigator.serviceWorker.register('sw.js', {
-            type: 'module',
-          });
-      } catch (err) {
-        console.log('Service worker registration failed: ', err);
-      }
-    });
-  }
+  // if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.pathname.includes('latest') && window.location === window.parent.location) {
+  //   window.addEventListener('load', async () => {
+  //     try {
+  //       let reg;
+  //         reg = await navigator.serviceWorker.register('sw.js', {
+  //           type: 'module',
+  //         });
+  //     } catch (err) {
+  //       console.log('Service worker registration failed: ', err);
+  //     }
+  //   });
+  // }
 </script>
 
 </body>

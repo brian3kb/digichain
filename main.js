@@ -3009,6 +3009,14 @@ if (restoreLastUsedAudioConfig) {
 }
 setTimeout(() => toggleOptionsPanel(), 250);
 
+if ('launchQueue' in window) {
+  window.launchQueue.setConsumer((launchParams) => {
+    if (launchParams.files && launchParams.files.length) {
+      consumeFileInput(launchParams.files);
+    }
+  });
+}
+
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {
   sliceOptions,

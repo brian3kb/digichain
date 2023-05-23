@@ -565,6 +565,29 @@ function trimRightSelected(event) {
   }, 250);
 }
 
+function truncateSelected(event) {
+  let truncLength = 3;
+  if (event.shiftKey || modifierKeys.shiftKey) {
+    const userResponse = prompt(`Please enter a custom length in seconds to truncate the selected samples to...`);
+    if (userResponse && !isNaN(userResponse)) {
+      truncLength = Math.abs(+userResponse);
+    }
+  }
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked);
+    selected.forEach((f, idx) => {
+      editor.truncate(event, f, false, truncLength);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
+}
+
 function reverseSelected(event) {
   files.forEach(f => f.meta.checked ? f.source?.stop() : '');
   document.getElementById('loadingText').textContent = 'Processing';
@@ -1226,7 +1249,9 @@ function joinAllByPath(event, pad = false) { //TODO: test and hook into UI
 const stopPlayFile = (event, id) => {
   const file = getFileById(id || lastSelectedRow?.dataset?.id);
   if (!file) { return; }
-  file?.source?.stop();
+   try{
+    file?.source?.stop();
+  } catch(e) {}
   if (file.meta.playing && file.meta.playing !== true) {
     const [fnType, fnId] = file.meta.playing.split('_');
     window['clear' + fnType](+fnId);
@@ -1441,7 +1466,7 @@ const selectSliceAmount = (event, size) => {
   if (size === 0) {
     files.forEach(f => f.source?.stop());
   }
-  if ((event.shiftKey || modifierKeys.shiftKey)) { return; } /*Shift-click to change grid but keep selections.*/
+  if ((event.shiftKey || modifierKeys.shiftKey)) { return; } /*Shift+click to change grid but keep selections.*/
   files.forEach(f => f.meta.checked = false);
   for (let i = 0; i < (size < files.length ? size : files.length); i++) {
     toggleCheck(event, files[i].meta.id);
@@ -2963,6 +2988,7 @@ if (localStorage.getItem('darkModeTheme') === null) {
     JSON.stringify(darkModeTheme)
   );
 }
+document.querySelector(`.logo h3`).dataset.version = document.querySelector('meta[name=version]').content;
 document.body.classList[
     darkModeTheme ? 'remove' : 'add'
     ]('light');
@@ -2990,6 +3016,7 @@ window.digichain = {
   removeSelected,
   toggleSelectedActionsList,
   trimRightSelected,
+  truncateSelected,
   normalizeSelected,
   reverseSelected,
   pitchUpSelected,

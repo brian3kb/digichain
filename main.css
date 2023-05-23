@@ -41,7 +41,7 @@ body {
     margin-top: 0.75rem;
 }
 .logo h3::after {
-    content: 'v 1.4.0';
+    content: attr(data-version);
     font-size: 1rem;
     position: absolute;
     margin-left: -0.75rem;
@@ -218,7 +218,7 @@ td.waveform-td span.play-head.play {
     border-left: 1px solid #d79c4e30;
     border-right: 1px solid #d79c4e30;
     padding-top: 2rem;
-    margin-bottom: 3rem;
+    margin-bottom: 1rem;
     overflow-x: auto;
     overflow-y: hidden;
 }
@@ -310,6 +310,17 @@ td button { margin: 0.5rem; }
     padding-bottom: 1rem;
     text-align: center;
 }
+.edit-btn-group {
+    max-width: 35%;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+.edit-btn-group.float-right {
+    max-width: 20%;
+    justify-content: end;
+}
+
 .slice-range {
     display: none;
     width: 1024px;
@@ -897,11 +908,10 @@ table#mergeList td.file-path-td {
     }
 }
 
-@media (max-width: 430px) {
+@media (max-width: 350px) {
     .container {
         display: block;
-        padding-left: 2.5rem;
-        margin: -2rem;
+        margin: -2rem 0 0 -2rem;
     }
 
     .end-of-grid td {
@@ -1024,9 +1034,24 @@ table#mergeList td.file-path-td {
         text-align: center;
         opacity: .75;
     }
+
+    .edit-btn-group.float-left {
+        max-width: 55% !important;
+    }
+    .edit-btn-group.float-right {
+        max-width: 30% !important;
+    }
 }
 
 @media (max-width: 430px), (max-height:650px) {
+    html {
+        font-size: 50%;
+        overflow-x: hidden;
+    }
+    .all-options {
+        width: 100vw;
+        padding-right: 1rem;
+    }
     .info-panel-md, .split-panel-options, .edit-panel-options, .merge-panel-options, .not-served-md, .export-settings-panel-md, .op-export-panel-options, .chain-name-list-panel-md {
         position: fixed;
         top: 1vh;
@@ -1070,6 +1095,38 @@ table#mergeList td.file-path-td {
         margin-top: 2rem;
     }
 
+    .edit-btn-group.float-left {
+        max-width: 31%;
+    }
+    .edit-btn-group.float-right {
+        max-width: 55%;
+    }
+
+}
+
+@media (max-width: 430px) {
+    html {
+        font-size: 50%;
+        overflow-x: hidden;
+    }
+    .all-options {
+        width: 100vw;
+        padding-right: 1rem;
+    }
+    .container {
+        display: block;
+        margin: -2rem 0 0 -2rem;
+    }
+    #toggleOptionsButton {
+        margin-top: 34rem;
+    }
+    .edit-btn-group.float-left {
+        max-width: 44%;
+        margin-top: 4rem;
+    }
+    .edit-btn-group.float-right {
+        max-width: 23%;
+    }
 }
 
 @media (min-width: 1100px) {
@@ -1103,6 +1160,10 @@ table#mergeList td.file-path-td {
     #chainFileNameListPanel {
         width: 512px;
         max-width: 512px;
+    }
+
+    .edit-btn-group.float-right {
+        max-width: 40%;
     }
 }
 

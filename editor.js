@@ -132,23 +132,30 @@ export function renderEditor(item) {
     <div class="current-selection-text">Click / tap to set start point</div>
   </div>
   <div class="sample-op-buttons">
+  <div class="edit-btn-group float-left">
+  
   <button title="Normalize the volume of the sample." class="normalize button button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
   
-  <button title="Silence the selected audio." class="silence button button-outline" onclick="digichain.editor.fade()">Silence</button>
+  <button title="Reverses the sample playback" class="reverse button button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>
+  <button title="Crop the sample to the selected area." class="trim-right button button-outline" onclick="digichain.editor.truncate(event)">Crop</button>
   <button title="Fade in the selected audio." class="fade-in button button-outline" onclick="digichain.editor.fade('in')">Fade In</button>
+  <button title="Silence the selected audio." class="silence button button-outline" onclick="digichain.editor.fade()">Silence</button>
   <button title="Fade out the selected audio." class="fade-out button button-outline" onclick="digichain.editor.fade('out')">Fade Out</button>
-  
-  <button title="Reverses the sample playback" class="reverse button button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>&nbsp;&nbsp;-&nbsp;
-  <button title="Trims any zero valued audio from the end of the sample." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
-  &nbsp;&nbsp;&nbsp;
-  <button title="Lower pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5, 12)">-12</button>
-  <button title="Lower pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12), 1)">-1</button>
-  &nbsp;<span> Pitch (semitones) </span>&nbsp;
-  <button title="Increase pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12), -1)">+1</button>
-  <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2, -12)">+12</button>
+</div>
+<div class="edit-btn-group float-right">
+    <div class="edit-pitch-btn-group">  
+    <button title="Lower pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5, 12)">-12</button>
+    <button title="Lower pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12), 1)">-1</button>
+    &nbsp;<span> Pitch (semitones) </span>&nbsp;
+    <button title="Increase pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12), -1)">+1</button>
+    <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2, -12)">+12</button>
+    </div>
+    <br>
+      <button title="Trims any zero valued audio from the end of the sample." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
   </div>
+</div>
   <span class="edit-info">
-    Normalize, Silence, Fade In, Fade Out, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
+    Normalize, Silence, Fade In, Fade Out, Crop, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo.
   </span>
   `;
@@ -523,6 +530,48 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
   }
   item.waveform = false;
 }
+
+function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
+  if (!renderEditPanel && item) {
+    selection.start = 0;
+    selection.end = conf.masterSR * lengthInSeconds;
+  }
+  item = item || editing;
+
+  let truncIndex = selection.end - selection.start;
+
+  if (truncIndex > item.buffer.length) {
+    // don't need to truncate as sample is shorter than the trim length.
+    return;
+  }
+
+  const audioArrayBuffer = conf.audioCtx.createBuffer(
+      item.buffer.numberOfChannels,
+      truncIndex,
+      conf.masterSR
+  );
+  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+    let x = 0;
+    for (let i = selection.start; i < selection.end; i++) {
+      audioArrayBuffer.getChannelData(channel)[x] = item.buffer.getChannelData(channel)[i];
+      x++;
+    }
+  }
+  item.buffer = audioArrayBuffer;
+  item.meta = {
+    ...item.meta,
+    length: audioArrayBuffer.length,
+    duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
+    startFrame: 0, endFrame: audioArrayBuffer.length
+  };
+  if (item.meta.slices) {
+    item.meta.slices = false;
+  }
+  if (renderEditPanel) {
+    showEditor(editing, conf, 'sample', folders);
+  }
+  item.waveform = false;
+}
 export const editor = {
   updateFile,
   toggleReadOnlyInput,
@@ -532,6 +581,7 @@ export const editor = {
   normalize,
   fade,
   trimRight,
+  truncate,
   perSamplePitch,
   buildOpKit,
   getLastItem : () => editing?.meta?.id,

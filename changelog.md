@@ -1,4 +1,4 @@
-1.4.1
+2023-05-22 1.4.1
 - Added truncate selected action (shift+click to set a custom length), and crop to selection in the editor panel.
 - Fixed bug playing back sample after editing in the edit panel if the sample was currently playing from the list.
 

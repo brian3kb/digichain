@@ -110,27 +110,36 @@ function buildOpKit() {
 export function renderEditor(item) {
   editing = item === editing ? editing : item;
   editEl.innerHTML = `
-  <button onclick="digichain.playFile(event);" class="button-outline check">Play</button>
-  <button onclick="digichain.playFile({ editor: true }, false, true);" class="button-outline check">Loop</button>
-  <button onclick="digichain.stopPlayFile(event);" class="button-outline check">Stop</button>
-  <div class="zoom-level float-right">
-    <button class="zoom-1x button-outline check" onclick="digichain.editor.zoomLevel('editor', 1)">1x</button>
-    <button class="zoom-2x button-outline check" onclick="digichain.editor.zoomLevel('editor', 2)">2x</button>
-    <button class="zoom-4x button-outline check" onclick="digichain.editor.zoomLevel('editor', 4)">4x</button>
+<div class="above-waveform-buttons">
+<div class="sample-selection-buttons text-align-left float-left">
+    <button title="Clicking on the waveform will set the selection start point." onclick="digichain.editor.setSelStart(true);" class="button check btn-select-start">Start</button>
+  <button title="Clicking on the waveform will set the selection end point." onclick="digichain.editor.setSelStart(false);" class="button-outline check btn-select-end">End</button>
+    <button title="Reset the waveform selectio to the whole sample." onclick="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
+</div>
+  
+  <div class="playback-controls text-align-right float-right" style="padding-left: 1.5rem;">
+    <button onclick="digichain.playFile(event);" class="button-outline check">Play</button>
+    <button onclick="digichain.playFile({ editor: true }, false, true);" class="button-outline check">Loop</button>
+    <button onclick="digichain.stopPlayFile(event);" class="button-outline check">Stop</button>  
+  </div>
+  <div class="zoom-level text-align-right">
+    <button title="Zoom out waveform view." class="zoom-out button-outline check" onclick="digichain.editor.zoomLevel('editor', .5)">-</button>
+    <button title="Reset zoom level waveform view."  class="zoom-reset button-outline check" onclick="digichain.editor.zoomLevel('editor', 1)">1x</button>
+    <button title="Zoom in on waveform view."  class="zoom-in button-outline check" onclick="digichain.editor.zoomLevel('editor', 2)">+</button>
+  </div>
   </div>
   <div class="waveform-container">
     <div>
       <canvas class="edit-panel-waveform"
         oncontextmenu="return false;"
         onclick="digichain.editor.changeSelectionPoint(event)"
-        onmouseleave="digichain.editor.setSelStart(true)"
         ></canvas>
       <div id="editLines">
         <div class="edit-line"></div>
       </div>
     </div>
-    <div class="current-selection-text">Click / tap to set start point</div>
   </div>
+
   <div class="sample-op-buttons">
   <div class="edit-btn-group float-left">
   
@@ -165,12 +174,12 @@ function renderEditableItems() {
   editableItemsEl.innerHTML = `
       <div class="input-set">
       <label for="editFileName" class="before-input">File Name</label>
-      <input type="text" onblur="digichain.editor.updateFile(event)" placeholder="Sample file name" id="editFileName" value="${getNiceFileName('', editing, true)}" readonly>
+      <input type="text" onkeyup="digichain.editor.updateFile(event)" placeholder="Sample file name" id="editFileName" value="${getNiceFileName('', editing, true)}" readonly>
       <button class="button-clear" onclick="digichain.editor.toggleReadOnlyInput('editFileName')"><i class="gg-pen"></i></button>
     </div><br>
     <div class="input-set">
     <label for="editFilePath" class="before-input">File Path</label>
-      <input type="text" onblur="digichain.editor.updateFile(event)" placeholder="File path of the sample (if known)" id="editFilePath" value="${editing.file.path}" id="editFilePath" list="folderOptions" readonly>
+      <input type="text" onkeyup="digichain.editor.updateFile(event)" placeholder="File path of the sample (if known)" id="editFilePath" value="${editing.file.path}" id="editFilePath" list="folderOptions" readonly>
       <datalist id="folderOptions">
         ${folders.map(f => '<option value="' + f + '">').join('')}
       </datalist>
@@ -296,8 +305,15 @@ function updateSelectionEl() {
 
 function zoomLevel(view, level) {
   if (view === 'editor') {
+    if (level !== 1) {
+      level = multiplier * level;
+    }
+    const step = editing.buffer.length / (1024 * level);
+    if ((1024 * level) < 1024 || (1024 * level) > 32768 || step < 1) {
+      return alert('Unable to zoom any further');
+    }
     renderEditPanelWaveform(level);
-    selection.step = editing.buffer.length / (1024 * level);
+    selection.step = step;
     multiplier = level;
     updateSelectionEl();
     const waveformContainerEl = document.querySelector('.waveform-container');
@@ -305,8 +321,11 @@ function zoomLevel(view, level) {
 }
 
 function setSelStart(value) {
+  const startBtnEl = document.querySelector('.btn-select-start');
+  const endBtnEl = document.querySelector('.btn-select-end');
   selection.selStart = value;
-  document.querySelector('.current-selection-text').textContent = `Click / tap to set ${selection.selStart === true ? 'start' : 'end'} point`
+  startBtnEl.classList[!value ? 'add' : 'remove']('button-outline');
+  endBtnEl.classList[value ? 'add' : 'remove']('button-outline');
 }
 
 function changeSelectionPoint(event, shiftKey = false) {
@@ -321,7 +340,6 @@ function changeSelectionPoint(event, shiftKey = false) {
     }
     selection.end = end;
     selection.start = selection.start >= selection.end? selection.end - 1: selection.start;
-    setSelStart(true);
   } else {
     let start = 0;
     if (event.offsetX <= max && event.offsetX > -1) {
@@ -331,11 +349,17 @@ function changeSelectionPoint(event, shiftKey = false) {
     }
     selection.start = start;
     selection.end = selection.end <= selection.start? selection.start + 1 : selection.end;
-    setSelStart(false);
   }
   selection.end = selection.end >= editing.buffer.length? editing.buffer.length : selection.end;
   //selection.start = selection.start >= selection.end? selection.end - 50 : selection.start;
   selection.start = selection.start >= selection.end ? selection.end - 1 : selection.start;
+  updateSelectionEl();
+}
+
+function resetSelectionPoints() {
+  selection.start = 0;
+  selection.end = editing.buffer.length;
+  selection.selStart = true;
   updateSelectionEl();
 }
 
@@ -567,6 +591,9 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
   if (item.meta.slices) {
     item.meta.slices = false;
   }
+  if (item.meta.op1Json) {
+    item.meta.op1Json = false;
+  }
   if (renderEditPanel) {
     showEditor(editing, conf, 'sample', folders);
   }
@@ -577,6 +604,7 @@ export const editor = {
   toggleReadOnlyInput,
   zoomLevel,
   changeSelectionPoint,
+  resetSelectionPoints,
   setSelStart,
   normalize,
   fade,

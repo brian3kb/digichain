@@ -241,8 +241,8 @@ const closePopUps = () => {
 };
 
 const arePopUpsOpen = () => {
-  return [...document.querySelectorAll('.pop-up')].some(
-      w => w.classList.contains('show'));
+  return ([...document.querySelectorAll('.pop-up')].some(
+      w => w.classList.contains('show')) || document.querySelectorAll('dialog[open]').length > 0);
 };
 
 const toggleOptionsPanel = () => {

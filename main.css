@@ -8,6 +8,8 @@ body {
 .disabled {
     opacity: .5;
 }
+.text-align-left { text-align: left; }
+.text-align-right { text-align: right; }
 .logo {
     position: fixed;
     bottom: 0;
@@ -1126,6 +1128,9 @@ table#mergeList td.file-path-td {
     }
     .edit-btn-group.float-right {
         max-width: 23%;
+    }
+    .zoom-level {
+        clear: right;
     }
 }
 

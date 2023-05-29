@@ -1,6 +1,12 @@
+1.4.2
+ - Hold shift key while dragging in samples to import randomly up to the currently chosen grid-size.
+
 2023-05-22 1.4.1
 - Added truncate selected action (shift+click to set a custom length), and crop to selection in the editor panel.
 - Fixed bug playing back sample after editing in the edit panel if the sample was currently playing from the list.
+- Changed start/end point editor selection.
+- Changed zoom levels to +/- buttons to zoom in further than 4x.
+- Fixed bug where grid keyboard shortcuts were still active on edit panel.
 
 2023-05-15 1.4.0
 - Workflow to support reading slices from and creating chains for the Teenage Engineering OP-1 Field / OP-Z

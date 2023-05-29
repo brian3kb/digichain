@@ -2650,7 +2650,14 @@ const setLoadingProgress = (count, total) => {
   1}%, #606c76 100%)`;
 };
 
-const consumeFileInput = (inputFiles) => {
+const getRandomFileSelectionFrom = (fileCollection) => {
+  let selection = [...fileCollection].sort(
+      f => crypto.randomUUID().localeCompare(crypto.randomUUID())
+  );
+  return selection.slice(0, (sliceGrid > 0 ? sliceGrid : selection.length));
+};
+
+const consumeFileInput = (event, inputFiles) => {
   document.getElementById('loadingText').textContent = 'Loading samples';
   document.body.classList.add('loading');
   const isAudioCtxClosed = checkAudioContextState();
@@ -2662,6 +2669,10 @@ const consumeFileInput = (inputFiles) => {
   let _mFiles = [...inputFiles].filter(
       f => ['ot'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
   );
+
+  if (event.shiftKey || modifierKeys.shiftKey) {
+    _files = getRandomFileSelectionFrom(_files);
+  }
 
   _mFiles.forEach((file, idx) => {
     const reader = new FileReader();
@@ -2755,7 +2766,7 @@ const consumeFileInput = (inputFiles) => {
 
 uploadInput.addEventListener(
     'change',
-    () => consumeFileInput(uploadInput.files),
+    () => consumeFileInput({shiftKey: modifierKeys.shiftKey}, uploadInput.files),
     false
 );
 
@@ -2829,7 +2840,7 @@ document.body.addEventListener(
         let doneInterval = setInterval(() => {
           if (total <= 0 && toConsume.count === toConsume.length) {
             clearInterval(doneInterval);
-            consumeFileInput(toConsume);
+            consumeFileInput(event, toConsume);
           }
         }, 500);
       } else {
@@ -3012,7 +3023,7 @@ setTimeout(() => toggleOptionsPanel(), 250);
 if ('launchQueue' in window) {
   window.launchQueue.setConsumer((launchParams) => {
     if (launchParams.files && launchParams.files.length) {
-      consumeFileInput(launchParams.files);
+      consumeFileInput({}, launchParams.files);
     }
   });
 }

@@ -29,4 +29,4 @@ DigiChain is not intended for use by individuals under the age of 13. We do not 
 DigiChain reserves the right to update or modify this Privacy Policy at any time. Users will be notified of any changes by updating the effective date at the top of this page. It is the responsibility of Users to review this Privacy Policy periodically for any updates.
 
 ### Contact Us
-If you have any questions or concerns about this Privacy Policy or the practices of DigiChain, please contact us at https://briabar.net/about.
+If you have any questions or concerns about this Privacy Policy or the practices of DigiChain, please contact us at https://brianbar.net/about.

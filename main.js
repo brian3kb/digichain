@@ -1110,13 +1110,15 @@ async function joinAll(
       return total;
     }, 0);
 
-  } else { /*Using max length in seconds file lengths upto 24 files*/
+  } else { /*Using max length in seconds (if aif also limit upto 24 files per chain)*/
     _files = _files.filter(f => f.meta.duration < secondsPerFile);
+    let maxChainLength = (
+        lastUsedAudioConfig.includes('a') ? 24 : (sliceGrid === 0 ? 64 : sliceGrid));
     const processing = _files.reduce((a, f) => {
       if (
           (a.duration + +f.meta.duration <=
               (secondsPerFile * pitchModifier)) &&
-          (a.processed.length < 24)) {
+          (a.processed.length < maxChainLength)) {
         a.duration = a.duration + +f.meta.duration;
         a.totalLength = a.totalLength + +f.meta.length;
         a.processed.push(f);
@@ -2015,10 +2017,12 @@ const setCountValues = () => {
     const calcFiles = (items, count = 0) => {
       let progress = {duration: 0, processed: [], skipped: [], count};
       let _items = items.filter(f => +f.meta.duration < secondsPerFile);
+      let maxChainLength = (
+          lastUsedAudioConfig.includes('a') ? 24 : (sliceGrid === 0 ? 64 : sliceGrid));
       while (_items.length > 0) {
         progress = _items.reduce((a, f) => {
           if (a.duration + +f.meta.duration <=
-              (secondsPerFile * pitchModifier) && a.processed.length < 24) {
+              (secondsPerFile * pitchModifier) && a.processed.length < maxChainLength) {
             a.duration = a.duration + +f.meta.duration;
             a.processed.push(f);
           } else {
@@ -2667,7 +2671,7 @@ const getRandomFileSelectionFrom = (fileCollection) => {
   let selection = [...fileCollection].sort(
       f => crypto.randomUUID().localeCompare(crypto.randomUUID())
   );
-  return selection.slice(0, (sliceGrid > 0 ? sliceGrid : selection.length));
+  return selection.slice(0, (sliceGrid > 0 ? sliceGrid : 256));
 };
 
 const consumeFileInput = (event, inputFiles) => {

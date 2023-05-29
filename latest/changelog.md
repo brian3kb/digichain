@@ -1,3 +1,13 @@
+1.4.2
+ - Hold shift key while dragging in samples to import randomly up to the currently chosen grid-size.
+
+2023-05-22 1.4.1
+- Added truncate selected action (shift+click to set a custom length), and crop to selection in the editor panel.
+- Fixed bug playing back sample after editing in the edit panel if the sample was currently playing from the list.
+- Changed start/end point editor selection.
+- Changed zoom levels to +/- buttons to zoom in further than 4x.
+- Fixed bug where grid keyboard shortcuts were still active on edit panel.
+
 2023-05-15 1.4.0
 - Workflow to support reading slices from and creating chains for the Teenage Engineering OP-1 Field / OP-Z
     - OP-1 / OP-1 Field / OP-Z aif file imports, mono and stereo.
@@ -115,7 +125,7 @@
 
 2023-03-24 1.0.2
 - When a slice grid length is selected, samples will now be auto-generated, (e.g. if you have 13 samples selected and a grid of 4, you will get 4 files downloaded instead of one chain of 13 samples [which isn't ideal for the Digitakt!]).
-- Shift-click the slice-grid numbers to change the grid size, but retain the selected samples.
+- Shift+click the slice-grid numbers to change the grid size, but retain the selected samples.
 - Added loading message while loading in files.
 - Added sort-by selected.
 - Changed button text, added joined file counts that will be produced, and a number of files that will be downloaded if downloading all.
@@ -128,7 +138,7 @@
 - Shift+Up/Down, Shift+Duplicate error.
 - Waveform display on Android.
 - Show version number on bottom of screen.
-- Shift-click on waveform will loop the files playback (de-select will stop loop, click will go back to one-shot, Off in slice grid will stop all sample playback).
+- Shift+click on waveform will loop the files playback (de-select will stop loop, click will go back to one-shot, Off in slice grid will stop all sample playback).
 - Added support for 128 slices (e.g. for wavetables or Model:Samples use on start point).
 - Cleaned up UI for mobile, moved around buttons to make use of the space better.
 

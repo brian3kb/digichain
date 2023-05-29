@@ -56,6 +56,8 @@ let darkModeTheme = JSON.parse(
     localStorage.getItem('darkModeTheme')) ?? true;
 let normalizeContrast = JSON.parse(
     localStorage.getItem('normalizeContrast')) ?? false;
+let importFileLimit = JSON.parse(
+    localStorage.getItem('importFileLimit')) ?? true;
 let secondsPerFile = 0;
 let audioCtx = new AudioContext({sampleRate: masterSR});
 let files = [];
@@ -670,6 +672,11 @@ function toggleSetting(param, value) {
     localStorage.setItem('exportWithOtFile', exportWithOtFile);
     showExportSettingsPanel();
   }
+  if (param === 'importFileLimit') {
+    importFileLimit = !importFileLimit;
+    localStorage.setItem('importFileLimit', importFileLimit);
+    showExportSettingsPanel();
+  }
   if (param === 'darkModeTheme') {
     darkModeTheme = !darkModeTheme;
     localStorage.setItem('darkModeTheme', darkModeTheme);
@@ -852,6 +859,12 @@ function showExportSettingsPanel() {
 <td><button onclick="digichain.toggleSetting('exportWithOtFile')" class="check ${exportWithOtFile
       ? 'button'
       : 'button-outline'}">${exportWithOtFile ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<td><span>Limit imports to maximum of 750 files?<br>(Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts) &nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('importFileLimit')" class="check ${importFileLimit
+      ? 'button'
+      : 'button-outline'}">${importFileLimit ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Show Shift/Ctrl modifier touch buttons?&nbsp;&nbsp;&nbsp;</span></td>
@@ -2672,6 +2685,10 @@ const consumeFileInput = (event, inputFiles) => {
 
   if (event.shiftKey || modifierKeys.shiftKey) {
     _files = getRandomFileSelectionFrom(_files);
+  }
+
+  if (importFileLimit && _files.length > 750) {
+    _files = _files.slice(0, 750);
   }
 
   _mFiles.forEach((file, idx) => {

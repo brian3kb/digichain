@@ -1,5 +1,6 @@
 1.4.2
  - Hold shift key while dragging in samples to import randomly up to the currently chosen grid-size.
+ - Default to limit the number of imported samples to 750, to reduce risk of timeouts - can be disabled in the settings panel.
 
 2023-05-22 1.4.1
 - Added truncate selected action (shift+click to set a custom length), and crop to selection in the editor panel.

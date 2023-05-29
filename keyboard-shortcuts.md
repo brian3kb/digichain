@@ -8,6 +8,7 @@
  - L / S / R / D : changes the channel for stereo files being processed to mono.
  - Number keys 1 through 0 : play the selected sample in the position of the key with 0 == 10.
  - E: Opens the edit panel for the currently highlighted sample.
+ - Holding Shift Key while dropping files: will randomly select files upto the currently set grid-size value.
 
 **Shift + Click / Shift + Key**
  - Up / Down Keys : moves the highlighted sample up or down in the list.

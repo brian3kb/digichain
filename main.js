@@ -1842,6 +1842,16 @@ const sort = (event, by, prop = 'meta') => {
   renderList();
 };
 
+const selectedHeaderClick = (event, id) => {
+  if (event.ctrlKey || modifierKeys.ctrlKey) {
+    const allChecked = files.every(f => f.meta.checked);
+    files.forEach(f => f.meta.checked = !allChecked);
+    renderList();
+  } else {
+    sort(event, 'checked');
+  }
+};
+
 const handleRowClick = (event, id) => {
   const row = getRowElementById(id);
   if (document.querySelector('.pop-up.show')) { return; }
@@ -3062,6 +3072,7 @@ window.digichain = {
   pitchUpSelected,
   showMergePanel,
   sort,
+  selectedHeaderClick,
   renderList,
   renderRow,
   joinAll: joinAllUICall,

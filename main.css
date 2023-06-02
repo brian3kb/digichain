@@ -660,7 +660,7 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     color: #fff !important;
 }
 
-.has-shift-mod, .has-ctrl-mod, .has-shift-mod-i {
+.has-shift-mod, .has-ctrl-mod, .has-shift-mod-i, .has-ctrl-mod-i {
     transition: all .1s linear;
 }
 
@@ -677,7 +677,9 @@ body.ctrlKey-down .has-ctrl-mod {
     color: #d79c4e;
 }
 body.ctrlKey-mod-down .split[class*="is-"] .has-ctrl-mod-i,
-body.ctrlKey-down .split[class*="is-"] .has-ctrl-mod-i {
+body.ctrlKey-down .split[class*="is-"] .has-ctrl-mod-i,
+body.ctrlKey-mod-down .has-ctrl-mod-i,
+body.ctrlKey-down .has-ctrl-mod-i {
     color: #663247  !important;
 }
 body.shiftKey-mod-down.ctrlKey-mod-down .has-shift-mod.has-ctrl-mod,

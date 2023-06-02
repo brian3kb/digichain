@@ -34,6 +34,7 @@
  - Slice Grid Off Button : restores the default slice grid options.
  - Time Limit : prompts to enter a custom value for the timed chain lengths when that mode is enabled.
  - Row Slice Icon : Clear any related slice data.
+ - Row Selected Header : Toggles select / de-select all samples in list.
 
 **Alt + Key**
  - Number 1 - 0, P : Stops the playback and looping of the sample.

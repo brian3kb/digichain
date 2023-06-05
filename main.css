@@ -121,15 +121,22 @@ input { color: #a8a8a8; }
 #getJoined, #uploadInput, #uploadSliceFile { display: none; }
 #fileNum { padding-left: 1rem; }
 table#masterList { padding-bottom: 12rem; padding-top: 1rem; }
+#fileList {
+    content-visibility: auto;
+}
 #fileList:empty::after {
-    content: 'Load/Drag in some samples to get started...';
+    content: 'Load / Drop samples here to get started...';
     text-align: center;
     padding-top: 7rem;
-    padding-bottom: 5rem;
-    opacity: .25;
+    padding-bottom: 7rem;
+    opacity: .35;
     position: absolute;
     width: 100%;
     font-size: 2rem;
+    border: 2px dashed #40392e;
+    border-radius: 1.5rem;
+    margin-top: 1rem;
+    max-width: 97vw;
 }
 th a { color: #606c76; }
 th a:first-of-type { margin-left: -15px; color: #d79c4e; }
@@ -542,6 +549,13 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
 }
 .left-buttons .button:last-child {
     margin-right: 0;
+}
+
+.load-file-label {
+    width: 21% !important;
+}
+.btn-audio-config {
+    width: 73.5% !important;
 }
 
 .selected-actions-button-list {

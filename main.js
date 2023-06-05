@@ -3058,6 +3058,11 @@ if ('launchQueue' in window) {
     }
   });
 }
+/*Conditionally show the 'load files' button.*/
+const inEdge = (navigator?.userAgentData?.brands??[]).find(b => b.brand.includes('Edge'));
+if (!inEdge) {
+  document.querySelector('.load-file-label').classList.remove('hide');
+}
 
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {

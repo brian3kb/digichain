@@ -1,9 +1,13 @@
-2023.06.01 1.4.2
+2023-06-01 1.4.2
  - Hold shift key while dragging in samples to import randomly up to the currently chosen grid-size.
  - Default to limit the number of imported samples to 750, to reduce risk of timeouts - can be disabled in the settings panel.
  - Limiting the max chain length to 64 slices when using the timed chain length in non-aif audio context, Aif context stays at max 24 slices.
  - Setting the default Shift import random drop value to 256 if no slice grid value is selected (this prevents accidental import of large numbers of files, Ctrl+click a slice-grid number and set a custom value to import more than 256 samples randomly).
  - Ctrl + Click on the Selected header text will toggle all the samples selection to all selected / all de-selected.
+ - Changed load files to an icon, and hiding in Edge.
+ - Expanded width of the audio config selection.
+ - Updated the drop-zone style when list is empty.
+ - Added content-visibility to list body.
 
 2023-05-22 1.4.1
 - Added truncate selected action (shift+click to set a custom length), and crop to selection in the editor panel.

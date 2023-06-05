@@ -1,4 +1,4 @@
-const cacheName = 'cache-v142-230106';
+const cacheName = 'cache-v1421-230506';
 const precacheResources = [
   './',
   'index.html',

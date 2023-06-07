@@ -4,7 +4,7 @@
  - Limiting the max chain length to 64 slices when using the timed chain length in non-aif audio context, Aif context stays at max 24 slices.
  - Setting the default Shift import random drop value to 256 if no slice grid value is selected (this prevents accidental import of large numbers of files, Ctrl+click a slice-grid number and set a custom value to import more than 256 samples randomly).
  - Ctrl + Click on the Selected header text will toggle all the samples selection to all selected / all de-selected.
- - Changed load files to an icon, and hiding in Edge.
+ - Changed load files to an icon.
  - Expanded width of the audio config selection.
  - Updated the drop-zone style when list is empty.
  - Added content-visibility to list body.

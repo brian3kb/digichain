@@ -599,6 +599,54 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
   }
   item.waveform = false;
 }
+
+function double(event, item, reverse = false, renderEditPanel = true) {
+  if (!renderEditPanel && item) {
+    selection.start = 0;
+    selection.end = item.buffer.length;
+  }
+  item = item || editing;
+
+  const audioArrayBuffer = conf.audioCtx.createBuffer(
+      item.buffer.numberOfChannels,
+      item.buffer.length * 2,
+      conf.masterSR
+  );
+  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+    let x = 0;
+    for (let i = selection.start; i < selection.end; i++) {
+      audioArrayBuffer.getChannelData(channel)[x] = item.buffer.getChannelData(channel)[i];
+      x++;
+    }
+    let data = item.buffer.getChannelData(channel).slice(selection.start, selection.end);
+    if (reverse) {
+      data = data.reverse();
+    }
+    for (let i = selection.start; i < selection.end; i++) {
+      audioArrayBuffer.getChannelData(channel)[x] = data[i];
+      x++;
+    }
+
+  }
+  item.buffer = audioArrayBuffer;
+  item.meta = {
+    ...item.meta,
+    length: audioArrayBuffer.length,
+    duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
+    startFrame: 0, endFrame: audioArrayBuffer.length
+  };
+  if (item.meta.slices) {
+    item.meta.slices = false;
+  }
+  if (item.meta.op1Json) {
+    item.meta.op1Json = false;
+  }
+  if (renderEditPanel) {
+    showEditor(editing, conf, 'sample', folders);
+  }
+  item.waveform = false;
+}
+
 export const editor = {
   updateFile,
   toggleReadOnlyInput,
@@ -611,6 +659,7 @@ export const editor = {
   trimRight,
   truncate,
   perSamplePitch,
+  double,
   buildOpKit,
   getLastItem : () => editing?.meta?.id,
   reverse

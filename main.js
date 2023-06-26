@@ -622,6 +622,22 @@ function pitchUpSelected(event) {
   }, 250);
 }
 
+function pingPongSelected(event) {
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked);
+    selected.forEach((f, idx) => {
+      editor.double(event, f, true, false);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
+}
+
 function showInfo() {
   const description = document.querySelector(
       'meta[name=description]').content;
@@ -3070,6 +3086,7 @@ window.digichain = {
   normalizeSelected,
   reverseSelected,
   pitchUpSelected,
+  pingPongSelected,
   showMergePanel,
   sort,
   selectedHeaderClick,

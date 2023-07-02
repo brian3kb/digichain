@@ -1,4 +1,4 @@
-1.4.3
+2023-07-02 1.4.3
  - Added a ping-pong selected actions action to add a reversed copy of the sample to the end of the sample.
  - Fixed issue where generated AIF files did not load slice data accurately into the new TE drum utility tool.
 

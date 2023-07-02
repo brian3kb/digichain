@@ -1,4 +1,4 @@
-export function buildOpData(slices = [], returnTemplate = false) {
+export function buildOpData(slices = [], numChannels, returnTemplate = false) {
   const template = slices?.length ? {
     attack: new Array(24).fill(0),
     drum_version: 2,
@@ -20,7 +20,7 @@ export function buildOpData(slices = [], returnTemplate = false) {
     playmode:new Array(24).fill(5119),
     reverse: new Array(24).fill(12000),
     start: new Array(24).fill(0),
-    stereo: true,
+    stereo: numChannels === 2,
     type: 'drum',
     volume:new Array(24).fill(8192)
   } : {
@@ -38,7 +38,7 @@ export function buildOpData(slices = [], returnTemplate = false) {
     name: 'DigiChain Sample',
     octave: 0,
     original_folder: 'DigiChain',
-    stereo: true,
+    stereo: numChannels === 2,
     synth_version: 3,
     type: 'sampler'
   };
@@ -47,7 +47,8 @@ export function buildOpData(slices = [], returnTemplate = false) {
   if (!slices?.length || slices?.length === 0) {
     return opData; /*Return single synth sampler template*/
   }
-  const scale = 2434; //chunks.form.type === 'AIFC' && chunks.comm.numberOfChannels === 2 ? 2434 : 4058;
+
+  const scale = numChannels === 2 ? 2434 : 4058;
 
   const s = slices.map((slice, idx) => ({
     p: slice.p,
@@ -142,7 +143,7 @@ export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumCh
   }
 
   return renderAsAif ?
-      encodeAif(result, sampleRate, numChannels, buildOpData(meta?.slices)) :
+      encodeAif(result, sampleRate, numChannels, buildOpData(meta?.slices, numChannels)) :
       encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier, embedSliceData);
 }
 

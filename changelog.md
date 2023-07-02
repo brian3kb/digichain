@@ -1,3 +1,7 @@
+1.4.3
+ - Added a ping-pong selected actions action to add a reversed copy of the sample to the end of the sample.
+ - Fixed issue where generated AIF files did not load slice data accurately into the new TE drum utility tool.
+
 2023-06-01 1.4.2
  - Hold shift key while dragging in samples to import randomly up to the currently chosen grid-size.
  - Default to limit the number of imported samples to 750, to reduce risk of timeouts - can be disabled in the settings panel.

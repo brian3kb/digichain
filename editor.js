@@ -53,7 +53,7 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
 }
 
 function createOpData() {
-  samples.json = samples.json || buildOpData([], true);
+  samples.json = samples.json || buildOpData([], conf.masterChannels, true);
 }
 
 function renderKey(color, index) {

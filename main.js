@@ -2394,8 +2394,8 @@ const parseAif = async (
         case 'APPL'://'op-1':
           const utf8Decoder = new TextDecoder('utf-8');
           //let maxSize = chunks.form.type === 'AIFC' ? 44100 * 20 : 44100 * 12;
-          let scale = chunks.form.type === 'AIFC' &&
-          chunks.comm.channels === 2 ? 2434 : 4058;
+          //let scale = chunks.form.type === 'AIFC' &&
+          let scale = chunks.comm.channels === 2 ? 2434 : 4058;
           chunks.json = {
             id: String.fromCharCode(dv.getUint8(offset),
                 dv.getUint8(offset + 1), dv.getUint8(offset + 2),
@@ -2408,9 +2408,9 @@ const parseAif = async (
               arrayBuffer.slice(offset + 12, chunks.json.size + offset + 8));
           chunks.json.data = JSON.parse(
               jsonString.replace(/\]\}(.|\n)+/gi, ']}').trimEnd());
-          if (chunks.json.data?.original_folder === 'digichain') {
-            chunks.json.scale = 2434;
-          }
+          // if (chunks.json.data?.original_folder === 'digichain') {
+          //   chunks.json.scale = 2434;
+          // }
           //jsonString.replace(/\]\}.*/gi, ']}').trimEnd());
           break;
         case 'SSND':

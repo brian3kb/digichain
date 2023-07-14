@@ -1,4 +1,9 @@
-import {audioBufferToWav, buildOpData, encodeAif} from './resources.js';
+import {
+  audioBufferToWav,
+  buildOpData,
+  encodeAif,
+  Resampler,
+} from './resources.js';
 
 const editPanelEl = document.getElementById('editPanel');
 const editableItemsEl = document.getElementById('editableItems');
@@ -370,21 +375,53 @@ function perSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = t
     return alert('Sample too small to be pitched up further.');
   }
 
-  const pitchedWav = audioBufferToWav(item.buffer, item.meta, (conf.masterSR * pitchValue), conf.masterBitDepth, item.buffer.numberOfChannels);
+  const newSR = (conf.masterSR * pitchValue);
+
+  const pitchedWav = audioBufferToWav(item.buffer, item.meta, newSR, conf.masterBitDepth, item.buffer.numberOfChannels, 0.4);
   const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
     type: 'audio/wav',
   });
   (async () => {
     let linkedFile = await fetch(URL.createObjectURL(pitchedBlob));
     let arrBuffer = await linkedFile.arrayBuffer();
-    await conf.audioCtx.decodeAudioData(arrBuffer, buffer => {
-      item.buffer = buffer;
+    await new AudioContext({sampleRate: newSR, latencyHint: 'interactive'}).decodeAudioData(arrBuffer, buffer => {
+
+      let resampledArrayBuffer;
+      let resample, resampleR;
+      resample = new Resampler(newSR, conf.masterSR, 1,
+          buffer.getChannelData(0));
+      resample.resampler(resample.inputBuffer.length);
+
+      if (item.buffer.numberOfChannels === 2) {
+        resampleR = new Resampler(newSR, conf.masterSR, 1,
+            buffer.getChannelData(1));
+        resampleR.resampler(resampleR.inputBuffer.length);
+      }
+
+      resampledArrayBuffer = conf.audioCtx.createBuffer(
+          item.buffer.numberOfChannels,
+          resample.outputBuffer.length,
+          conf.masterSR
+      );
+
+      if (item.buffer.numberOfChannels === 2) {
+        for (let i = 0; i < resample.outputBuffer.length; i++) {
+          resampledArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
+          resampledArrayBuffer.getChannelData(1)[i] = resampleR.outputBuffer[i];
+        }
+      } else {
+        for (let i = 0; i < resample.outputBuffer.length; i++) {
+          resampledArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
+        }
+      }
+
+      item.buffer = resampledArrayBuffer;
       item.meta = {
         ...item.meta,
         opPitch: (item.meta.opPitch??0) + (512 * pitchSteps),
-        length: buffer.length,
-        duration: Number(buffer.length / conf.masterSR).toFixed(3),
-        startFrame: 0, endFrame: buffer.length,
+        length: resampledArrayBuffer.length,
+        duration: Number(resampledArrayBuffer.length / conf.masterSR).toFixed(3),
+        startFrame: 0, endFrame: resampledArrayBuffer.length,
         note: false,
         slices: item.meta.slices ? item.meta.slices.map(slice => ({
           ...slice,

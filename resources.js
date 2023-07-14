@@ -112,7 +112,22 @@ export function encodeOt(slices, bufferLength, tempo = 120) {
   return dv;
 }
 
-export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, renderAsAif = false, pitchModifier = 1, embedSliceData = true) {
+function deClick(audioArray, threshold) {
+  const bufferLength = audioArray.length;
+  if (!threshold || threshold === 0) {
+    return audioArray;
+  }
+  const _threshold = +threshold;
+  for (let i = 1; i < bufferLength - 1; i++) {
+    const average = (audioArray[i - 1] + audioArray[i + 1]) / 2;
+    if (Math.abs(audioArray[i] - average) > _threshold) {
+      audioArray[i] = average;
+    }
+  }
+  return audioArray;
+}
+
+export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, deClickThreshold = false, renderAsAif = false, pitchModifier = 1, embedSliceData = true) {
   let numChannels = buffer.numberOfChannels;
   let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
   sampleRate = sampleRate * pitchModifier;
@@ -134,11 +149,13 @@ export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumCh
         result[i] = (buffer.getChannelData(0)[i] - buffer.getChannelData(1)[i]) / 2;
       }
     }
+    result = deClick(result, deClickThreshold);
   } else {
     if (numChannels === 2) {
-      result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+      //result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+      result = interleave(deClick(buffer.getChannelData(0), deClickThreshold), deClick(buffer.getChannelData(1), deClickThreshold));
     } else {
-      result = buffer.getChannelData(0);
+      result = deClick(buffer.getChannelData(0), deClickThreshold);
     }
   }
 

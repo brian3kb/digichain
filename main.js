@@ -58,8 +58,10 @@ let normalizeContrast = JSON.parse(
     localStorage.getItem('normalizeContrast')) ?? false;
 let importFileLimit = JSON.parse(
     localStorage.getItem('importFileLimit')) ?? true;
+let deClick = JSON.parse(
+    localStorage.getItem('deClick')) ?? 0.4;
 let secondsPerFile = 0;
-let audioCtx = new AudioContext({sampleRate: masterSR});
+let audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
 let files = [];
 let unsorted = [];
 let metaFiles = [];
@@ -182,7 +184,7 @@ function changeAudioConfig(event, option) {
     audioConfigOptions[selection].bd,
     audioConfigOptions[selection].c];
   event.target.dataset.selection = selection;
-  audioCtx = new AudioContext({sampleRate: masterSR});
+  audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
   secondsPerFile = lastUsedAudioConfig.includes('a') ? 20 : secondsPerFile;
   toggleSecondsPerFile(false,
       secondsPerFile === 0 ? 0 :
@@ -395,7 +397,7 @@ async function setWavLink(file, linkEl, renderAsAif) {
       fileName;
 
   wav = audioBufferToWav(
-      file.buffer, file.meta, masterSR, masterBitDepth, masterChannels,
+      file.buffer, file.meta, masterSR, masterBitDepth, masterChannels, deClick,
       (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData
   );
   blob = new window.Blob([new DataView(wav)], {
@@ -412,7 +414,7 @@ async function setWavLink(file, linkEl, renderAsAif) {
       e: Math.round(slice.e / pitchModifier)
     }));
     wav = audioBufferToWav(
-        pitchedBuffer, meta, masterSR, masterBitDepth, masterChannels,
+        pitchedBuffer, meta, masterSR, masterBitDepth, masterChannels, deClick,
         renderAsAif, 1, embedSliceData
     );
     blob = new window.Blob([new DataView(wav)], {
@@ -729,6 +731,11 @@ function toggleSetting(param, value) {
     localStorage.setItem('playWithPopMarker', playWithPopMarker);
     showExportSettingsPanel();
   }
+  if (param === 'deClick') {
+    deClick = value;
+    localStorage.setItem('deClick', deClick);
+    showExportSettingsPanel();
+  }
 }
 
 function setCustomSecondsPerFileValue(targetEl, size, silent = false) {
@@ -855,6 +862,25 @@ function showExportSettingsPanel() {
   1 ? 'button' : 'button-outline'}">0db</button>
   <button onclick="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${playWithPopMarker ===
   2 ? 'button' : 'button-outline'}">Peak</button>
+  </td>
+  </tr>
+    <tr>
+  <td><span>De-click exported samples?<br>Helps when importing non-wav files of a different<br>sample rate than the export file, or small buffered audio interfaces. &nbsp;&nbsp;&nbsp;</span></td>
+  <td>
+  <button onclick="digichain.toggleSetting('deClick', 0)" class="check ${+deClick ===
+  0 ? 'button' : 'button-outline'}">OFF</button>
+  <button onclick="digichain.toggleSetting('deClick', 0.1)" class="check ${+deClick ===
+  0.1 ? 'button' : 'button-outline'}">&gt;10%</button>
+  <button onclick="digichain.toggleSetting('deClick', 0.2)" class="check ${+deClick ===
+  0.2 ? 'button' : 'button-outline'}">&gt;20%</button>
+  <button onclick="digichain.toggleSetting('deClick', 0.3)" class="check ${+deClick ===
+  0.3 ? 'button' : 'button-outline'}">&gt;30%</button>
+  <button onclick="digichain.toggleSetting('deClick', 0.4)" class="check ${+deClick ===
+  0.4 ? 'button' : 'button-outline'}">&gt;40%</button>
+  <button onclick="digichain.toggleSetting('deClick', 0.5)" class="check ${+deClick ===
+  0.5 ? 'button' : 'button-outline'}">&gt;50%</button>
+  <button onclick="digichain.toggleSetting('deClick', 0.75)" class="check ${+deClick ===
+  0.75 ? 'button' : 'button-outline'}">&gt;75%</button>
   </td>
   </tr>
 <tr>
@@ -2651,6 +2677,38 @@ const parseWav = (
   }
   try {
     /*duration, length, numberOfChannels, sampleRate*/
+    let resampledArrayBuffer;
+
+    if(file.sampleRate && file.sampleRate !== masterSR) {
+      let resample, resampleR;
+      resample = new Resampler(file.sampleRate, masterSR, 1,
+          audioArrayBuffer.getChannelData(0));
+      resample.resampler(resample.inputBuffer.length);
+
+      if (file.channels === 2) {
+        resampleR = new Resampler(file.sampleRate, masterSR, 1,
+            audioArrayBuffer.getChannelData(1));
+        resampleR.resampler(resampleR.inputBuffer.length);
+      }
+
+      resampledArrayBuffer = audioCtx.createBuffer(
+          file.channels,
+          resample.outputBuffer.length,
+          masterSR
+      );
+
+      if (file.channels === 2) {
+        for (let i = 0; i < resample.outputBuffer.length; i++) {
+          resampledArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
+          resampledArrayBuffer.getChannelData(1)[i] = resampleR.outputBuffer[i];
+        }
+      } else {
+        for (let i = 0; i < resample.outputBuffer.length; i++) {
+          resampledArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
+        }
+      }
+    }
+
     files[pushToTop ? 'unshift' : 'push']({
       file: {
         lastModified: file.lastModified,
@@ -2660,12 +2718,12 @@ const parseWav = (
         size: file.size,
         type: file.type
       },
-      buffer: audioArrayBuffer, meta: {
-        length: audioArrayBuffer.length,
-        duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
-        startFrame: 0, endFrame: audioArrayBuffer.length,
+      buffer: (resampledArrayBuffer || audioArrayBuffer), meta: {
+        length: (resampledArrayBuffer || audioArrayBuffer).length,
+        duration: Number((resampledArrayBuffer || audioArrayBuffer).length / masterSR).toFixed(3),
+        startFrame: 0, endFrame: (resampledArrayBuffer || audioArrayBuffer).length,
         checked: checked, id: uuid,
-        channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
+        channel: (resampledArrayBuffer || audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
         slices: slices,
         note: noteFromFileName(file.name)
       }
@@ -2783,7 +2841,25 @@ const consumeFileInput = (event, inputFiles) => {
       ) {
         count.push(file.uuid);
         const fb = buffer.slice(0);
-        await audioCtx.decodeAudioData(buffer, data => {
+
+        if (file.name.toLowerCase().endsWith('.wav') ||
+            file.type === 'audio/wav') {
+          let dv = new DataView(buffer);
+          for (let i = 0; i < dv.byteLength - 4; i++) {
+            const code = String.fromCharCode(dv.getUint8(i), dv.getUint8(i + 1),
+                dv.getUint8(i + 2), dv.getUint8(i + 3));
+            if (i > dv.byteLength || code === 'PAD ') {
+              break;
+            }
+            if (code === 'fmt ') {
+              file.channels = dv.getUint16(i + 10, true);
+              file.sampleRate = dv.getUint32(i + 12, true);
+              break;
+            }
+          }
+        }
+
+        await (masterSR !== file.sampleRate ? new AudioContext({sampleRate: file.sampleRate, latencyHint: 'interactive'}) : audioCtx).decodeAudioData(buffer, data => {
           let result = parseWav(data, fb, file, file.fullPath);
           if (result.failed) {
             count.splice(count.findIndex(c => c === result.uuid), 1);

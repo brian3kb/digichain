@@ -1,5 +1,6 @@
 2023-07-13 1.4.4
  - Minimizes reported click/pops on exported chains when importing wav files of differing sample rate to the target sample rate, or when using audio interfaces configured with small sample buffers. On by default at a 40% threshold, user configurable thresholds and can be disabled via settings panel.
+ - Resolves issue where running in the Brave browser caused an unexpected error modifying an existing audio array buffer.
 
 2023-07-02 1.4.3
  - Added a ping-pong selected actions action to add a reversed copy of the sample to the end of the sample.

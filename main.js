@@ -61,7 +61,7 @@ let importFileLimit = JSON.parse(
 let deClick = JSON.parse(
     localStorage.getItem('deClick')) ?? 0.4;
 let secondsPerFile = 0;
-let audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
+let audioCtx;
 let files = [];
 let unsorted = [];
 let metaFiles = [];
@@ -156,7 +156,7 @@ metaFiles.removeByName = function(filename) {
   }
 }
 
-function changeAudioConfig(event, option) {
+function changeAudioConfig(event, option, onloadRestore = false) {
   const selection = option ||
       event?.target?.selectedOptions[0]?.value ||
       'm4800016';
@@ -184,7 +184,9 @@ function changeAudioConfig(event, option) {
     audioConfigOptions[selection].bd,
     audioConfigOptions[selection].c];
   event.target.dataset.selection = selection;
-  audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
+  if (!onloadRestore) {
+    audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
+  }
   secondsPerFile = lastUsedAudioConfig.includes('a') ? 20 : secondsPerFile;
   toggleSecondsPerFile(false,
       secondsPerFile === 0 ? 0 :
@@ -2761,6 +2763,15 @@ const getRandomFileSelectionFrom = (fileCollection) => {
 const consumeFileInput = (event, inputFiles) => {
   document.getElementById('loadingText').textContent = 'Loading samples';
   document.body.classList.add('loading');
+  if (!audioCtx) {
+    audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
+    setEditorConf({
+      audioCtx,
+      masterSR,
+      masterChannels,
+      masterBitDepth
+    });
+  }
   const isAudioCtxClosed = checkAudioContextState();
   if (isAudioCtxClosed) { return; }
   let _files = [...inputFiles].filter(
@@ -2905,6 +2916,15 @@ document.body.addEventListener(
     'drop',
     (event) => {
       event.preventDefault();
+      if (!audioCtx) {
+        audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
+        setEditorConf({
+          audioCtx,
+          masterSR,
+          masterChannels,
+          masterBitDepth
+        });
+      }
       if (event?.dataTransfer?.items?.length &&
           event?.dataTransfer?.items[0].kind === 'string') {
         try {
@@ -3132,7 +3152,7 @@ document.body.classList[
 if (restoreLastUsedAudioConfig) {
   changeAudioConfig({
     target: document.getElementById('audioConfigOptions')
-  }, lastUsedAudioConfig);
+  }, lastUsedAudioConfig, true);
 } else {
   setEditorConf({
     audioCtx,

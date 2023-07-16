@@ -30,7 +30,8 @@ body {
 #toggleOptionsButton {
     position: absolute;
     margin-left: 50vw;
-    margin-top: 19rem;
+    /*margin-top: 19rem;*/
+    margin-top: .85rem;
     color: #d79c4e30;
     text-align: center;
     cursor: pointer;
@@ -40,7 +41,7 @@ body {
     background-color: #202124;
 }
 #toggleOptionsButton.collapsed {
-    margin-top: 0.75rem;
+    margin-top: 0.85rem;
 }
 .logo h3::after {
     content: attr(data-version);
@@ -565,6 +566,7 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     padding: 0.5rem 0.5rem 0 0.5rem;
     border-radius: 0.4rem;
     background-color: #202124;
+    z-index: 1;
 }
 .selected-actions-button-list .button-outline {
     width: 16.5rem;
@@ -922,7 +924,8 @@ table#mergeList td.file-path-td {
         margin-top: -31rem;
     }
     #toggleOptionsButton {
-        margin-top: 35.5rem;
+        /*margin-top: 35.5rem;*/
+        margin-top: .85rem;
     }
 }
 
@@ -946,7 +949,7 @@ table#mergeList td.file-path-td {
     }
 
     #toggleOptionsButton {
-        margin-top: 34rem;
+        /*margin-top: 34rem;*/
     }
 
     #masterList tr {
@@ -1136,7 +1139,7 @@ table#mergeList td.file-path-td {
         margin: -2rem 0 0 -2rem;
     }
     #toggleOptionsButton {
-        margin-top: 34rem;
+        /*margin-top: 34rem;*/
     }
     .edit-btn-group.float-left {
         max-width: 44%;

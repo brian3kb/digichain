@@ -474,10 +474,10 @@ function normalize(event, item, renderEditPanel = true, findPeakOnly = false) {
   item.waveform = false;
 }
 
-function fade(type, item, renderEditPanel = true) {
+function fade(type, item, renderEditPanel = true, start = 0, end = 0, absolute = false) {
   if (!renderEditPanel && item) {
-    selection.start = 0;
-    selection.end = item.buffer.length;
+    selection.start = start;
+    selection.end = end > 0 ? end : item.buffer.length;
   }
   item = item || editing;
 
@@ -490,18 +490,25 @@ function fade(type, item, renderEditPanel = true) {
   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
     let data = item.buffer.getChannelData(channel);
     if (type === 'out') {
+      if (absolute) {
+        data[selection.end] = 0;
+      }
       for (let i = selection.start; i < selection.end; i++) {
           data[i] = data[i] *
               ((fadeDuration - (i - selection.start)) / fadeDuration);
       }
     } else if (type === 'in') {
+      if (absolute) {
+        data[selection.start] = 0;
+      }
       for (let i = selection.end; i > selection.start; i--) {
           data[i] = data[i] /
               ((fadeDuration - (i - selection.end)) / fadeDuration);
       }
-    } else if (type === 'curse') {
+    } else if (type === 'fuzz') {
       for (let i = selection.start; i < selection.end; i++) {
-        data[i] = ((fadeDuration - i) / fadeDuration) / data[i];
+        const x = ((fadeDuration + i) / fadeDuration) / (data[i] + 0.001) * Math.random();
+        data[i] = Math.abs(x) > 1 ? (data[i] + 0.001) : x;
       }
     } else {
       for (let i = selection.end; i > selection.start; i--) {

@@ -642,13 +642,53 @@ function pingPongSelected(event) {
   }, 250);
 }
 
+function fuzzSelected(event) {
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked);
+    selected.forEach((f, idx) => {
+      editor.fade('fuzz', f, false);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
+}
+
+function fadeSelected(event, type) {
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked);
+    selected.forEach((f, idx) => {
+      let start = 0,
+          end = f.buffer.length < 256 ? f.buffer.length : 256;
+      if (type === 'out') {
+        start = f.buffer.length < 256 ? 0 : f.buffer.length - 256;
+        end = f.buffer.length;
+      }
+      editor.fade(type, f, false, start, end, true);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
+}
+
 function showInfo() {
   const description = document.querySelector(
       'meta[name=description]').content;
+  const version = document.querySelector(
+      'meta[name=version]').content;
   const infoPanelContentEl = document.querySelector(
       '#infoPanelMd .content');
   infoPanelContentEl.innerHTML = `
-  <h3>DigiChain</h3>
+  <h3>DigiChain (${version})</h3>
   <p>${description}</p>
   <p class="float-right"><a href="https://brianbar.net/" target="_blank">Brian Barnett</a>
   (<a href="https://www.youtube.com/c/sfxBrian" target="_blank">sfxBrian</a> / <a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>
@@ -1099,6 +1139,123 @@ function performMerge(mFiles) {
         newItem.buffer.getChannelData(panChannel)[i] = buffer[i] === 0 ?
             data[i] :
             ((buffer[i] + data[i]) / 2);
+      }
+    }
+
+    if (idx === mFiles.length - 1) {
+      files.unshift(newItem);
+      unsorted.push(newItem.meta.id);
+      document.body.classList.remove('loading');
+      renderList();
+    }
+  });
+
+}
+
+function showBlendPanel() {
+  const mergePanelEl = document.getElementById('mergePanel');
+  const mergePanelContentEl = document.getElementById('mergePanelContent');
+  mergeFiles = files.filter(f => f.meta.checked).map(f => {
+    f.meta.pan = f.meta.pan || 'C';
+    return f;
+  });
+  if (mergeFiles.length < 2) {
+    return alert('Blend requires more than one file to be selected.');
+  }
+
+  mergePanelContentEl.innerHTML = `
+   <div class="row">
+   <div class="column mh-60vh">
+     <table id="mergeList">
+      <thead>
+        <tr>
+        <th>Filename</th>
+        <th>Duration</th>
+        <th>Mono Channel Choice</th>
+        </tr>
+      </thead>
+    <tbody>
+` + mergeFiles.map(mf => buildRowMarkupFromFile(mf, 'blend')).join('') +
+      `</tbody>
+   </table>
+ </div>
+</div>
+<div class="row" style="padding-left: 1rem;">
+<label for="blendLength">Blend length: </label>
+<select class="btn-audio-config" style="max-width: 100px;margin-left: 1rem;margin-top: -.75rem;" name="blendLength" id="blendLength">
+${[16, 32, 64, 128, 256, 512, 1024, 2048, 4096].reduce((a, c) => 
+  a += '<option value="' + c + '"' + ( c === 64 ? 'selected="selected">' : '>') + c + '</option>' 
+      , '')}
+</select>
+</div>
+<span class="merge-info">EXPERIMENTAL: Blend interpolates between the selected samples by the number of steps specified. Works best when the selected files are approximately the same durations.</span>
+<button class="float-right" onclick="digichain.performBlendUiCall()">Blend Files</button>
+`;
+  mergePanelEl.showModal();
+}
+
+function performBlendUiCall() {
+  const blendLengthEl = document.getElementById('blendLength');
+  const blendLength = +blendLengthEl.value;
+  const blendPanelEl = document.getElementById('mergePanel');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  if (files.filter(f => f.meta.checked).length === 0 || !blendLength) {
+    return;
+  }
+  blendPanelEl.close();
+  setTimeout(() => performBlend(mergeFiles, blendLength), 100);
+}
+
+function performBlend(mFiles, blendLength) {
+  const blendLengths = mFiles.map( (f, i) =>
+      Math.floor(blendLength / mFiles.length) + (i === mFiles.length - 1 ? blendLength % mFiles.length : 0)
+  );
+
+  let blendName = `${getNiceFileName(mFiles.at(0).file.name)}__${getNiceFileName(mFiles.at(-1).file.name)}_blend`;
+  let newItemBuffer = audioCtx.createBuffer(
+      1,
+      mFiles.reduce((a, f, i) => a += f.buffer.length * blendLengths[i], 0),
+      masterSR
+  );
+  let newItem = {
+    file: {
+      name: blendName,
+      filename: `${blendName}.wav`,
+      path: '',
+      type: 'audio/wav'
+    },
+    buffer: newItemBuffer,
+    meta: {
+      length: newItemBuffer.length,
+      duration: Number(newItemBuffer.length / masterSR).toFixed(3),
+      startFrame: 0,
+      endFrame: newItemBuffer.length,
+      isBlend: true,
+      editOf: '',
+      id: crypto.randomUUID(),
+      checked: false
+    },
+    waveform: false
+  };
+  for (let i = 0; i < newItem.buffer.length; i++) {
+    newItem.buffer.getChannelData(0)[i] = 0;
+  }
+
+  let pos = 0;
+  mFiles.forEach((mf, idx) => {
+    const nextMf = idx === mFiles.length - 1 ? mFiles[0] : mFiles[idx + 1];
+    let data = mf.buffer.numberOfChannels === 2 ?
+      getMonoFloat32ArrayFromBuffer(mf.buffer, mf.meta?.channel) :
+      mf.buffer.getChannelData(0);
+    let data2 = nextMf.buffer.numberOfChannels === 2 ?
+        getMonoFloat32ArrayFromBuffer(nextMf.buffer, nextMf.meta?.channel) :
+        nextMf.buffer.getChannelData(0);
+
+    for (let n = 0; n < blendLengths[idx]; n++) {
+      for (let i = 0; i < data.length; i++) {
+        newItem.buffer.getChannelData(0)[pos] = data[i] + ((n+1) / blendLengths[idx]) * (data2[i] - data[i]);
+        pos++;
       }
     }
 
@@ -2251,7 +2408,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
           <i class="gg-shape-circle"></i>
       </div>
   </td>
-  <td class="pan-options-td">
+  <td class="pan-options-td ${type === 'blend' ? 'hide' : ''}">
       <div class="pan-options" style="display: block;">
       <a title="Hard Left" onclick="digichain.changePan(event, '${f.meta.id}', 'L')" class="${f.meta.pan ===
       'L' ? 'selected' : ''} pan-option-L">L</a>
@@ -3183,13 +3340,17 @@ window.digichain = {
   reverseSelected,
   pitchUpSelected,
   pingPongSelected,
+  fuzzSelected,
+  fadeSelected,
   showMergePanel,
+  showBlendPanel,
   sort,
   selectedHeaderClick,
   renderList,
   renderRow,
   joinAll: joinAllUICall,
   performMergeUiCall,
+  performBlendUiCall,
   selectSliceAmount,
   showInfo,
   toggleCheck,

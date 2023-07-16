@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name = "viewport" content = "width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
   <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]">
-  <meta name="version" content="1.4.3">
+  <meta name="version" content="1.4.4">
   <meta
           name="description"
           content="DigiChain aims to make the creation of sample chains as easy as possible; it loads uncompressed wav, syx (MachineDrum), aif (OP-1 Field/OP-Z), flac, and converts them to wav files for transfer via the Transfer app, or to aif files for use on Teenage Engineering OP-1 Field / OP-Z, or direct playback. The converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. When the slice-grid is on, the last sample in the chain will be repeated to pad to the selected grid size. All processing is done in the browser, on *your* computer, no data is sent to a server, and there is no, and never will be any user tracking. The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
@@ -110,7 +110,7 @@
     <div for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</div>
     <output class="float-left" id="fileNum">0/0</output>
   </div>
-  <div id="toggleOptionsButton" class="collapsed" onclick="digichain.toggleOptionsPanel()"><i class="gg-select-r"></i></div>
+  <div id="toggleOptionsButton" class="collapsed" onclick="digichain.toggleOptionsPanel()"><i class="gg-select-r" title="Hide/show the top options panel."></i></div>
   <div id="infoIndicator"></div>
 </div>
 
@@ -153,7 +153,7 @@
           <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline">
             Trim Right
           </button>
-          <br>
+
           <button title="Truncate all selected. 3 seconds is the default, shift+click to set custom length." onclick="digichain.truncateSelected(event)" class="button-outline has-shift-mod">
             Truncate
           </button>
@@ -161,7 +161,7 @@
           <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)" class="button-outline">
             Normalize
           </button>
-          <br>
+
           <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline">
             Reverse
           </button>
@@ -169,13 +169,28 @@
           <button title="Pitch all selected up by 1 octave." onclick="digichain.pitchUpSelected(event)"
                   class="button-outline">Pitch Up an Octave
           </button>
-          <br>
-          <button title="Add a reversed verson of the sample to the end of itself." onclick="digichain.pingPongSelected(event)"
+
+          <button title="Add a reversed version of the sample to the end of itself." onclick="digichain.pingPongSelected(event)"
                   class="button-outline">Ping-Pong
+          </button>
+          <br>
+          <button title="Create small fade-in on all selected samples." onclick="digichain.fadeSelected(event, 'in')"
+                  class="button-outline">Fade In
+          </button>
+
+          <button title="Create small fade-out on all selected samples." onclick="digichain.fadeSelected(event, 'out')"
+                  class="button-outline">Fade Out
+          </button>
+          <br>
+          <button title="Introduces noise into the sample." onclick="digichain.fuzzSelected(event)"
+                  class="button-outline">Fuzz
           </button>
         </div>
         <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)"
-                class="button button-outline">Merge Selected
+                class="button button-outline" style="width: 23%;">Merge
+        </button>
+        <button title="Blend all selected to new sample" onclick="digichain.showBlendPanel(event)"
+                class="button button-outline" style="width: 23%;">Blend
         </button>
       </div>
     </div>

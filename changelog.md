@@ -1,3 +1,7 @@
+ - Improved the note from filename detection and sorting.
+ - 44.1/48K 8bit mono/stereo file exports.
+ - Crush selected actions action to add some crush/distortion to the sample.
+
 2023-07-16 1.4.4
  - Minimizes reported click/pops on exported chains when importing wav files of differing sample rate to the target sample rate, or when using audio interfaces configured with small sample buffers. On by default at a 40% threshold, user configurable thresholds and can be disabled via settings panel.
  - Resolves issue where running in the Brave browser caused an unexpected error modifying an existing audio array buffer.

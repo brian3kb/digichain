@@ -19,6 +19,10 @@ const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
 const opSliceOptions = [4, 8, 12, 16, 20, 24];
 const otSliceOptions = [4, 8, 16, 32, 48, 64];
 const audioConfigOptions = {
+  m441008: { sr: 44100, bd: 8, c: 1 },
+  s441008: { sr: 44100, bd: 8, c: 2 },
+  m480008: { sr: 48000, bd: 8, c: 1 },
+  s480008: { sr: 48000, bd: 8, c: 2 },
   m4410016: { sr: 44100, bd: 16, c: 1 },
   s4410016: { sr: 44100, bd: 16, c: 2 },
   m4410024: { sr: 44100, bd: 24, c: 1 },
@@ -654,6 +658,39 @@ function fuzzSelected(event) {
         document.body.classList.remove('loading');
       }
     });
+    renderList();
+  }, 250);
+}
+
+function crushSelected(event) {
+  let crushAmount = 25;
+  if (event.shiftKey || modifierKeys.shiftKey) {
+    const userResponse = prompt(`Please enter a custom crush amount (25 is the default, above 127 will sound the same)...`);
+    if (userResponse && !isNaN(userResponse)) {
+      crushAmount = Math.abs(+userResponse);
+    }
+  }
+  crushAmount = Math.min(Math.floor(Math.abs(crushAmount)), 127);
+
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(async() => {
+    const selected = files.filter(f => f.meta.checked);
+    await  new Promise(resolve => selected.forEach((f, idx) => {
+      editor.perSamplePitch(event, 1, 1, f, false, crushAmount, 8);
+      if (idx === selected.length - 1) {
+        resolve(true);
+      }
+    }));
+    await new Promise(resolve => setTimeout(() => (selected.forEach((f, idx) => {
+      //editor.perSamplePitch(event, .5, 12, f, false);
+      editor.normalize(event, f, false);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+        resolve(true);
+      }
+    })), 1000));
     renderList();
   }, 250);
 }
@@ -2014,7 +2051,7 @@ const move = (event, id, direction) => {
 };
 const sort = (event, by, prop = 'meta') => {
   const groupByChecked = (event.shiftKey || modifierKeys.shiftKey);
-  const forLocaleCompare = ['name', 'note'];
+  const forLocaleCompare = ['name'];
   if (by === 'id') {
     if (groupByChecked === true) {
       files.sort(
@@ -2022,6 +2059,20 @@ const sort = (event, by, prop = 'meta') => {
     } else {
       files = unsorted.map(key => files.find(f => f.meta.id === key));
       lastSort = '';
+    }
+  } else if (by === 'note') {
+    const noteOrder = [];
+    const notes = ['C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'];
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].forEach(o => notes.forEach(n => noteOrder.push(`${n}${o}`)));
+    files = files.sort((a, b) => {
+      const noteA = a[prop][by];
+      const noteB = b[prop][by];
+      const noteValueA = noteOrder.indexOf(noteA);
+      const noteValueB = noteOrder.indexOf(noteB);
+      return noteValueA < noteValueB ? -1 : 1;
+    });
+    if (lastSort === by) { files.reverse(); lastSort = ''; } else {
+      lastSort = by;
     }
   } else {
     if (lastSort === by) {
@@ -2458,8 +2509,11 @@ const bytesToInt = (bh, bm, bl) => {
 };
 
 function noteFromFileName(name) {
-  const match = name.match(/[-_. ](?![EB]#)([A-G])([#b])?([0-9]|[0-9]{2})?[-_. ]/);
-  return match? match[0].trim() : '';
+  //const match = name.match(/[-_. ](?![EB]#)([A-G])([#b])?([0-9]|[0-9]{2})?[-_. ]/);
+  //return match? match[0].replace(/_|-|\./g, '').trim() : '';
+  const match = name.match(/_([A-Ga-g](?:#|b)?)(-?\d+)\.\w+$/);
+  return match && match.length > 2 ? (match[1] + match[2]).replace(/_|-|\./g, '').trim() : '';
+
 }
 function createAndSetOtFileLink(slices, bufferLength, fileName, linkEl) {
   if (checkShouldExportOtFile() && slices && slices.length > 0) {
@@ -3341,6 +3395,7 @@ window.digichain = {
   pitchUpSelected,
   pingPongSelected,
   fuzzSelected,
+  crushSelected,
   fadeSelected,
   showMergePanel,
   showBlendPanel,

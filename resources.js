@@ -222,6 +222,8 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
     floatTo16BitPCM(view, 44, samples);
   } else if (bitDepth === 24) {
     floatTo24BitPCM(view, 44, samples);
+  } else if (bitDepth === 8) {
+    floatTo8BitPCM(view, 44, samples);
   } else {
     writeFloat32(view, 44, samples);
   }
@@ -381,21 +383,28 @@ function interleave(inputL, inputR) {
 }
 
 function writeFloat32(output, offset, input) {
-  for (var i = 0; i < input.length; i++, offset += 4) {
+  for (let i = 0; i < input.length; i++, offset += 4) {
     output.setFloat32(offset, input[i], true);
   }
 }
 
+function floatTo8BitPCM(output, offset, input){
+  for (let i = 0; i < input.length; i++, offset++){
+    const s = Math.max(-1, Math.min(1, input[i]));
+    output.setInt8(offset, (s * 128) + 128);
+  }
+}
+
 function floatTo16BitPCM(output, offset, input) {
-  for (var i = 0; i < input.length; i++, offset += 2) {
-    var s = Math.max(-1, Math.min(1, input[i]));
+  for (let i = 0; i < input.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, input[i]));
     output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
   }
 }
 
 function floatTo24BitPCM(output, offset, input) {
-  for (var i = 0; i < input.length; i++, offset += 3) {
-    var s = Math.floor(input[i] * 8388608 + 0.5);
+  for (let i = 0; i < input.length; i++, offset += 3) {
+    const s = Math.floor(input[i] * 8388608 + 0.5);
     output.setInt24(offset, s, true);
   }
 }

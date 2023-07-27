@@ -368,7 +368,7 @@ function resetSelectionPoints() {
   updateSelectionEl();
 }
 
-function perSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = true) {
+function perSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = true, volumeAdjust = 1, bitDepthOverride) {
   item = item || editing;
 
   if (item.buffer.length < 1024 && pitchValue > 1) {
@@ -376,8 +376,22 @@ function perSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = t
   }
 
   const newSR = (conf.masterSR * pitchValue);
+  let audioArrayBuffer;
 
-  const pitchedWav = audioBufferToWav(item.buffer, item.meta, newSR, conf.masterBitDepth, item.buffer.numberOfChannels, 0.4);
+  if (volumeAdjust !== 1) {
+    audioArrayBuffer = conf.audioCtx.createBuffer(
+        item.buffer.numberOfChannels,
+        item.buffer.length,
+        conf.masterSR
+    );
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+      for (let i = 0; i < item.buffer.length; i++) {
+        audioArrayBuffer.getChannelData(channel)[i] = item.buffer.getChannelData(channel)[i] / volumeAdjust;
+      }
+    }
+  }
+
+  const pitchedWav = audioBufferToWav((audioArrayBuffer || item.buffer), item.meta, newSR, (bitDepthOverride || conf.masterBitDepth), item.buffer.numberOfChannels, 0.4);
   const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
     type: 'audio/wav',
   });

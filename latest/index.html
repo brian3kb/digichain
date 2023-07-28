@@ -125,12 +125,16 @@
         <label class="button button-clear load-file-label" for="uploadInput" aria="Load files..." title="Load files..."><i class="gg-file-add"></i></label>
         <input id="uploadInput" type="file" multiple/>
           <select title="Change audio file export settings." onchange="digichain.changeAudioConfig(event)" data-selection="m4800016" class="btn-audio-config gg-calibrate" name="audioConfigOptions" id="audioConfigOptions">
+            <option value="m441008">44.1K/8BIT MONO</option>
+            <option value="s441008">44.1K/8BIT STEREO</option>
             <option value="m4410016">44.1K/16BIT MONO</option>
             <option value="s4410016">44.1K/16BIT STEREO</option>
             <option value="m4410024">44.1K/24BIT MONO</option>
             <option value="s4410024">44.1K/24BIT STEREO</option>
             <option value="m4410032">44.1K/32BIT MONO</option>
             <option value="s4410032">44.1K/32BIT STEREO</option>
+            <option value="m480008">48K/8BIT MONO</option>
+            <option value="s480008">48K/8BIT STEREO</option>
             <option value="m4800016" selected>48K/16BIT MONO</option>
             <option value="s4800016">48K/16BIT STEREO</option>
             <option value="m4800024">48K/24BIT MONO</option>
@@ -184,6 +188,9 @@
           <br>
           <button title="Introduces noise into the sample." onclick="digichain.fuzzSelected(event)"
                   class="button-outline">Fuzz
+          </button>
+          <button title="Crushes the sample, shift+click to set custom amount between 1 and 128 (default is 25)." onclick="digichain.crushSelected(event)"
+                  class="button-outline has-shift-mod">Crush
           </button>
         </div>
         <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)"
@@ -274,19 +281,6 @@
   if ( window.location !== window.parent.location ) {
     document.documentElement.classList.add('scaled');
   }
-
-  // if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.pathname.includes('latest') && window.location === window.parent.location) {
-  //   window.addEventListener('load', async () => {
-  //     try {
-  //       let reg;
-  //         reg = await navigator.serviceWorker.register('sw.js', {
-  //           type: 'module',
-  //         });
-  //     } catch (err) {
-  //       console.log('Service worker registration failed: ', err);
-  //     }
-  //   });
-  // }
 </script>
 
 </body>

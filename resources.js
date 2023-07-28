@@ -390,8 +390,9 @@ function writeFloat32(output, offset, input) {
 
 function floatTo8BitPCM(output, offset, input){
   for (let i = 0; i < input.length; i++, offset++){
-    const s = Math.max(-1, Math.min(1, input[i]));
-    output.setInt8(offset, (s * 128) + 128);
+    //const s = Math.max(-1, Math.min(1, input[i]));
+    const s = Math.floor(Math.max(-1, Math.min(1, input[i])) * 127 + 128);
+    output.setInt8(offset, s);
   }
 }
 

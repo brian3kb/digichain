@@ -28,6 +28,7 @@
  - Reset Button : Randomizes the order of the list.
  - Check Sample Row Button : Will select all samples between the highlighted sample and the clicked sample (inclusive). Ctrl+Shift+Click will de-select.
  - E : Opens the editor panel for the currently highlighted sample, with the file name and path inputs editable, and the filename input keyboard focused.
+ - Truncate / Crush : Shows popup to enter a custom value.
 
 **Ctrl + Click**
  - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.

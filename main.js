@@ -394,7 +394,7 @@ const showEditPanel = (event, id, view = 'sample') => {
 function checkShouldExportOtFile() {
   return exportWithOtFile && masterChannels === 2 && masterSR === 44100 && !lastUsedAudioConfig.includes('a');
 }
-async function setWavLink(file, linkEl, renderAsAif) {
+async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
   let fileName = getNiceFileName('', file, false, true);
   let wav, blob;
 
@@ -403,7 +403,7 @@ async function setWavLink(file, linkEl, renderAsAif) {
       fileName;
 
   wav = audioBufferToWav(
-      file.buffer, file.meta, masterSR, masterBitDepth, masterChannels, deClick,
+      file.buffer, file.meta, masterSR, (bitDepthOverride || masterBitDepth), masterChannels, deClick,
       (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData
   );
   blob = new window.Blob([new DataView(wav)], {
@@ -420,7 +420,7 @@ async function setWavLink(file, linkEl, renderAsAif) {
       e: Math.round(slice.e / pitchModifier)
     }));
     wav = audioBufferToWav(
-        pitchedBuffer, meta, masterSR, masterBitDepth, masterChannels, deClick,
+        pitchedBuffer, meta, masterSR, (bitDepthOverride || masterBitDepth), masterChannels, deClick,
         renderAsAif, 1, embedSliceData
     );
     blob = new window.Blob([new DataView(wav)], {
@@ -1057,7 +1057,7 @@ function joinToMono(audioArrayBuffer, _files, largest, pad) {
         file?.meta?.channel);
 
     for (let i = 0; i < bufferLength; i++) {
-      audioArrayBuffer.getChannelData(0)[totalWrite] = result[i];
+      audioArrayBuffer.getChannelData(0)[totalWrite] = result[i] || 0;
       totalWrite++;
     }
   });
@@ -1078,8 +1078,8 @@ function joinToStereo(audioArrayBuffer, _files, largest, pad) {
     }
 
     for (let i = 0; i < bufferLength; i++) {
-      audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i];
-      audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i];
+      audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i] || 0;
+      audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i] || 0;
       totalWrite++;
     }
   });
@@ -1166,16 +1166,16 @@ function performMerge(mFiles) {
     if (mf.meta.pan === 'C') {
       for (let i = 0; i < mf.buffer.length; i++) {
         newItem.buffer.getChannelData(0)[i] = (newItem.buffer.getChannelData(
-            0)[i] + data[i]) / 2;
+            0)[i] + (data[i]||0)) / 2;
         newItem.buffer.getChannelData(1)[i] = (newItem.buffer.getChannelData(
-            1)[i] + data[i]) / 2;
+            1)[i] + (data[i]||0)) / 2;
       }
     } else {
       const buffer = newItem.buffer.getChannelData(panChannel);
       for (let i = 0; i < mf.buffer.length; i++) {
         newItem.buffer.getChannelData(panChannel)[i] = buffer[i] === 0 ?
-            data[i] :
-            ((buffer[i] + data[i]) / 2);
+            (data[i]||0) :
+            ((buffer[i] + (data[i]||0)) / 2);
       }
     }
 
@@ -1291,7 +1291,7 @@ function performBlend(mFiles, blendLength) {
 
     for (let n = 0; n < blendLengths[idx]; n++) {
       for (let i = 0; i < data.length; i++) {
-        newItem.buffer.getChannelData(0)[pos] = data[i] + ((n+1) / blendLengths[idx]) * (data2[i] - data[i]);
+        newItem.buffer.getChannelData(0)[pos] = (data[i]||0) + ((n+1) / blendLengths[idx]) * ((data2[i]||0) - (data[i]||0));
         pos++;
       }
     }
@@ -1404,6 +1404,12 @@ async function joinAll(
       masterSR
   );
 
+  for (let channel = 0; channel < masterChannels; channel++) {
+    for (let i = 0; i < totalLength; i++) {
+      audioArrayBuffer.getChannelData(channel)[i] = 0;
+    }
+  }
+
   if (masterChannels === 1) {
     joinToMono(audioArrayBuffer, _files, largest, pad);
   }
@@ -1425,7 +1431,7 @@ async function joinAll(
   };
   if (toInternal) {
 
-    const blob = await setWavLink(fileData, joinedEl);
+    const blob = await setWavLink(fileData, joinedEl, false, (masterBitDepth === 8 ? 8 : 32));
     const fileReader = new FileReader();
     fileReader.readAsArrayBuffer(blob);
     fileReader.fileCount = fileCount;
@@ -1443,7 +1449,7 @@ async function joinAll(
           //     1}--[${_files.length}].wav` :
           //     `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount +
           //     1}--[${_files.length}].wav`,
-          size: ((masterBitDepth * masterSR * (buffer.length / masterSR)) /
+          size: (((masterBitDepth === 8 ? 8 : 32) * masterSR * (buffer.length / masterSR)) /
               8) * buffer.numberOfChannels / 1024,
           type: 'audio/wav'
         }, '', true, false);

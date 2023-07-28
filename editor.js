@@ -157,12 +157,19 @@ export function renderEditor(item) {
   <button title="Fade out the selected audio." class="fade-out button button-outline" onclick="digichain.editor.fade('out')">Fade Out</button>
 </div>
 <div class="edit-btn-group float-right">
-    <div class="edit-pitch-btn-group">  
+    <div class="edit-pitch-btn-group pitch-semi-tones">  
     <button title="Lower pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5, 12)">-12</button>
     <button title="Lower pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12), 1)">-1</button>
-    &nbsp;<span> Pitch (semitones) </span>&nbsp;
+    &nbsp;<a href="javascript:;" onclick="digichain.editor.togglePitchSemitoneCents(event, 'cent')" title="Click to toggle between semi-tones and cents."> Pitch (semitones) </a>&nbsp;
     <button title="Increase pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12), -1)">+1</button>
     <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2, -12)">+12</button>
+    </div>
+    <div class="edit-pitch-btn-group pitch-cents hide">  
+    <button title="Lower pitch by 10 cents" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/120), 1)">-10</button>
+    <button title="Lower pitch by 1 cent" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/1200), 1)">-1</button>
+    &nbsp;<a href="javascript:;" onclick="digichain.editor.togglePitchSemitoneCents(event, 'semi')" title="Click to toggle between semi-tones and cents." style="display: inline-block; width: 13rem;"> Pitch (cents) </a>&nbsp;
+    <button title="Increase pitch by 1 cent" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/1200), 1)">+1</button>
+    <button title="Increase pitch by 10 cents" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/120), 1)">+10</button>
     </div>
     <br>
       <button title="Trims any zero valued audio from the end of the sample." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
@@ -170,7 +177,7 @@ export function renderEditor(item) {
 </div>
   <span class="edit-info">
     Normalize, Silence, Fade In, Fade Out, Crop, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
-    Note: sample operations are destructive, applied immediately, no undo.
+    Note: sample operations are destructive, applied immediately, no undo. Pitch adjustments are done via sample-rate, cumulative changes will affect sample quality.
   </span>
   `;
 }
@@ -290,6 +297,14 @@ function toggleReadOnlyInput(inputId) {
   input.readOnly ? input.removeAttribute('readonly') : input.setAttribute('readonly', true);
 }
 
+function togglePitchSemitoneCents(event, toggle) {
+  const semiTonesDiv = document.querySelector('.pitch-semi-tones');
+  const centsDiv = document.querySelector('.pitch-cents');
+
+  semiTonesDiv.classList[toggle === 'cent' ? 'add' : 'remove']('hide');
+  centsDiv.classList[toggle === 'semi' ? 'add' : 'remove']('hide');
+}
+
 function getSelectionStartPoint() {
   return Math.round(selection.start / selection.step);
 }
@@ -391,7 +406,7 @@ function perSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = t
     }
   }
 
-  const pitchedWav = audioBufferToWav((audioArrayBuffer || item.buffer), item.meta, newSR, (bitDepthOverride || conf.masterBitDepth), item.buffer.numberOfChannels, 0.4);
+  const pitchedWav = audioBufferToWav((audioArrayBuffer || item.buffer), item.meta, newSR, (bitDepthOverride || 32), item.buffer.numberOfChannels, 0.4);
   const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
     type: 'audio/wav',
   });
@@ -708,6 +723,7 @@ function double(event, item, reverse = false, renderEditPanel = true) {
 export const editor = {
   updateFile,
   toggleReadOnlyInput,
+  togglePitchSemitoneCents,
   zoomLevel,
   changeSelectionPoint,
   resetSelectionPoints,

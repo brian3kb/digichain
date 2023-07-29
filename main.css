@@ -8,6 +8,9 @@ body {
 .disabled {
     opacity: .5;
 }
+.clear {
+    clear: both;
+}
 .text-align-left { text-align: left; }
 .text-align-right { text-align: right; }
 .logo {

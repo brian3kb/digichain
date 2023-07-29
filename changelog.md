@@ -1,3 +1,6 @@
+ - Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data.
+ - Ctrl+Click to preview slices before slicing a sample.
+
 2023-07-27 1.4.5
  - Improved the note from filename detection and sorting.
  - 44.1/48K 8bit mono/stereo file exports.

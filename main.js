@@ -1493,6 +1493,74 @@ async function joinAll(
   }
 }
 
+function convertChain(event) {
+  const newItem = duplicate(event, lastSelectedRow.dataset.id, true);
+  if (!newItem.item.meta.slices) {
+    let found = metaFiles.getByFile(getFileById(lastSelectedRow.dataset.id));
+    if (found) {
+      newItem.item.meta.slices = found.slices.map(i => ({s: i.startPoint, e: i.endPoint}));
+    }
+  }
+  const sliceLengths = newItem.item.meta.slices.map(s => s.e - s.s);
+  let itemIsEvenlySpaced = sliceLengths.every((x, i, a) => x === a[0]);
+  const largestSlice = Math.max(...sliceLengths);
+
+  let buffers = newItem.item.meta.slices.map(slice => {
+    const buffer = new AudioBuffer({
+      numberOfChannels: newItem.item.buffer.numberOfChannels,
+      length: (slice.e - slice.s),
+      sampleRate: newItem.item.buffer.sampleRate
+    });
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      for (let i = 0; i < buffer.length; i++) {
+        buffer.getChannelData(channel)[i] = newItem.item.buffer.getChannelData(channel)[slice.s + i] || 0;
+      }
+    }
+    return {buffer, meta: {}};
+  });
+
+  if (itemIsEvenlySpaced) {
+    buffers.forEach(buffer => {
+      editor.trimRight(event, buffer, false);
+    });
+  }
+  const trimmedLength = itemIsEvenlySpaced ?
+      buffers.reduce((length, item) => length += item.buffer.length, 0) :
+      (buffers.length * largestSlice);
+  const trimmedBuffer = new AudioBuffer({
+    numberOfChannels: newItem.item.buffer.numberOfChannels,
+    length: trimmedLength,
+    sampleRate: newItem.item.buffer.sampleRate,
+  });
+
+  if (trimmedBuffer.numberOfChannels === 1) {
+    joinToMono(trimmedBuffer, buffers, largestSlice, !itemIsEvenlySpaced);
+  }
+  if (trimmedBuffer.numberOfChannels === 2) {
+    joinToStereo(trimmedBuffer, buffers, largestSlice, !itemIsEvenlySpaced);
+  }
+
+  let progress = 0;
+  buffers.forEach((item, idx) => {
+    const length = itemIsEvenlySpaced ? item.buffer.length : largestSlice;
+    if (newItem.item.meta.slices) {
+      newItem.item.meta.slices[idx].s = progress;
+      newItem.item.meta.slices[idx].e = progress + length;
+    }
+    progress += length;
+  });
+  newItem.item.buffer = trimmedBuffer;
+  newItem.item.meta = {
+    ...newItem.item.meta,
+    length: trimmedBuffer.length,
+    duration: Number(trimmedBuffer.length / masterSR).toFixed(3),
+    startFrame: 0, endFrame: trimmedBuffer.length
+  };
+  delete newItem.item.meta.op1Json;
+  newItem.callback(newItem.item, newItem.fileIdx);
+  document.getElementById('splitOptions').close();
+}
+
 function joinAllByPath(event, pad = false) { //TODO: test and hook into UI
   const filesByPath = {};
   files.filter(f => f.meta.checked).forEach(file => {
@@ -1524,7 +1592,7 @@ const stopPlayFile = (event, id) => {
   if (playHead) { playHead.remove(); }
 };
 
-const playFile = (event, id, loop) => {
+const playFile = (event, id, loop, start, end) => {
   const file = getFileById(id || lastSelectedRow.dataset.id);
   let playHead;
   loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
@@ -1574,7 +1642,11 @@ const playFile = (event, id, loop) => {
     file.playHead = playHead;
   }
 
-  file.source.start();
+  file.source.start(
+      0,
+      start || 0,
+      end
+  );
 
   if (id && !event?.editor) {
     playHead.style.animationIterationCount = file.source.loop
@@ -1601,6 +1673,15 @@ const playFile = (event, id, loop) => {
   }
 
 };
+
+const playSlice = (event, id, startPoint, endPoint) => {
+  if ((event.ctrlKey || modifierKeys.ctrlKey)) {
+    const start = startPoint / masterSR;
+    const end = (endPoint / masterSR) - start;
+    let loop;
+    playFile(event, id, loop, start, end);
+  }
+}
 
 const toggleCheck = (event, id, silent = false) => {
   try {
@@ -1751,6 +1832,7 @@ const duplicate = (event, id, prepForEdit = false) => {
   item.waveform = false;
   item.meta.playing = false;
   item.meta.id = crypto.randomUUID();
+  item.file.name = getUniqueName(files, item.file.filename);
   if (prepForEdit) {
     item.meta.editOf = id;
     return {
@@ -1766,7 +1848,6 @@ const duplicate = (event, id, prepForEdit = false) => {
     };
   }
   item.meta.dupeOf = id;
-  item.file.name = getUniqueName(files, item.file.filename);
   files.splice(
       ((event.shiftKey || modifierKeys.shiftKey) ? files.length : fileIdx), 0,
       item);
@@ -1992,11 +2073,15 @@ const splitSizeAction = (event, slices, threshold) => {
       `#splitOptions .slice-group`);
   const optionsEl = document.querySelectorAll(
       `#splitOptions .slice-group button`);
+  const convertChainButtonEl = document.getElementById('convertChainButton');
+
+  convertChainButtonEl.style.display = 'none';
 
   if (slices === 'ot' && sliceGroupEl.dataset.id) {
     file = getFileById(sliceGroupEl.dataset.id);
     otMeta = metaFiles.getByFile(file);
     slices = otMeta.slices;
+    convertChainButtonEl.style.display = 'block';
   }
   if (slices === 'transient' && sliceGroupEl.dataset.id) {
     file = getFileById(sliceGroupEl.dataset.id);
@@ -2019,7 +2104,7 @@ const splitSizeAction = (event, slices, threshold) => {
         option.classList.remove('button-outline') :
         option.classList.add('button-outline');
   });
-  drawSliceLines(slices, file, otMeta);
+  drawSliceLines(slices, (file || getFileById(lastSelectedRow.dataset.id)), otMeta);
   if (file?.meta?.customSlices) {
     file.meta.customSlices = false;
   }
@@ -2130,7 +2215,10 @@ const rowDragStart = (event) => {
 
 const drawSliceLines = (slices, file, otMeta) => {
   const _slices = typeof slices === 'number'
-      ? Array.from('.'.repeat(slices))
+      ? Array.from('.'.repeat(slices)).map((x, i) => ({
+        startPoint: (file.buffer.length / slices) * i,
+        endPoint: (file.buffer.length / slices) * (i + 1)
+      }))
       : slices;
   const sliceLinesEl = document.getElementById('sliceLines');
   const splitPanelWaveformContainerEl = document.querySelector(
@@ -2140,16 +2228,16 @@ const drawSliceLines = (slices, file, otMeta) => {
   if (file && otMeta) {
     let scaleSize = file.buffer.length / waveformWidth;
     lines = otMeta.slices.map((slice, idx) => `
-      <div class="line" data-idx="${idx}" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')" 
-      title="${slice.name}"
+      <div class="line" data-idx="${idx}" onclick="digichain.playSlice(event, '${file.meta.id}', '${slice.startPoint}', '${slice.endPoint}')" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')" 
+      title="${slice.name || ('Slice ' + (idx + 1))}"
       style="margin-left:${(slice.startPoint /
         scaleSize)}px; width:${(slice.endPoint / scaleSize) -
     (slice.startPoint / scaleSize)}px;"></div>
   `);
   } else {
     lines = _slices.map((slice, idx) => `
-    <div class="line" data-idx="${idx}" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"style="margin-left:${(waveformWidth /
-        _slices.length) * idx}px; width:${(waveformWidth / _slices.length)}px;"></div>
+    <div class="line" data-idx="${idx}" onclick="digichain.playSlice(event, '${file.meta.id}', '${slice.startPoint}', '${slice.endPoint}')" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"style="margin-left:${(waveformWidth /
+        _slices.length) * idx}px; width:${(waveformWidth / _slices.length)}px;" title="Slice ${idx + 1}"></div>
 `);
     //
     // lines = _slices.map((slice, idx) => `
@@ -3417,6 +3505,7 @@ window.digichain = {
   toggleCheck,
   move,
   playFile,
+  playSlice,
   stopPlayFile,
   downloadFile,
   downloadAll,
@@ -3431,6 +3520,7 @@ window.digichain = {
   splitFromFile,
   splitSizeAction,
   splitFromTrack,
+  convertChain,
   toggleModifier,
   toggleOptionsPanel,
   showExportSettingsPanel,

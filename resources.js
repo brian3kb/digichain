@@ -179,7 +179,8 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
   if (embedSliceData && slices && Array.isArray(slices) && slices.length !== 0) {
     let _slices = pitchModifier === 1 ? slices : slices.map(slice => ({
       n: slice.n, s: Math.round(slice.s / pitchModifier),
-      e: Math.round(slice.e / pitchModifier)
+      e: Math.round(slice.e / pitchModifier),
+      l: (!slice.l || slice.l === -1) ? -1 : Math.round(slice.l / pitchModifier)
     }));
     sliceData = `{"sr": ${sampleRate}, "dcs":` + JSON.stringify(_slices) + '}';
     sliceData = sliceData.padEnd(sliceData.length + sliceData.length%4, ' ');

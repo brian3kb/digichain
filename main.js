@@ -141,11 +141,20 @@ metaFiles.getByFile = function(file) {
           slice => ({
             startPoint: slice.s,
             endPoint: slice.e,
-            name: slice.n
+            loopPoint: slice.l || -1,
+            name: slice.n || ''
           })
       )
     };
   }
+};
+metaFiles.getByFileInDcFormat = function(file) {
+  return (metaFiles.getByFile(file) || { slices: [] }).slices.map(slice => ({
+    s: slice.startPoint,
+    e: slice.endPoint,
+    l: slice.loopPoint,
+    n: slice.name || ''
+  }));
 };
 metaFiles.removeSelected = function() {
   files.forEach(f => {
@@ -402,6 +411,8 @@ async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
       fileName.replace('.wav', '.aif') :
       fileName;
 
+  file.meta.slices = file.meta.slices || metaFiles.getByFileInDcFormat(file);
+
   wav = audioBufferToWav(
       file.buffer, file.meta, masterSR, (bitDepthOverride || masterBitDepth), masterChannels, deClick,
       (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData
@@ -417,7 +428,8 @@ async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
     meta.slices = meta.slices.map(slice => ({
       ...slice,
       n: slice.n, s: Math.round(slice.s / pitchModifier),
-      e: Math.round(slice.e / pitchModifier)
+      e: Math.round(slice.e / pitchModifier),
+      l: (!slice.l || slice.l) === -1 ? -1 : Math.round(slice.l / pitchModifier)
     }));
     wav = audioBufferToWav(
         pitchedBuffer, meta, masterSR, (bitDepthOverride || masterBitDepth), masterChannels, deClick,
@@ -1117,7 +1129,7 @@ function showMergePanel() {
 <span class="merge-info">Merging flattens each source sample to mono based on the mixdown choice and pans that mono file hard left/right or centers. If you want to retain a stereo files stereo field in the merge, duplicate it first and choose its L/R mix.</span>
 <button class="float-right" onclick="digichain.performMergeUiCall()">Merge Files</button>
 `;
-  mergePanelEl.showModal();
+  if (!mergePanelEl.open) { mergePanelEl.showModal(); }
 }
 
 function performMergeUiCall() {
@@ -1228,7 +1240,7 @@ ${[16, 32, 64, 128, 256, 512, 1024, 2048, 4096].reduce((a, c) =>
 <span class="merge-info">EXPERIMENTAL: Blend interpolates between the selected samples by the number of steps specified. Works best when the selected files are approximately the same durations.</span>
 <button class="float-right" onclick="digichain.performBlendUiCall()">Blend Files</button>
 `;
-  mergePanelEl.showModal();
+  if (!mergePanelEl.open) { mergePanelEl.showModal(); }
 }
 
 function performBlendUiCall() {
@@ -1493,16 +1505,23 @@ async function joinAll(
   }
 }
 
-function convertChain(event) {
+function convertChain(event, toSpacedChain = false) {
+  const el = document.getElementById('splitOptions');
+  const excludeSlices = [...el.querySelectorAll(`div.line.fade`)].map(
+      s => +s.dataset.idx);
   const newItem = duplicate(event, lastSelectedRow.dataset.id, true);
-  if (!newItem.item.meta.slices) {
-    let found = metaFiles.getByFile(getFileById(lastSelectedRow.dataset.id));
-    if (found) {
-      newItem.item.meta.slices = found.slices.map(i => ({s: i.startPoint, e: i.endPoint}));
+
+  newItem.item.meta.slices = (newItem.item.meta.slices ?
+      newItem.item.meta.slices :
+      metaFiles.getByFileInDcFormat(getFileById(lastSelectedRow.dataset.id))).filter((x, idx) => !excludeSlices.includes(idx));
+
+  if (toSpacedChain && sliceGrid !== 0) {
+    while (newItem.item.meta.slices.length < sliceGrid) {
+      newItem.item.meta.slices.push(JSON.parse(JSON.stringify(newItem.item.meta.slices.at(-1))));
     }
   }
+
   const sliceLengths = newItem.item.meta.slices.map(s => s.e - s.s);
-  let itemIsEvenlySpaced = sliceLengths.every((x, i, a) => x === a[0]);
   const largestSlice = Math.max(...sliceLengths);
 
   let buffers = newItem.item.meta.slices.map(slice => {
@@ -1519,14 +1538,14 @@ function convertChain(event) {
     return {buffer, meta: {}};
   });
 
-  if (itemIsEvenlySpaced) {
+  if (!toSpacedChain) {
     buffers.forEach(buffer => {
       editor.trimRight(event, buffer, false);
     });
   }
-  const trimmedLength = itemIsEvenlySpaced ?
-      buffers.reduce((length, item) => length += item.buffer.length, 0) :
-      (buffers.length * largestSlice);
+  const trimmedLength = toSpacedChain ?
+      (buffers.length * largestSlice) :
+      buffers.reduce((length, item) => length += item.buffer.length, 0);
   const trimmedBuffer = new AudioBuffer({
     numberOfChannels: newItem.item.buffer.numberOfChannels,
     length: trimmedLength,
@@ -1534,15 +1553,15 @@ function convertChain(event) {
   });
 
   if (trimmedBuffer.numberOfChannels === 1) {
-    joinToMono(trimmedBuffer, buffers, largestSlice, !itemIsEvenlySpaced);
+    joinToMono(trimmedBuffer, buffers, largestSlice, toSpacedChain);
   }
   if (trimmedBuffer.numberOfChannels === 2) {
-    joinToStereo(trimmedBuffer, buffers, largestSlice, !itemIsEvenlySpaced);
+    joinToStereo(trimmedBuffer, buffers, largestSlice, toSpacedChain);
   }
 
   let progress = 0;
   buffers.forEach((item, idx) => {
-    const length = itemIsEvenlySpaced ? item.buffer.length : largestSlice;
+    const length = toSpacedChain ? largestSlice : item.buffer.length;
     if (newItem.item.meta.slices) {
       newItem.item.meta.slices[idx].s = progress;
       newItem.item.meta.slices[idx].e = progress + length;
@@ -1896,7 +1915,7 @@ function splitFromTrack(event, track) {
 
 const splitByOtSlices = (
     event, id, pushInPlace = false, sliceSource = 'ot',
-    excludeSlices = []) => {
+    excludeSlices = [], saveSlicesMetaOnly = false) => {
   const file = getFileById(id);
   const pushInPlaceItems = [];
   let otMeta;
@@ -1908,6 +1927,13 @@ const splitByOtSlices = (
     otMeta = file.meta.customSlices ? file.meta.customSlices : false;
   }
   if (!otMeta) { return; }
+  if (saveSlicesMetaOnly) {
+    file.meta.slices = metaFiles.getByFileInDcFormat(file).filter((x, idx) => !excludeSlices.includes(idx));
+    metaFiles.removeByName(file.file.filename);
+    file.meta.slices = file.meta.slices.length > 0 ? file.meta.slices : false;
+    splitAction(event, id);
+    return;
+  }
   for (let i = 0; i < otMeta.sliceCount; i++) {
     if (excludeSlices.includes(i)) {
       continue;
@@ -1963,10 +1989,22 @@ const splitByOtSlices = (
 };
 
 const splitEvenly = (
-    event, id, slices, pushInPlace = false, excludeSlices = []) => {
+    event, id, slices, pushInPlace = false, excludeSlices = [], saveSlicesMetaOnly = false) => {
   const file = getFileById(id);
   const frameSize = file.buffer.length / slices;
   const pushInPlaceItems = [];
+  if (saveSlicesMetaOnly) {
+    file.meta.slices = Array.from('.'.repeat(slices)).map((x, i) => ({
+      s: Math.round((file.buffer.length / slices) * i),
+      e: Math.round((file.buffer.length / slices) * (i + 1)),
+      n: '',
+      l: -1
+    })).filter((x, idx) => !excludeSlices.includes(idx));
+    metaFiles.removeByName(file.file.filename);
+    file.meta.slices = file.meta.slices.length > 0 ? file.meta.slices : false;
+    splitAction(event, id);
+    return;
+  }
   for (let i = 0; i < slices; i++) {
     if (excludeSlices.includes(i)) {
       continue;
@@ -2080,21 +2118,21 @@ const splitSizeAction = (event, slices, threshold) => {
   if (slices === 'ot' && sliceGroupEl.dataset.id) {
     file = getFileById(sliceGroupEl.dataset.id);
     otMeta = metaFiles.getByFile(file);
-    slices = otMeta.slices;
-    convertChainButtonEl.style.display = 'block';
+    slices = otMeta?.slices??[];
+    convertChainButtonEl.style.display = slices.length > 0 ? 'block' : 'none';
   }
   if (slices === 'transient' && sliceGroupEl.dataset.id) {
     file = getFileById(sliceGroupEl.dataset.id);
     otMeta = splitByTransient(file, (+threshold) / 100);
-    slices = otMeta.slices;
+    slices = otMeta?.slices??[];
   } else {
     metaFiles.removeByName('---sliceToTransientCached---');
   }
 
   optionsEl.forEach(option => option.classList.add('button-outline'));
   sliceGroupEl.dataset.sliceCount = typeof slices === 'number'
-      ? slices
-      : otMeta.sliceCount;
+      ? slices??0
+      : otMeta?.sliceCount??0;
   optionsEl.forEach((option, index) => {
     (+option.dataset.sel === +sliceGroupEl.dataset.sliceCount && !otMeta) ||
     (option.dataset.sel === 'ot' && otMeta && otMeta.name !==
@@ -2247,7 +2285,7 @@ const drawSliceLines = (slices, file, otMeta) => {
   sliceLinesEl.innerHTML = lines.join('');
 };
 
-const splitAction = (event, id, slices) => {
+const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
   const el = document.getElementById('splitOptions');
   const fileNameEl = document.getElementById('splitFileName');
   const sliceGroupEl = document.querySelector(
@@ -2291,15 +2329,19 @@ const splitAction = (event, id, slices) => {
         !sliceByOtButtonEl.classList.contains('button-outline')) {
       const sliceSource = sliceByTransientButtonEl.classList.contains(
           'button-outline') ? 'ot' : 'transient';
-      splitByOtSlices(event, id, pushInPlace, sliceSource, excludeSlices);
+      splitByOtSlices(event, id, pushInPlace, sliceSource, excludeSlices, saveSlicesMetaOnly);
     } else {
       if (item.meta.customSlices) {
-        splitByOtSlices(event, id, pushInPlace, 'custom', excludeSlices);
+        splitByOtSlices(event, id, pushInPlace, 'custom', excludeSlices, saveSlicesMetaOnly);
       } else {
-        splitEvenly(event, id, slices, pushInPlace, excludeSlices);
+        splitEvenly(event, id, slices, pushInPlace, excludeSlices, saveSlicesMetaOnly);
       }
     }
-    return el.close();
+    if (saveSlicesMetaOnly) {
+      setTimeout(() => sliceByOtButtonEl.click(), 250);
+    } else {
+      return el.close();
+    }
   }
   otMeta = metaFiles.getByFile(item);
   fileNameEl.textContent = getNiceFileName('', item, true);
@@ -2319,7 +2361,7 @@ const splitAction = (event, id, slices) => {
     sliceByOtButtonEl.classList.remove('is-dc-file');
   }
   splitSizeAction(false, 0);
-  el.showModal();
+  if (!el.open) { el.showModal(); }
   drawWaveform(item, splitPanelWaveformEl, item.meta.channel, {
     width: +splitPanelWaveformContainerEl.dataset.waveformWidth, height: 128
   });
@@ -2972,6 +3014,7 @@ const parseWav = (
           slices = json.dcs.map(slice => ({
             s: Math.round((slice.s / json.sr) * masterSR),
             e: Math.round((slice.e / json.sr) * masterSR),
+            l: Math.round(((slice.l || -1) / json.sr) * masterSR),
             n: slice.n
           }));
         } else {

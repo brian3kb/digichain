@@ -656,6 +656,11 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     width: auto;
     border: none;
 }
+#splitOptions .split-right-action-buttons button {
+    padding: 0 1rem;
+    margin-right: .5rem;
+    min-width: 11rem;
+}
 .touch-buttons {
     /*display: none;*/
     position: fixed;

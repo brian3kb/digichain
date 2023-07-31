@@ -149,7 +149,10 @@ metaFiles.getByFile = function(file) {
   }
 };
 metaFiles.getByFileInDcFormat = function(file) {
-  return (metaFiles.getByFile(file) || { slices: [] }).slices.map(slice => ({
+  return (
+      file === '---sliceToTransientCached---' ?
+          metaFiles.getByFileName('---sliceToTransientCached---') :
+          metaFiles.getByFile(file) || { slices: [] }).slices.map(slice => ({
     s: slice.startPoint,
     e: slice.endPoint,
     l: slice.loopPoint,
@@ -1940,8 +1943,16 @@ const splitByOtSlices = (
   }
   if (!otMeta) { return; }
   if (saveSlicesMetaOnly) {
-    file.meta.slices = metaFiles.getByFileInDcFormat(file).filter((x, idx) => !excludeSlices.includes(idx));
-    metaFiles.removeByName(file.file.filename);
+    file.meta.slices = metaFiles.getByFileInDcFormat(
+        sliceSource === 'transient' ?
+            '---sliceToTransientCached---' :
+            file
+    ).filter((x, idx) => !excludeSlices.includes(idx));
+    metaFiles.removeByName(
+        sliceSource === 'transient' ?
+            '---sliceToTransientCached---' :
+            file.file.filename
+    );
     file.meta.slices = file.meta.slices.length > 0 ? file.meta.slices : false;
     splitAction(event, id);
     return;

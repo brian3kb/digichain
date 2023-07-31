@@ -1,5 +1,7 @@
  - Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data. When converted to a spaced chain, if the grid-size is set to a value, the new chain will be padded to this number.
  - Ctrl+Click to preview slices before slicing a sample.
+ - Slice editing on sample edit panel, create/update/remove slice markers.
+ - Playback/looped playback on the sample edit panel follows the selected region on the waveform.
 
 2023-07-27 1.4.5
  - Improved the note from filename detection and sorting.

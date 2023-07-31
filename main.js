@@ -169,6 +169,19 @@ metaFiles.removeByName = function(filename) {
   }
 }
 
+function removeMetaFile(id) {
+  const file = getFileById(id);
+  if (!file) { return; }
+  metaFiles.removeByName(file.file.filename);
+  if (file.meta.op1Json) {
+    delete file.meta.op1Json;
+  }
+}
+
+function getSlicesFromMetaFile(file) {
+  return metaFiles.getByFileInDcFormat(file);
+}
+
 function changeAudioConfig(event, option, onloadRestore = false) {
   const selection = option ||
       event?.target?.selectedOptions[0]?.value ||
@@ -1693,11 +1706,10 @@ const playFile = (event, id, loop, start, end) => {
 
 };
 
-const playSlice = (event, id, startPoint, endPoint) => {
+const playSlice = (event, id, startPoint, endPoint, loop) => {
   if ((event.ctrlKey || modifierKeys.ctrlKey)) {
     const start = startPoint / masterSR;
     const end = (endPoint / masterSR) - start;
-    let loop;
     playFile(event, id, loop, start, end);
   }
 }
@@ -3576,5 +3588,7 @@ window.digichain = {
   toggleChainNamePanel,
   changeChainName,
   generateChainNames,
+  removeMetaFile,
+  getSlicesFromMetaFile,
   editor
 };

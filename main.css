@@ -661,6 +661,36 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     margin-right: .5rem;
     min-width: 11rem;
 }
+.slice-options {
+    margin-top: -1.5rem !important;
+}
+.slice-options label {
+    margin-top: .25rem;
+}
+.slice-options #sliceSelection {
+    width: 15rem;
+    padding: 0;
+    margin-top: .2rem;
+    padding-left: 5rem;
+    background-color: #202124;
+    text-align: left;
+    color: #606c76;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-block;
+    height: 3.8rem;
+    letter-spacing: .1rem;
+    line-height: 3.8rem;
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border: 1px solid #8a5d2e;
+    background-blend-mode: soft-light;
+}
+.slice-options button {
+    padding: 0 1rem;
+}
 .touch-buttons {
     /*display: none;*/
     position: fixed;
@@ -1294,6 +1324,10 @@ body.show-help .help-text {
 }
 
 body.light.show-help .help-text {
+    background-color: #ede5d8;
+}
+
+body.light .slice-options #sliceSelection {
     background-color: #ede5d8;
 }
 

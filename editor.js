@@ -45,6 +45,7 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
     renderEditor(editing);
     updateSelectionEl();
     if (!editPanelEl.open) { editPanelEl.showModal(); }
+    renderSliceList();
     renderEditPanelWaveform();
     return;
   }
@@ -112,20 +113,84 @@ function buildOpKit() {
   linkEl.click();
 }
 
+function sliceSelect(event) {
+  const sliceSelectEl = document.querySelector('#sliceSelection');
+  const selectionEl = document.querySelector('#editLines .edit-line');
+  if (+sliceSelectEl.value === -1) {
+    return resetSelectionPoints();
+  }
+  const slices = digichain.getSlicesFromMetaFile(editing);
+  const slice = slices.at(+sliceSelectEl.value);
+  selection.start = slice.s;
+  selection.end = slice.e;
+  updateSelectionEl();
+  selectionEl.scrollIntoViewIfNeeded();
+}
+function sliceUpdate(event) {
+  const sliceSelectEl = document.querySelector('#sliceSelection');
+  if (+sliceSelectEl.value === -1) {
+    return;
+  }
+  const slices = digichain.getSlicesFromMetaFile(editing);
+  const slice = slices.at(+sliceSelectEl.value);
+  slice.s = selection.start;
+  slice.e = selection.end;
+  slice.l = -1;
+  digichain.removeMetaFile(editing.meta.id);
+  editing.meta.slices = slices;
+}
+function sliceRemove(event) {
+  const sliceSelectEl = document.querySelector('#sliceSelection');
+  if (+sliceSelectEl.value === -1) {
+    return;
+  }
+  const slices = digichain.getSlicesFromMetaFile(editing);
+  editing.meta.slices = slices.filter(
+      (slice, idx) => idx !== +sliceSelectEl.value
+  );
+  digichain.removeMetaFile(editing.meta.id);
+  sliceSelectEl.value = -1;
+  selection.start = 0;
+  selection.end = 0;
+  updateSelectionEl();
+  renderSliceList();
+}
+function sliceCreate(event) {
+  const slices = digichain.getSlicesFromMetaFile(editing);
+  const slice = slices.push({
+    n: '',
+    s: selection.start,
+    e: selection.end,
+    l: -1
+  });
+  digichain.removeMetaFile(editing.meta.id);
+  editing.meta.slices = slices;
+  renderSliceList();
+  const sliceSelectEl = document.querySelector('#sliceSelection');
+  sliceSelectEl.value = slices.length > 0 ? slices.length - 1 : -1;
+}
+
 export function renderEditor(item) {
   editing = item === editing ? editing : item;
   editEl.innerHTML = `
+<div class="slice-options input-set">
+  <label for="sliceSelection" class="before-input">Slice</label>
+  <select title="Choose a slice marker to edit." name="sliceSelection" id="sliceSelection" onchange="digichain.editor.sliceSelect(event);"></select>
+  <button title="Update the slice marker start/end points." onclick="digichain.editor.sliceUpdate(event);" class="button-outline">Update Slice</button>
+  <button title="Remove the current slice marker." onclick="digichain.editor.sliceRemove(event);" class="button-outline">Remove Slice</button>
+  <button title="Add the current range as a new slice marker." onclick="digichain.editor.sliceCreate(event);" class="button-outline">Add New Slice</button>
+</div>
 <div class="above-waveform-buttons">
 <div class="sample-selection-buttons text-align-left float-left">
     <button title="Clicking on the waveform will set the selection start point." onclick="digichain.editor.setSelStart(true);" class="button check btn-select-start">Start</button>
   <button title="Clicking on the waveform will set the selection end point." onclick="digichain.editor.setSelStart(false);" class="button-outline check btn-select-end">End</button>
-    <button title="Reset the waveform selectio to the whole sample." onclick="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
+    <button title="Reset the waveform selection to the whole sample." onclick="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
 </div>
   
   <div class="playback-controls text-align-right float-right" style="padding-left: 1.5rem;">
-    <button onclick="digichain.playFile(event);" class="button-outline check">Play</button>
-    <button onclick="digichain.playFile({ editor: true }, false, true);" class="button-outline check">Loop</button>
-    <button onclick="digichain.stopPlayFile(event);" class="button-outline check">Stop</button>  
+    <button onclick="digichain.editor.editorPlayFile(event);" class="button-outline check">Play</button>
+    <button onclick="digichain.editor.editorPlayFile(event, true);" class="button-outline check">Loop</button>
+    <button onclick="digichain.editor.editorPlayFile(event, false, true);" class="button-outline check">Stop</button>  
   </div>
   <div class="zoom-level text-align-right">
     <button title="Zoom out waveform view." class="zoom-out button-outline check" onclick="digichain.editor.zoomLevel('editor', .5)">-</button>
@@ -198,6 +263,16 @@ function renderEditableItems() {
       <button class="button-clear" onclick="digichain.editor.toggleReadOnlyInput('editFilePath')"><i class="gg-pen"></i></button>
     </div>
   `;
+}
+
+function renderSliceList() {
+  const sliceSelectEl = document.querySelector('#sliceSelection');
+  const slices = digichain.getSlicesFromMetaFile(editing);
+  if (Array.isArray(slices)) {
+    sliceSelectEl.innerHTML = slices.reduce((a, v, i) => a += `
+        <option value="${i}">${i+1}</option>
+    `, '<option value="-1">None</option>');
+  }
 }
 
 function renderEditPanelWaveform(multiplier = 1) {
@@ -316,15 +391,16 @@ function getSelectionEndPoint() {
 }
 
 function updateSelectionEl() {
-  const selection = document.querySelector('#editLines .edit-line');
+  const selectionEl = document.querySelector('#editLines .edit-line');
   const width = getSelectionEndPoint() >= (1024 * multiplier) ? (1024 * multiplier) : getSelectionEndPoint();
-  selection.style.marginLeft = `${getSelectionStartPoint()}px`;
-  selection.style.width = `${width}px`;
+  selectionEl.style.marginLeft = `${getSelectionStartPoint()}px`;
+  selectionEl.style.width = `${width}px`;
 
 }
 
 function zoomLevel(view, level) {
   if (view === 'editor') {
+    const selectionEl = document.querySelector('#editLines .edit-line');
     if (level !== 1) {
       level = multiplier * level;
     }
@@ -336,7 +412,7 @@ function zoomLevel(view, level) {
     selection.step = step;
     multiplier = level;
     updateSelectionEl();
-    const waveformContainerEl = document.querySelector('.waveform-container');
+    selectionEl.scrollIntoViewIfNeeded();
   }
 }
 
@@ -720,6 +796,20 @@ function double(event, item, reverse = false, renderEditPanel = true) {
   item.waveform = false;
 }
 
+function editorPlayFile(event, loop = false, stop = false) {
+  const start = selection.start / conf.masterSR;
+  const end = (selection.end / conf.masterSR) - start;
+  if (stop || !editPanelEl.open) {
+    clearTimeout(editorPlayFile.nextLoop);
+    digichain.stopPlayFile(event, editing.meta.id);
+    return;
+  }
+  digichain.playFile({ editor: true }, editing.meta.id, false, start, end);
+  if (loop) {
+    editorPlayFile.nextLoop = setTimeout(() => editorPlayFile(event, loop), end*1000);
+  }
+}
+
 export const editor = {
   updateFile,
   toggleReadOnlyInput,
@@ -728,6 +818,7 @@ export const editor = {
   changeSelectionPoint,
   resetSelectionPoints,
   setSelStart,
+  editorPlayFile,
   normalize,
   fade,
   trimRight,
@@ -735,6 +826,10 @@ export const editor = {
   perSamplePitch,
   double,
   buildOpKit,
+  sliceUpdate,
+  sliceCreate,
+  sliceRemove,
+  sliceSelect,
   getLastItem : () => editing?.meta?.id,
   reverse
 };

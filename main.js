@@ -430,7 +430,7 @@ const showEditPanel = (event, id, view = 'sample') => {
   );
 };
 function checkShouldExportOtFile() {
-  return exportWithOtFile && masterChannels === 2 && masterSR === 44100 && !lastUsedAudioConfig.includes('a');
+  return exportWithOtFile && masterSR === 44100 && !lastUsedAudioConfig.includes('a');
 }
 async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
   let fileName = getNiceFileName('', file, false, true);
@@ -1017,7 +1017,7 @@ function showExportSettingsPanel() {
 </tr>
 <tr>
 <tr>
-<td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 16/24 stereo [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
+<td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 16/24 [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
 <td><button onclick="digichain.toggleSetting('exportWithOtFile')" class="check ${exportWithOtFile
       ? 'button'
       : 'button-outline'}">${exportWithOtFile ? 'YES' : 'NO'}</button></td>

@@ -8,6 +8,7 @@
  - Added LRSD controls to the edit panel.
  - Remembering slice position/selection when changing options on edit panel.
  - Edit panel LRSD / play/stop keyboard shortcuts on edit panel.
+ - Allow generating .ot metadata file on 16/24 44.1 mono exports.
 
 2023-07-27 1.4.5
  - Improved the note from filename detection and sorting.

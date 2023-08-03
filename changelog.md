@@ -2,6 +2,12 @@
  - Ctrl+Click to preview slices before slicing a sample.
  - Slice editing on sample edit panel, create/update/remove slice markers.
  - Playback/looped playback on the sample edit panel follows the selected region on the waveform.
+ - Show stereo waveform if available on sample edit panel.
+ - Update the row waveform when changing the mono rendering method.
+ - Moved around the edit panel UI.
+ - Added LRSD controls to the edit panel.
+ - Remembering slice position/selection when changing options on edit panel.
+ - Edit panel LRSD / play/stop keyboard shortcuts on edit panel.
 
 2023-07-27 1.4.5
  - Improved the note from filename detection and sorting.

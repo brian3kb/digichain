@@ -654,6 +654,68 @@
     top: 8px;
     left: 4px
 }
+.gg-play-button {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(1);
+    width: 22px;
+    height: 22px
+}
+.gg-play-button::before {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    width: 0;
+    height: 10px;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid;
+    top: 6px;
+    left: 9px
+}
+.gg-repeat {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(1);
+    box-shadow:
+            -2px -2px 0 0,
+            2px 2px 0 0;
+    width: 14px;
+    height: 6px
+}
+.gg-repeat::after,
+.gg-repeat::before {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-top: 3px solid transparent;
+    border-bottom: 3px solid transparent
+}
+.gg-repeat::before {
+    border-left: 5px solid;
+    top: -4px;
+    right: 0
+}
+.gg-repeat::after {
+    border-right: 5px solid;
+    bottom: -4px;
+    left: 0
+}
+.gg-play-stop {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(1);
+    width: 10px;
+    height: 10px;
+    background: currentColor
+}
 .gg-file-add {
     background:
             linear-gradient(to bottom,

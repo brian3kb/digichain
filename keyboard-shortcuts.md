@@ -1,11 +1,11 @@
 **Keyboard Shortcuts**
  
  - Up / Down Arrow Keys: when a sample row is highlighted, this changes the highlighted sample.
- - P : plays the currently highlighted sample in the list.
+ - P : plays the currently highlighted sample in the list. (also in edit panel).
  - I : inverts the selected items in the list.
  - Escape : closes any open dialog windows and stops all sample playback.
  - Enter / Return : toggles the selection of the currently highlighted sample in the list.
- - L / S / R / D : changes the channel for stereo files being processed to mono.
+ - L / S / R / D : changes the channel for stereo files being processed to mono (also on edit panel in mono contexts.)
  - Number keys 1 through 0 : play the selected sample in the position of the key with 0 == 10.
  - E: Opens the edit panel for the currently highlighted sample.
  - Holding Shift Key while dropping files: will randomly select files upto the currently set grid-size value.

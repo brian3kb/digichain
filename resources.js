@@ -70,6 +70,77 @@ export function buildOpData(slices = [], numChannels, returnTemplate = false) {
   return opData;
 }
 
+export function bufferToFloat32Array(
+    buffer, channel, getAudioBuffer = false, audioCtx, masterChannels, masterSR) {
+  let result = getAudioBuffer ?
+      audioCtx.createBuffer(
+          masterChannels,
+          buffer.length,
+          masterSR
+      ) : new Float32Array(buffer.length);
+
+  if (channel === 'S') {
+    for (let i = 0; i < buffer.length; i++) {
+      (getAudioBuffer
+          ? result.getChannelData(0)
+          : result)[i] = (buffer.getChannelData(0)[i] +
+          buffer.getChannelData(1)[i]) / 2;
+    }
+  } else if (channel === 'D') {
+    for (let i = 0; i < buffer.length; i++) {
+      (getAudioBuffer
+          ? result.getChannelData(0)
+          : result)[i] = (buffer.getChannelData(0)[i] -
+          buffer.getChannelData(1)[i]) / 2;
+    }
+  } else {
+    const _channel = channel === 'R' ? 1 : 0;
+    for (let i = 0; i < buffer.length; i++) {
+      (getAudioBuffer
+          ? result.getChannelData(0)
+          : result)[i] = buffer.getChannelData(_channel)[i];
+    }
+  }
+  return result;
+}
+
+export function joinToMono(audioArrayBuffer, _files, largest, pad) {
+  let totalWrite = 0;
+  _files.forEach((file, idx) => {
+    const bufferLength = pad ? largest : file.buffer.length;
+
+    let result = bufferToFloat32Array(file.buffer,
+        file?.meta?.channel);
+
+    for (let i = 0; i < bufferLength; i++) {
+      audioArrayBuffer.getChannelData(0)[totalWrite] = result[i] || 0;
+      totalWrite++;
+    }
+  });
+}
+
+export function joinToStereo(audioArrayBuffer, _files, largest, pad) {
+  let totalWrite = 0;
+  _files.forEach((file, idx) => {
+    const bufferLength = pad ? largest : file.buffer.length;
+    let result = [
+      new Float32Array(file.buffer.length),
+      new Float32Array(file.buffer.length)];
+
+    for (let i = 0; i < file.buffer.length; i++) {
+      result[0][i] = file.buffer.getChannelData(0)[i];
+      result[1][i] = file.buffer.getChannelData(
+          file.buffer.numberOfChannels === 2 ? 1 : 0)[i];
+    }
+
+    for (let i = 0; i < bufferLength; i++) {
+      audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i] || 0;
+      audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i] || 0;
+      totalWrite++;
+    }
+  });
+}
+
 export function encodeOt(slices, bufferLength, tempo = 120) {
   const dv = new DataView(new ArrayBuffer(0x340));
   const header =

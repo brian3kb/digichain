@@ -1,5 +1,5 @@
 import {
-  audioBufferToWav,
+  audioBufferToWav, bufferToFloat32Array,
   buildOpData,
   encodeAif,
   Resampler,
@@ -24,6 +24,7 @@ let selection = {
   step: 0,
   selStart: true
 };
+let showStereoWaveform = false;
 
 let samples = [];
 let folders = [];
@@ -41,12 +42,8 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
     selection.start = 0;
     selection.step = editing.buffer.length / (1024 * multiplier);
     selection.selStart = true;
-    renderEditableItems();
-    renderEditor(editing);
-    updateSelectionEl();
-    if (!editPanelEl.open) { editPanelEl.showModal(); }
-    renderSliceList();
-    renderEditPanelWaveform();
+    showStereoWaveform = conf.masterChannels > 1;
+    render();
     return;
   }
   if (view === 'opExport') {
@@ -56,6 +53,15 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
     opExportPanelEl.classList.add('show');
     rightButtonsEl.classList.add('fade');
   }
+}
+
+function render() {
+  renderEditableItems();
+  renderEditor(editing);
+  updateSelectionEl();
+  if (!editPanelEl.open) { editPanelEl.showModal(); }
+  renderSliceList();
+  renderEditPanelWaveform();
 }
 
 function createOpData() {
@@ -172,38 +178,54 @@ function sliceCreate(event) {
 
 export function renderEditor(item) {
   editing = item === editing ? editing : item;
+  const canvasMarkup = `
+  <canvas class="edit-panel-waveform"
+        oncontextmenu="return false;"
+        onclick="digichain.editor.changeSelectionPoint(event)"
+        ></canvas>
+  `;
   editEl.innerHTML = `
 <div class="slice-options input-set">
   <label for="sliceSelection" class="before-input">Slice</label>
   <select title="Choose a slice marker to edit." name="sliceSelection" id="sliceSelection" onchange="digichain.editor.sliceSelect(event);"></select>
   <button title="Update the slice marker start/end points." onclick="digichain.editor.sliceUpdate(event);" class="button-outline">Update Slice</button>
   <button title="Remove the current slice marker." onclick="digichain.editor.sliceRemove(event);" class="button-outline">Remove Slice</button>
-  <button title="Add the current range as a new slice marker." onclick="digichain.editor.sliceCreate(event);" class="button-outline">Add New Slice</button>
+  <button title="Add the current range as a new slice marker." onclick="digichain.editor.sliceCreate(event);" class="button-outline">New Slice</button>
 </div>
 <div class="above-waveform-buttons">
-<div class="sample-selection-buttons text-align-left float-left">
-    <button title="Clicking on the waveform will set the selection start point." onclick="digichain.editor.setSelStart(true);" class="button check btn-select-start">Start</button>
-  <button title="Clicking on the waveform will set the selection end point." onclick="digichain.editor.setSelStart(false);" class="button-outline check btn-select-end">End</button>
-    <button title="Reset the waveform selection to the whole sample." onclick="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
+  <div class="sample-selection-buttons text-align-left float-left">
+      <button title="Clicking on the waveform will set the selection start point." onclick="digichain.editor.setSelStart(true);" class="button check btn-select-start">Start</button>
+    <button title="Clicking on the waveform will set the selection end point." onclick="digichain.editor.setSelStart(false);" class="button-outline check btn-select-end">End</button>
+      <button title="Reset the waveform selection to the whole sample." onclick="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
+  </div>  
+  <div class="channel-options editor-channel-options float-right" style="border: 0.1rem solid #d79c4e; display: ${editing.buffer.numberOfChannels >
+  1 && conf.masterChannels === 1 ? 'inline-block' : 'none'}">
+            <a title="Left channel" onclick="digichain.editor.changeChannel(event, 'L')" class="${editing.meta.channel ===
+  'L' ? 'selected' : ''} channel-option-L">L</a>
+            <a title="Sum to mono" onclick="digichain.editor.changeChannel(event, 'S')" class="${editing.meta.channel ===
+  'S' ? 'selected' : ''} channel-option-S">S</a>
+            <a title="Right channel" onclick="digichain.editor.changeChannel(event, 'R')" class="${editing.meta.channel ===
+  'R' ? 'selected' : ''} channel-option-R">R</a>
+            <a title="Difference between Left and Right channels" onclick="digichain.editor.changeChannel(event, 'D')" class="${editing.meta.channel ===
+  'D' ? 'selected' : ''} channel-option-D">D</a>
+  </div>
 </div>
-  
-  <div class="playback-controls text-align-right float-right" style="padding-left: 1.5rem;">
-    <button onclick="digichain.editor.editorPlayFile(event);" class="button-outline check">Play</button>
-    <button onclick="digichain.editor.editorPlayFile(event, true);" class="button-outline check">Loop</button>
-    <button onclick="digichain.editor.editorPlayFile(event, false, true);" class="button-outline check">Stop</button>  
+
+  <div class="playback-controls text-align-right float-left" style="position: absolute;">
+    <button title="Play selection" onclick="digichain.editor.editorPlayFile(event);" class="button-clear check"><i class="gg-play-button"></i></button>
+    <button title="Loop playback of selection" onclick="digichain.editor.editorPlayFile(event, true);" class="button-clear check"><i class="gg-repeat"></i></button>
+    <button title="Stop playback" onclick="digichain.editor.editorPlayFile(event, false, true);" class="button-clear check"><i class="gg-play-stop"></i></button>  
   </div>
-  <div class="zoom-level text-align-right">
-    <button title="Zoom out waveform view." class="zoom-out button-outline check" onclick="digichain.editor.zoomLevel('editor', .5)">-</button>
+  <div class="zoom-level text-align-right float-right">
+    <button title="Zoom out waveform view." class="zoom-out button-outline check" style="width:2.5rem;" onclick="digichain.editor.zoomLevel('editor', .5)">-</button>
     <button title="Reset zoom level waveform view."  class="zoom-reset button-outline check" onclick="digichain.editor.zoomLevel('editor', 1)">1x</button>
-    <button title="Zoom in on waveform view."  class="zoom-in button-outline check" onclick="digichain.editor.zoomLevel('editor', 2)">+</button>
+    <button title="Zoom in on waveform view."  class="zoom-in button-outline check" style="width:2.5rem;" onclick="digichain.editor.zoomLevel('editor', 2)">+</button>
   </div>
-  </div>
+
+ </div>
   <div class="waveform-container">
     <div>
-      <canvas class="edit-panel-waveform"
-        oncontextmenu="return false;"
-        onclick="digichain.editor.changeSelectionPoint(event)"
-        ></canvas>
+    ${Array.from('.'.repeat(Math.floor((conf.masterChannels + editing.buffer.numberOfChannels)/2))).reduce((a, v) => a += canvasMarkup, '')}
       <div id="editLines">
         <div class="edit-line"></div>
       </div>
@@ -273,35 +295,50 @@ function renderSliceList() {
         <option value="${i}">${i+1}</option>
     `, '<option value="-1">None</option>');
   }
+  const selectedSlice = slices.findIndex(s => s.s === selection.start && s.e === selection.end);
+  if (selectedSlice !== -1) {
+    sliceSelectEl.value = selectedSlice;
+  }
 }
 
 function renderEditPanelWaveform(multiplier = 1) {
   const waveformWidth = 1024 * multiplier;
   const editPanelWaveformEl = document.querySelector(`.edit-panel-waveform`);
-  drawWaveform(editing, editPanelWaveformEl, editing.meta.channel, {
-    width: waveformWidth, height: 128, multiplier
-  });
+  const editPanelWaveformEls = document.querySelectorAll(`.edit-panel-waveform`);
+  if (showStereoWaveform) {
+    editPanelWaveformEls.forEach((editPanelWaveformEl, idx) => {
+      drawWaveform(editing, editPanelWaveformEl, idx, {
+        width: waveformWidth, height: (128/editPanelWaveformEls.length), multiplier
+      });
+    });
+  } else {
+    drawWaveform(editing, editPanelWaveformEl, -1, {
+      width: waveformWidth, height: 128, multiplier
+    });
+  }
+
 }
 export function drawWaveform(file, el, channel, dimensions) {
   let drawData = [];
   let drawResolution = Math.floor(file.buffer.length / 32);
-  if (conf.masterChannels === 2 && file.buffer.numberOfChannels > 1) { channel = 'S'; }
+  let drawBuffer;
   if (file.buffer.length > 512) {
     drawResolution = (drawResolution > 4096 ? 4096: drawResolution) * (((dimensions?.multiplier || 0) * 2) || 1);
   } else {
     drawResolution = file.buffer.length;
   }
+  if (channel === 0 || channel === 1) {
+    drawBuffer = file.buffer.getChannelData(channel);
+  } else {
+    drawBuffer = bufferToFloat32Array(file.buffer, Number.isInteger(channel) ? file.meta?.channel : channel);
+  }
   for (let y = 0; y < file.buffer.length; y += Math.floor(file.buffer.length / drawResolution)) {
-    // if (channel === 'S') {
-    //   drawData.push(
-    //       (file.buffer.getChannelData(0)[y] + file.buffer.getChannelData(1)[y]) / 2
-    //   );
-    // } else {
-    //   drawData.push(file.buffer.getChannelData((channel === 'R' ? 1 : 0))[y]);
-    // }
-    drawData.push(
-        (file.buffer.getChannelData(0)[y] + file.buffer.getChannelData(file.buffer.numberOfChannels - 1)[y]) / 2
-    );
+    drawData.push(drawBuffer[y]);
+
+      // drawData.push(
+      //     (file.buffer.getChannelData(0)[y] + file.buffer.getChannelData(file.buffer.numberOfChannels - 1)[y]) / 2
+      // );
+
   }
   draw(drawData, file.meta.id, el, dimensions);
 }
@@ -378,6 +415,11 @@ function togglePitchSemitoneCents(event, toggle) {
 
   semiTonesDiv.classList[toggle === 'cent' ? 'add' : 'remove']('hide');
   centsDiv.classList[toggle === 'semi' ? 'add' : 'remove']('hide');
+}
+
+function changeChannel(event, channel) {
+  editing.meta.channel = channel;
+  render();
 }
 
 function getSelectionStartPoint() {
@@ -740,9 +782,7 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
   if (item.meta.slices) {
     item.meta.slices = false;
   }
-  if (item.meta.op1Json) {
-    item.meta.op1Json = false;
-  }
+  digichain.removeMetaFile(item.meta.id);
   if (renderEditPanel) {
     showEditor(editing, conf, 'sample', folders);
   }
@@ -830,6 +870,7 @@ export const editor = {
   sliceCreate,
   sliceRemove,
   sliceSelect,
+  changeChannel,
   getLastItem : () => editing?.meta?.id,
   reverse
 };

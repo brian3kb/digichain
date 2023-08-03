@@ -3,6 +3,8 @@ import {
   audioBufferToWav,
   encodeOt,
   getAifSampleRate,
+  joinToMono,
+  joinToStereo, bufferToFloat32Array,
 } from './resources.js';
 import {
   editor,
@@ -227,6 +229,9 @@ function changeAudioConfig(event, option, onloadRestore = false) {
     masterChannels,
     masterBitDepth
   });
+  if (files.length > 0) {
+    files.filter(f => f.buffer.numberOfChannels > 1).forEach(f => f.waveform = false);
+  }
   renderList();
 }
 
@@ -390,6 +395,14 @@ function toggleChainNamePanel() {
   if (chainFileNameListPanelEl.open) {
     renderChainNamePanelContent();
   }
+}
+
+function closeSplitOptions(event) {
+  const el = document.getElementById('splitOptions');
+  if (el.open) {
+    el.close();
+  }
+  stopPlayFile(event, lastSelectedRow.dataset.id);
 }
 
 const showEditPanel = (event, id, view = 'sample') => {
@@ -1044,73 +1057,7 @@ function showExportSettingsPanel() {
 
 function getMonoFloat32ArrayFromBuffer(
     buffer, channel, getAudioBuffer = false) {
-  let result = getAudioBuffer ?
-      audioCtx.createBuffer(
-          masterChannels,
-          buffer.length,
-          masterSR
-      ) : new Float32Array(buffer.length);
-
-  if (channel === 'S') {
-    for (let i = 0; i < buffer.length; i++) {
-      (getAudioBuffer
-          ? result.getChannelData(0)
-          : result)[i] = (buffer.getChannelData(0)[i] +
-          buffer.getChannelData(1)[i]) / 2;
-    }
-  } else if (channel === 'D') {
-    for (let i = 0; i < buffer.length; i++) {
-      (getAudioBuffer
-          ? result.getChannelData(0)
-          : result)[i] = (buffer.getChannelData(0)[i] -
-          buffer.getChannelData(1)[i]) / 2;
-    }
-  } else {
-    const _channel = channel === 'R' ? 1 : 0;
-    for (let i = 0; i < buffer.length; i++) {
-      (getAudioBuffer
-          ? result.getChannelData(0)
-          : result)[i] = buffer.getChannelData(_channel)[i];
-    }
-  }
-  return result;
-}
-
-function joinToMono(audioArrayBuffer, _files, largest, pad) {
-  let totalWrite = 0;
-  _files.forEach((file, idx) => {
-    const bufferLength = pad ? largest : file.buffer.length;
-
-    let result = getMonoFloat32ArrayFromBuffer(file.buffer,
-        file?.meta?.channel);
-
-    for (let i = 0; i < bufferLength; i++) {
-      audioArrayBuffer.getChannelData(0)[totalWrite] = result[i] || 0;
-      totalWrite++;
-    }
-  });
-}
-
-function joinToStereo(audioArrayBuffer, _files, largest, pad) {
-  let totalWrite = 0;
-  _files.forEach((file, idx) => {
-    const bufferLength = pad ? largest : file.buffer.length;
-    let result = [
-      new Float32Array(file.buffer.length),
-      new Float32Array(file.buffer.length)];
-
-    for (let i = 0; i < file.buffer.length; i++) {
-      result[0][i] = file.buffer.getChannelData(0)[i];
-      result[1][i] = file.buffer.getChannelData(
-          file.buffer.numberOfChannels === 2 ? 1 : 0)[i];
-    }
-
-    for (let i = 0; i < bufferLength; i++) {
-      audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i] || 0;
-      audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i] || 0;
-      totalWrite++;
-    }
-  });
+  return bufferToFloat32Array(buffer, channel, getAudioBuffer, audioCtx, masterChannels, masterSR);
 }
 
 function showMergePanel() {
@@ -1593,7 +1540,7 @@ function convertChain(event, toSpacedChain = false) {
   };
   delete newItem.item.meta.op1Json;
   newItem.callback(newItem.item, newItem.fileIdx);
-  document.getElementById('splitOptions').close();
+  closeSplitOptions();
 }
 
 function joinAllByPath(event, pad = false) { //TODO: test and hook into UI
@@ -1765,8 +1712,9 @@ const changeChannel = (
     const confirmSetAllSelected = confirm(
         `Confirm setting all selected samples that are stereo to ${opts[channel]}?`);
     if (confirmSetAllSelected) {
-      files.filter(f => f.meta.checked).forEach(f => {
+      files.filter(f => f.meta.checked && f.buffer.numberOfChannels > 1).forEach(f => {
         f.meta.channel = channel;
+        file.waveform = false;
       });
     }
     if (!modifierKeys.shiftKey &&
@@ -1776,12 +1724,14 @@ const changeChannel = (
     return renderList();
   }
   file.meta.channel = channel;
+  file.waveform = false;
+  renderRow(file);
   //file.waveform.getContext('2d').clear();
   //drawWaveform(file, file.waveform, file.buffer.numberOfChannels);
-  getRowElementById(id, tableId).
-      querySelectorAll('.channel-options a').
-      forEach(opt => opt.classList.remove('selected'));
-  el.classList.add('selected');
+  // getRowElementById(id, tableId).
+  //     querySelectorAll('.channel-options a').
+  //     forEach(opt => opt.classList.remove('selected'));
+  // el.classList.add('selected');
 };
 
 const changePan = (event, id, pan) => {
@@ -2385,7 +2335,7 @@ const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
   }
   splitSizeAction(false, 0);
   if (!el.open) { el.showModal(); }
-  drawWaveform(item, splitPanelWaveformEl, item.meta.channel, {
+  drawWaveform(item, splitPanelWaveformEl, item.meta?.channel??0, {
     width: +splitPanelWaveformContainerEl.dataset.waveformWidth, height: 128
   });
   item.meta.customSlices = false;
@@ -2640,7 +2590,7 @@ const drawEmptyWaveforms = (_files) => {
         _files[i].waveform.parentElement.appendChild(_files[i].playHead);
       }
     } else {
-      drawWaveform(_files[i], el, _files[i].meta.channel);
+      drawWaveform(_files[i], el, (masterChannels > 1 ? 'S' : _files[i].meta?.channel??0));
       _files[i].waveform = el;
     }
   });
@@ -3406,6 +3356,19 @@ document.body.addEventListener('keydown', (event) => {
   }
   if (arePopUpsOpen()) {
     // Don't listen for keyboard commands when popups are open.
+    // If editor panel is open, use these shortcuts.
+    if (document.getElementById('editPanel').open) {
+      if (event.code === 'KeyP') {
+        event.altKey
+            ? digichain.editor.editorPlayFile(event, false, true)
+            : digichain.editor.editorPlayFile(event);
+      } else if (masterChannels === 1 &&
+          (event.code === 'KeyL' || event.code === 'KeyR' || event.code ===
+              'KeyS' || event.code === 'KeyD')) {
+          digichain.editor.changeChannel(event,
+              event.code.replace('Key', ''));
+      }
+    }
     return;
   }
 
@@ -3591,6 +3554,7 @@ window.digichain = {
   toggleOptionsPanel,
   showExportSettingsPanel,
   showEditPanel,
+  closeSplitOptions,
   pitchExports,
   toggleSetting,
   toggleSecondsPerFile,

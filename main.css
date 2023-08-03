@@ -440,6 +440,34 @@ td button { margin: 0.5rem; }
     display: none;
 }
 
+.above-waveform-buttons {
+    width: 100%;
+    display:inline-block;
+}
+
+.playback-controls button {
+    padding: .5rem;
+    margin: 0;
+    width: 2rem;
+    height: 2.25rem;
+    text-align: center;
+    vertical-align: middle;
+    margin-top: -.25rem;
+}
+
+.zoom-level {
+    position: absolute;
+    right: 3rem;
+}
+.zoom-level button {
+    width: 2.5rem;
+    height: 2.5rem;
+    text-align: center;
+    vertical-align: middle;
+    line-height: .25rem;
+}
+
+
 dialog {
     color: #606c76;
     font-family: 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
@@ -668,7 +696,7 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     margin-top: .25rem;
 }
 .slice-options #sliceSelection {
-    width: 15rem;
+    width: 12rem;
     padding: 0;
     margin-top: .2rem;
     padding-left: 5rem;
@@ -689,7 +717,7 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     background-blend-mode: soft-light;
 }
 .slice-options button {
-    padding: 0 1rem;
+    padding: 0 .5rem;
 }
 .touch-buttons {
     /*display: none;*/

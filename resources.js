@@ -198,7 +198,7 @@ function deClick(audioArray, threshold) {
   return audioArray;
 }
 
-export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, deClickThreshold = false, renderAsAif = false, pitchModifier = 1, embedSliceData = true) {
+export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, deClickThreshold = false, renderAsAif = false, pitchModifier = 1, embedSliceData = true, embedCuePoints = true) {
   let numChannels = buffer.numberOfChannels;
   let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
   sampleRate = sampleRate * pitchModifier;
@@ -232,7 +232,7 @@ export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumCh
 
   return renderAsAif ?
       encodeAif(result, sampleRate, numChannels, buildOpData(meta?.slices, numChannels)) :
-      encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier, embedSliceData);
+      encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier, embedSliceData, embedCuePoints);
 }
 
 DataView.prototype.setInt24 = function(pos, val, littleEndian) {
@@ -240,29 +240,45 @@ DataView.prototype.setInt24 = function(pos, val, littleEndian) {
   this.setInt16(pos + 1, val >> 8, littleEndian);
 }
 
-export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, slices, pitchModifier = 1, embedSliceData = true) {
+export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, slices, pitchModifier = 1, embedSliceData = true, embedCuePoints = true) {
+  const hasSlices = slices && Array.isArray(slices) && slices.length !== 0;
   let bytesPerSample = bitDepth / 8;
   let blockAlign = numChannels * bytesPerSample;
   let sliceData = [];
   let buffer;
-  let riffSize;
+  let riffSize = 36 + samples.length * bytesPerSample;
+  let bufferLength = 44 + samples.length * bytesPerSample;
+  let sliceCueLength = 0;
 
-  if (embedSliceData && slices && Array.isArray(slices) && slices.length !== 0) {
-    let _slices = pitchModifier === 1 ? slices : slices.map(slice => ({
-      n: slice.n, s: Math.round(slice.s / pitchModifier),
-      e: Math.round(slice.e / pitchModifier),
-      l: (!slice.l || slice.l === -1) ? -1 : Math.round(slice.l / pitchModifier)
-    }));
-    sliceData = `{"sr": ${sampleRate}, "dcs":` + JSON.stringify(_slices) + '}';
-    sliceData = sliceData.padEnd(sliceData.length + sliceData.length%4, ' ');
-    buffer = new ArrayBuffer(44 + (sliceData.length + 8) + samples.length * bytesPerSample);
-    riffSize = 36 + (sliceData.length + 8) + samples.length * bytesPerSample;
-  } else {
-    buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
-    riffSize = 36 + samples.length * bytesPerSample;
+  let _slices = hasSlices ? (pitchModifier === 1 ? slices : slices.map(slice => ({
+    n: slice.n, s: Math.round(slice.s / pitchModifier),
+    e: Math.round(slice.e / pitchModifier),
+    l: (!slice.l || slice.l === -1) ? -1 : Math.round(slice.l / pitchModifier)
+  }))) : [];
+
+  if (hasSlices) {
+    if (embedSliceData) {
+      sliceData = `{"sr": ${sampleRate}, "dcs":` + JSON.stringify(_slices) + '}';
+      sliceData = sliceData.padEnd(sliceData.length + sliceData.length%4, ' ');
+      bufferLength += (sliceData.length + 8);
+      riffSize += (sliceData.length + 8);
+    }
+    if (embedCuePoints) {
+      sliceCueLength = (12 + (24 * slices.length));
+      bufferLength += sliceCueLength;
+      riffSize += sliceCueLength;
+    }
+    /*buffer = new ArrayBuffer(44 + (sliceData.length + 8) + samples.length * bytesPerSample);
+    riffSize = 36 + (sliceData.length + 8) + samples.length * bytesPerSample;*/
+
+    // buffer = new ArrayBuffer(44 + (sliceData.length + 8) + sliceCueLength + samples.length * bytesPerSample);
+    // riffSize = 36 + (sliceData.length + 8) + sliceCueLength + samples.length * bytesPerSample;
   }
 
-  var view = new DataView(buffer);
+  buffer = new ArrayBuffer(bufferLength);
+
+
+  let view = new DataView(buffer);
 
   /* RIFF identifier */
   writeString(view, 0, 'RIFF');
@@ -299,13 +315,46 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
   } else {
     writeFloat32(view, 44, samples);
   }
-  if (slices && slices.length !== 0) {
-    /*DCSD custom chunk header*/
-    writeString(view, view.byteLength - (sliceData.length + 8), 'DCSD');
-    /*DCSD custom chunk size*/
-    view.setUint32(view.byteLength - (sliceData.length + 4), sliceData.length, true);
-    /*DCSD custom chunk data*/
-    writeString(view, view.byteLength - sliceData.length, sliceData);
+  if (hasSlices) {
+    if (embedSliceData) {
+      /*DCSD custom chunk header*/
+      writeString(view,
+          view.byteLength - (sliceData.length + 8) - sliceCueLength, 'DCSD');
+      /*DCSD custom chunk size*/
+      view.setUint32(view.byteLength - (sliceData.length + 4) - sliceCueLength,
+          sliceData.length, true);
+      /*DCSD custom chunk data*/
+      writeString(view, view.byteLength - sliceData.length - sliceCueLength,
+          sliceData);
+    }
+    if (embedCuePoints) {
+      writeString(view, view.byteLength - sliceCueLength, 'cue ');
+      view.setUint32(view.byteLength - sliceCueLength + 4, sliceCueLength - 4,
+          true);
+      view.setUint32(view.byteLength - sliceCueLength + 8, slices.length, true);
+
+      for (let sIdx = 0; sIdx < slices.length; sIdx++) {
+        const increment = 12 + (sIdx * 24);
+        /*Cue id*/
+        view.setUint32(view.byteLength - sliceCueLength + increment, sIdx,
+            true);
+        /*Cue position*/
+        view.setUint32(view.byteLength - sliceCueLength + increment + 4, 0,
+            true);
+        /*Cue data chunk sig*/
+        writeString(view, view.byteLength - sliceCueLength + increment + 8,
+            'data');
+        /*Cue chunk start zero value*/
+        view.setUint32(view.byteLength - sliceCueLength + increment + 12, 0,
+            true);
+        /*Cue block start zero value*/
+        view.setUint32(view.byteLength - sliceCueLength + increment + 16, 0,
+            true);
+        /*Cue point sample start position*/
+        view.setUint32(view.byteLength - sliceCueLength + increment + 20,
+            _slices[sIdx].s, true);
+      }
+    }
   }
 
   return buffer;

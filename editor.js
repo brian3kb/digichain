@@ -746,12 +746,50 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
   item.waveform = false;
 }
 
+// function werp(event, item, length) {
+//   if (!renderEditPanel && item) {
+//     selection.start = 0;
+//     selection.end = item.buffer.length;
+//   }
+//   item = item || editing;
+//
+//   const audioArrayBuffer = conf.audioCtx.createBuffer(
+//       item.buffer.numberOfChannels,
+//       length,
+//       conf.masterSR
+//   );
+//   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+//     let x = 0;
+//     for (let i = selection.start; i < selection.end; i++) {
+//       audioArrayBuffer.getChannelData(channel)[x] = item.buffer.getChannelData(channel)[i];
+//       x++;
+//     }
+//   }
+//
+// }
+
 function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
+  const attemptToFindCrossingPoint = JSON.parse(
+      localStorage.getItem('attemptToFindCrossingPoint')) ?? false;
+
   if (!renderEditPanel && item) {
     selection.start = 0;
     selection.end = conf.masterSR * lengthInSeconds;
   }
   item = item || editing;
+
+  if (renderEditPanel || attemptToFindCrossingPoint) {
+    // match start and end sample values
+    for (let i = (selection.start - Math.floor(((selection.start/4)*3))); i < selection.end; i++) {
+      if (
+          (item.buffer.getChannelData(0)[selection.end - i] === selection.start) &&
+          (item.buffer.numberOfChannels > 1 ? item.buffer.getChannelData(1)[selection.end - i] === selection.start : true)
+      ) {
+        selection.end = selection.end - i;
+      }
+    }
+  }
+
 
   let truncIndex = selection.end - selection.start;
 

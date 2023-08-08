@@ -54,6 +54,8 @@ let playWithPopMarker = JSON.parse(
 let zipDownloads = JSON.parse(localStorage.getItem('zipDownloads')) ?? true;
 let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData')) ??
     true;
+let embedCuePoints = JSON.parse(localStorage.getItem('embedCuePoints')) ??
+    true;
 let showTouchModifierKeys = JSON.parse(
     localStorage.getItem('showTouchModifierKeys')) ?? true;
 let exportWithOtFile = JSON.parse(
@@ -64,6 +66,8 @@ let normalizeContrast = JSON.parse(
     localStorage.getItem('normalizeContrast')) ?? false;
 let importFileLimit = JSON.parse(
     localStorage.getItem('importFileLimit')) ?? true;
+let attemptToFindCrossingPoint = JSON.parse(
+    localStorage.getItem('attemptToFindCrossingPoint')) ?? false;
 let deClick = JSON.parse(
     localStorage.getItem('deClick')) ?? 0.4;
 let secondsPerFile = 0;
@@ -444,7 +448,7 @@ async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
 
   wav = audioBufferToWav(
       file.buffer, file.meta, masterSR, (bitDepthOverride || masterBitDepth), masterChannels, deClick,
-      (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData
+      (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData, embedCuePoints
   );
   blob = new window.Blob([new DataView(wav)], {
     type: renderAsAif && pitchModifier === 1 ? 'audio/aiff' : 'audio/wav',
@@ -462,7 +466,7 @@ async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
     }));
     wav = audioBufferToWav(
         pitchedBuffer, meta, masterSR, (bitDepthOverride || masterBitDepth), masterChannels, deClick,
-        renderAsAif, 1, embedSliceData
+        renderAsAif, 1, embedSliceData, embedCuePoints
     );
     blob = new window.Blob([new DataView(wav)], {
       type: renderAsAif ? 'audio/aiff' : 'audio/wav',
@@ -805,6 +809,11 @@ function toggleSetting(param, value) {
     localStorage.setItem('embedSliceData', embedSliceData);
     showExportSettingsPanel();
   }
+  if (param === 'embedCuePoints') {
+    embedCuePoints = !embedCuePoints;
+    localStorage.setItem('embedCuePoints', embedCuePoints);
+    showExportSettingsPanel();
+  }
   if (param === 'exportWithOtFile') {
     exportWithOtFile = !exportWithOtFile;
     localStorage.setItem('exportWithOtFile', exportWithOtFile);
@@ -813,6 +822,11 @@ function toggleSetting(param, value) {
   if (param === 'importFileLimit') {
     importFileLimit = !importFileLimit;
     localStorage.setItem('importFileLimit', importFileLimit);
+    showExportSettingsPanel();
+  }
+  if (param === 'attemptToFindCrossingPoint') {
+    attemptToFindCrossingPoint = !attemptToFindCrossingPoint;
+    localStorage.setItem('attemptToFindCrossingPoint', attemptToFindCrossingPoint);
     showExportSettingsPanel();
   }
   if (param === 'darkModeTheme') {
@@ -951,7 +965,7 @@ function showExportSettingsPanel() {
   <table style="padding-top:0;">
   <thead>
   <tr>
-  <th width="55%"></th>
+  <th width="68%"></th>
   <th></th>
 </tr>
 </thead>
@@ -974,16 +988,22 @@ function showExportSettingsPanel() {
       : 'button-outline'}">${restoreLastUsedAudioConfig ? 'YES' : 'NO'}</button></td>
 </tr>
   <tr>
-  <td><span>Play pop markers when playing back samples?<br>0db prevents DT normalization.<br>Peak sets pop to loudest sample peak. &nbsp;&nbsp;&nbsp;</span></td>
+  <td><span>Play pop markers when playing back samples?&nbsp;&nbsp;&nbsp;</span></td>
   <td>
   <button onclick="digichain.toggleSetting('playWithPopMarker', 0)" class="check ${playWithPopMarker ===
   0 ? 'button' : 'button-outline'}">OFF</button>
-  <button onclick="digichain.toggleSetting('playWithPopMarker', 1)" class="check ${playWithPopMarker ===
+  <button title="0db prevents DT normalization." onclick="digichain.toggleSetting('playWithPopMarker', 1)" class="check ${playWithPopMarker ===
   1 ? 'button' : 'button-outline'}">0db</button>
-  <button onclick="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${playWithPopMarker ===
+  <button title="Peak sets pop to loudest sample peak." onclick="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${playWithPopMarker ===
   2 ? 'button' : 'button-outline'}">Peak</button>
   </td>
   </tr>
+  <td><span>Try to match start/end sample when cropping/truncating?&nbsp;&nbsp;&nbsp;</span></td>
+<td><button title="Could give shorter length samples than specified but can help
+   reduce clicks on looping cropped/truncated samples" onclick="digichain.toggleSetting('attemptToFindCrossingPoint')" class="check ${attemptToFindCrossingPoint
+      ? 'button'
+      : 'button-outline'}">${attemptToFindCrossingPoint ? 'YES' : 'NO'}</button></td>
+</tr>
     <tr>
   <td><span>De-click exported samples?<br>Helps when importing non-wav files of a different<br>sample rate than the export file, or small buffered audio interfaces. &nbsp;&nbsp;&nbsp;</span></td>
   <td>
@@ -1010,10 +1030,16 @@ function showExportSettingsPanel() {
       : 'button-outline'}">${zipDownloads ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
-<td><span>Embed slice information in exported wav files?<br>(Disable this if files cause an error loading for you.) &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData
+<td><span>Embed slice information in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
+<td><button title="Embed the slice information into the wav file in DigiChain format, this includes start, end points and the source file name for the slice." onclick="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData
       ? 'button'
       : 'button-outline'}">${embedSliceData ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<td><span>Embed slice information as CUE points in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
+<td><button title="Embed slice data as wav CUE point markers, compatible with DirtyWave M8 slice sampler. The end points will extend to the start point of the next sample, or the end of the wav file for the last slice." onclick="digichain.toggleSetting('embedCuePoints')" class="check ${embedCuePoints
+      ? 'button'
+      : 'button-outline'}">${embedCuePoints ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <tr>
@@ -1023,8 +1049,8 @@ function showExportSettingsPanel() {
       : 'button-outline'}">${exportWithOtFile ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
-<td><span>Limit imports to maximum of 750 files?<br>(Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts) &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('importFileLimit')" class="check ${importFileLimit
+<td><span>Limit imports to maximum of 750 files?&nbsp;&nbsp;&nbsp;</span></td>
+<td><button title="(Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts)." onclick="digichain.toggleSetting('importFileLimit')" class="check ${importFileLimit
       ? 'button'
       : 'button-outline'}">${importFileLimit ? 'YES' : 'NO'}</button></td>
 </tr>
@@ -2590,7 +2616,7 @@ const drawEmptyWaveforms = (_files) => {
         _files[i].waveform.parentElement.appendChild(_files[i].playHead);
       }
     } else {
-      drawWaveform(_files[i], el, (masterChannels > 1 ? 'S' : _files[i].meta?.channel??0));
+      drawWaveform(_files[i], el, ((masterChannels > 1 && _files[i].buffer.numberOfChannels > 1) ? 'S' : _files[i].meta?.channel??0));
       _files[i].waveform = el;
     }
   });
@@ -2978,7 +3004,7 @@ const parseWav = (
         }
       }
       if (code === 'DCSD') {
-        const size = dv.getUint32(i + 4);
+        const size = dv.getUint32(i + 4, true);
         const utf8Decoder = new TextDecoder('utf-8');
         let jsonString = utf8Decoder.decode(
             arrayBuffer.slice(i + 8, i + 8 + size));
@@ -2994,8 +3020,31 @@ const parseWav = (
           slices = json.dcs;
         }
       }
+      if (code === 'cue ') {
+        const size = dv.getUint32(i + 4, true);
+        const cueCount = dv.getUint32(i + 8, true);
+        i += 12;
+        const wavSr = dv.getUint32(24, true);
+        const cuePoints = [];
+        for (let ci = 0; ci < cueCount; ci++) {
+          const cueId = dv.getUint32(i, true);
+          const cuePos = dv.getUint32(i + 20, true);
+          cuePoints.push({cueId, cuePos});
+          i += 24;
+        }
+        slices = slices || [];
+        cuePoints.forEach((cue, cueIdx) => slices.push({
+          s: Math.round((cue.cuePos / wavSr) * masterSR),
+          e: Math.round((
+                  (cueIdx !== cuePoints.length - 1 ? cuePoints[cueIdx + 1].cuePos : -1)
+           / wavSr) * masterSR),
+          l: -1,
+          n: `Cue ${cue.cueId + 1}`
+        }));
+      }
     }
   } catch (e) {
+    debugger;
     slices = false;
   }
   try {
@@ -3030,6 +3079,15 @@ const parseWav = (
           resampledArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
         }
       }
+    }
+
+    if (Array.isArray(slices)) {
+      /*Set the end point to the length of the buffer is the end is -1*/
+      slices.forEach(s => s.e = s.e === -1 ? (resampledArrayBuffer || audioArrayBuffer).length : s.e );
+      /*De-dupe the slices list, in the event of both DCSD and cue chunks being found in the wav file data.*/
+      const ddSlices = [];
+      slices.forEach(slice => ddSlices.findIndex(s => s.s === slice.s) > -1 ? false : ddSlices.push(slice));
+      slices = ddSlices;
     }
 
     files[pushToTop ? 'unshift' : 'push']({

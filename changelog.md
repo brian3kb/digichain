@@ -9,6 +9,8 @@
  - Remembering slice position/selection when changing options on edit panel.
  - Edit panel LRSD / play/stop keyboard shortcuts on edit panel.
  - Allow generating .ot metadata file on 16/24 44.1 mono exports.
+ - Option in settings to match the end sample with the start sample (if possible), to help reduce clicks for samples that will be played looped. (can result in shorter than specified samples).
+ - Read/write wav file cue point markers into DigiChain slice data (adds compatibility for DirtyWave M8 to read chains, and to import the slices from M8 to DigiChain).
 
 2023-07-27 1.4.5
  - Improved the note from filename detection and sorting.

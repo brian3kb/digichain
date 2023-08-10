@@ -268,16 +268,9 @@ export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, sl
       bufferLength += sliceCueLength;
       riffSize += sliceCueLength;
     }
-    /*buffer = new ArrayBuffer(44 + (sliceData.length + 8) + samples.length * bytesPerSample);
-    riffSize = 36 + (sliceData.length + 8) + samples.length * bytesPerSample;*/
-
-    // buffer = new ArrayBuffer(44 + (sliceData.length + 8) + sliceCueLength + samples.length * bytesPerSample);
-    // riffSize = 36 + (sliceData.length + 8) + sliceCueLength + samples.length * bytesPerSample;
   }
 
   buffer = new ArrayBuffer(bufferLength);
-
-
   let view = new DataView(buffer);
 
   /* RIFF identifier */

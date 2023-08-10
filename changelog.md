@@ -1,3 +1,4 @@
+2023-08-09 1.4.6
  - Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data. When converted to a spaced chain, if the grid-size is set to a value, the new chain will be padded to this number.
  - Ctrl+Click to preview slices before slicing a sample.
  - Slice editing on sample edit panel, create/update/remove slice markers.
@@ -11,6 +12,7 @@
  - Allow generating .ot metadata file on 16/24 44.1 mono exports.
  - Option in settings to match the end sample with the start sample (if possible), to help reduce clicks for samples that will be played looped. (can result in shorter than specified samples).
  - Read/write wav file cue point markers into DigiChain slice data (adds compatibility for DirtyWave M8 to read chains, and to import the slices from M8 to DigiChain).
+ - Added basic sample stretching (which does affect pitch), stretch selected samples to shortest or longest sample in the list, or hold shift to set a custom length in seconds. (this will remove any slice data for the modified samples).
 
 2023-07-27 1.4.5
  - Improved the note from filename detection and sorting.

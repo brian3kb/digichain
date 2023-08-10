@@ -746,27 +746,55 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
   item.waveform = false;
 }
 
-// function werp(event, item, length) {
-//   if (!renderEditPanel && item) {
-//     selection.start = 0;
-//     selection.end = item.buffer.length;
-//   }
-//   item = item || editing;
-//
-//   const audioArrayBuffer = conf.audioCtx.createBuffer(
-//       item.buffer.numberOfChannels,
-//       length,
-//       conf.masterSR
-//   );
-//   for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-//     let x = 0;
-//     for (let i = selection.start; i < selection.end; i++) {
-//       audioArrayBuffer.getChannelData(channel)[x] = item.buffer.getChannelData(channel)[i];
-//       x++;
-//     }
-//   }
-//
-// }
+function stretch(event, item, renderEditPanel = true, targetLength) {
+  if (!renderEditPanel && item) {
+    selection.start = 0;
+    selection.end = item.buffer.length;
+  }
+  item = item || editing;
+
+  const originalLength = item.buffer.length;
+  const factor = targetLength / originalLength;
+  const audioArrayBuffer = conf.audioCtx.createBuffer(
+      item.buffer.numberOfChannels,
+      targetLength,
+      conf.masterSR
+  );
+
+  for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+    for (let i = 0; i < targetLength; i++) {
+      const index = i / factor;
+      const lowerIndex = Math.floor(index);
+      const upperIndex = Math.ceil(index);
+      const interpolationFactor = index - lowerIndex;
+
+      if (upperIndex >= originalLength) {
+        audioArrayBuffer.getChannelData(channel)[i] = item.buffer.getChannelData(channel)[lowerIndex];
+      } else {
+        audioArrayBuffer.getChannelData(channel)[i] =
+            (1 - interpolationFactor) * item.buffer.getChannelData(channel)[lowerIndex] +
+            interpolationFactor * item.buffer.getChannelData(channel)[upperIndex];
+      }
+    }
+  }
+
+  item.buffer = audioArrayBuffer;
+  item.meta = {
+    ...item.meta,
+    length: audioArrayBuffer.length,
+    duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
+    startFrame: 0, endFrame: audioArrayBuffer.length
+  };
+  if (item.meta.slices) {
+    item.meta.slices = false;
+  }
+  digichain.removeMetaFile(item.meta.id);
+  if (renderEditPanel) {
+    showEditor(editing, conf, 'sample', folders);
+  }
+  item.waveform = false;
+
+}
 
 function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
   const attemptToFindCrossingPoint = JSON.parse(
@@ -903,6 +931,7 @@ export const editor = {
   truncate,
   perSamplePitch,
   double,
+  stretch,
   buildOpKit,
   sliceUpdate,
   sliceCreate,

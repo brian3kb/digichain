@@ -643,6 +643,34 @@ function truncateSelected(event) {
   }, 250);
 }
 
+function stretchSelected(event, shortest = false) {
+  let stretchLength = files.filter(
+      f => f.meta.checked
+  ).sort(
+      (a, b) => a.meta.length > b.meta.length ? 1 : 0
+  ).at(shortest ? -1 : 0).meta.length;
+  console.warn(stretchLength);
+  if (event.shiftKey || modifierKeys.shiftKey) {
+    const userResponse = prompt(`Please enter a custom length in seconds to stretch the selected samples to...`);
+    if (userResponse && !isNaN(userResponse)) {
+      stretchLength = Math.floor(Math.abs(+userResponse) * masterSR);
+    }
+  }
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked);
+    selected.forEach((f, idx) => {
+      editor.stretch(event, f, false, stretchLength);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
+}
+
 function reverseSelected(event) {
   files.forEach(f => f.meta.checked ? f.source?.stop() : '');
   document.getElementById('loadingText').textContent = 'Processing';
@@ -3044,7 +3072,6 @@ const parseWav = (
       }
     }
   } catch (e) {
-    debugger;
     slices = false;
   }
   try {
@@ -3153,6 +3180,7 @@ const consumeFileInput = (event, inputFiles) => {
   }
   const isAudioCtxClosed = checkAudioContextState();
   if (isAudioCtxClosed) { return; }
+
   let _files = [...inputFiles].filter(
       f => ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a'].includes(
           f?.name?.split('.')?.reverse()[0].toLowerCase())
@@ -3277,6 +3305,104 @@ const consumeFileInput = (event, inputFiles) => {
   }, 10000);
 };
 
+const dropHandler = (event) => {
+  event.preventDefault();
+  if (!audioCtx) {
+    audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
+    setEditorConf({
+      audioCtx,
+      masterSR,
+      masterChannels,
+      masterBitDepth
+    });
+  }
+  if (event?.dataTransfer?.items?.length &&
+      event?.dataTransfer?.items[0].kind === 'string') {
+    try {
+      event?.dataTransfer?.items[0].getAsString(async link => {
+        let linkedFile = await fetch(link);
+        if (!linkedFile.url.includes('.wav')) { return; } // probably not a wav file
+        let buffer = await linkedFile.arrayBuffer();
+        const fb = buffer.slice(0);
+        await audioCtx.decodeAudioData(buffer,
+            data => parseWav(data, fb, {
+              lastModified: new Date().getTime(),
+              name: linkedFile.url.split('/').reverse()[0],
+              size: ((masterBitDepth * masterSR *
+                      (buffer.length / masterSR)) / 8) *
+                  buffer.numberOfChannels / 1024,
+              type: 'audio/wav'
+            }, '', true));
+        renderList();
+      });
+      return;
+    } catch (e) {}
+  }
+  if (event?.dataTransfer?.items?.length) {
+    let toConsume = [];
+    let total = event.dataTransfer.items.length;
+    toConsume.count = 0;
+    const addItem = item => {
+      if (item.isFile) {
+        item.file(
+            (file) => {
+              file.fullPath = item.fullPath.replace('/', '');
+              toConsume.push(file);
+            }
+        );
+        toConsume.count++;
+        total--;
+      } else if (item.isDirectory) {
+        const dirReader = item.createReader();
+        dirReader.readEntries(entries => {
+          total += entries.length;
+          for (const entry of entries) {
+            addItem(entry);
+          }
+          total--;
+        });
+      }
+    }
+    for (const entry of event.dataTransfer.items) {
+      const itemAsEntry = entry.getAtEntry
+          ? entry.getAtEntry()
+          : entry.webkitGetAsEntry();
+      if (itemAsEntry) {
+        addItem(itemAsEntry);
+      }
+    }
+    let doneInterval = setInterval(() => {
+      if (total <= 0 && toConsume.count === toConsume.length) {
+        clearInterval(doneInterval);
+        consumeFileInput(event, toConsume);
+      }
+    }, 500);
+  } else {
+    let target = event.target;
+    if (document.getElementById('opExportPanel').
+        classList.
+        contains('show')) {
+      // Block row re-ordering while op export side panel is open.
+      return;
+    }
+    while (!target.classList.contains('file-row')) {
+      target = target.parentElement || document.body;
+      target = target.nodeName === 'THEAD' ? document.querySelector(
+          'tr.file-row') : target;
+      target = target === document.body ? document.querySelector(
+          'tr.file-row:last-of-type') : target;
+    }
+    if (target) {
+      let selectedRowId = getFileIndexById(lastSelectedRow.dataset.id);
+      let targetRowId = getFileIndexById(target.dataset.id);
+      let item = files.splice(selectedRowId, 1)[0];
+      files.splice(targetRowId, 0, item);
+      targetRowId === 0 ? target.before(lastSelectedRow) : target.after(
+          lastSelectedRow);
+    }
+  }
+};
+
 uploadInput.addEventListener(
     'change',
     () => consumeFileInput({shiftKey: modifierKeys.shiftKey}, uploadInput.files),
@@ -3293,103 +3419,7 @@ document.body.addEventListener(
 
 document.body.addEventListener(
     'drop',
-    (event) => {
-      event.preventDefault();
-      if (!audioCtx) {
-        audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
-        setEditorConf({
-          audioCtx,
-          masterSR,
-          masterChannels,
-          masterBitDepth
-        });
-      }
-      if (event?.dataTransfer?.items?.length &&
-          event?.dataTransfer?.items[0].kind === 'string') {
-        try {
-          event?.dataTransfer?.items[0].getAsString(async link => {
-            let linkedFile = await fetch(link);
-            if (!linkedFile.url.includes('.wav')) { return; } // probably not a wav file
-            let buffer = await linkedFile.arrayBuffer();
-            const fb = buffer.slice(0);
-            await audioCtx.decodeAudioData(buffer,
-                data => parseWav(data, fb, {
-                  lastModified: new Date().getTime(),
-                  name: linkedFile.url.split('/').reverse()[0],
-                  size: ((masterBitDepth * masterSR *
-                          (buffer.length / masterSR)) / 8) *
-                      buffer.numberOfChannels / 1024,
-                  type: 'audio/wav'
-                }, '', true));
-            renderList();
-          });
-          return;
-        } catch (e) {}
-      }
-      if (event?.dataTransfer?.items?.length) {
-        let toConsume = [];
-        let total = event.dataTransfer.items.length;
-        toConsume.count = 0;
-        const addItem = item => {
-          if (item.isFile) {
-            item.file(
-                (file) => {
-                  file.fullPath = item.fullPath.replace('/', '');
-                  toConsume.push(file);
-                }
-            );
-            toConsume.count++;
-            total--;
-          } else if (item.isDirectory) {
-            const dirReader = item.createReader();
-            dirReader.readEntries(entries => {
-              total += entries.length;
-              for (const entry of entries) {
-                addItem(entry);
-              }
-              total--;
-            });
-          }
-        }
-        for (const entry of event.dataTransfer.items) {
-          const itemAsEntry = entry.getAtEntry
-              ? entry.getAtEntry()
-              : entry.webkitGetAsEntry();
-          if (itemAsEntry) {
-            addItem(itemAsEntry);
-          }
-        }
-        let doneInterval = setInterval(() => {
-          if (total <= 0 && toConsume.count === toConsume.length) {
-            clearInterval(doneInterval);
-            consumeFileInput(event, toConsume);
-          }
-        }, 500);
-      } else {
-        let target = event.target;
-        if (document.getElementById('opExportPanel').
-            classList.
-            contains('show')) {
-          // Block row re-ordering while op export side panel is open.
-          return;
-        }
-        while (!target.classList.contains('file-row')) {
-          target = target.parentElement || document.body;
-          target = target.nodeName === 'THEAD' ? document.querySelector(
-              'tr.file-row') : target;
-          target = target === document.body ? document.querySelector(
-              'tr.file-row:last-of-type') : target;
-        }
-        if (target) {
-          let selectedRowId = getFileIndexById(lastSelectedRow.dataset.id);
-          let targetRowId = getFileIndexById(target.dataset.id);
-          let item = files.splice(selectedRowId, 1)[0];
-          files.splice(targetRowId, 0, item);
-          targetRowId === 0 ? target.before(lastSelectedRow) : target.after(
-              lastSelectedRow);
-        }
-      }
-    },
+    dropHandler,
     false
 );
 
@@ -3578,6 +3608,7 @@ window.digichain = {
   fuzzSelected,
   crushSelected,
   fadeSelected,
+  stretchSelected,
   showMergePanel,
   showBlendPanel,
   sort,

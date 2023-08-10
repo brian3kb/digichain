@@ -57,7 +57,7 @@ let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData')) ??
 let embedCuePoints = JSON.parse(localStorage.getItem('embedCuePoints')) ??
     true;
 let showTouchModifierKeys = JSON.parse(
-    localStorage.getItem('showTouchModifierKeys')) ?? true;
+    localStorage.getItem('showTouchModifierKeys')) ?? false;
 let exportWithOtFile = JSON.parse(
     localStorage.getItem('exportWithOtFile')) ?? false;
 let darkModeTheme = JSON.parse(

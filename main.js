@@ -649,7 +649,6 @@ function stretchSelected(event, shortest = false) {
   ).sort(
       (a, b) => a.meta.length > b.meta.length ? 1 : 0
   ).at(shortest ? -1 : 0).meta.length;
-  console.warn(stretchLength);
   if (event.shiftKey || modifierKeys.shiftKey) {
     const userResponse = prompt(`Please enter a custom length in seconds to stretch the selected samples to...`);
     if (userResponse && !isNaN(userResponse)) {

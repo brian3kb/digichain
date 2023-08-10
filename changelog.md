@@ -1,3 +1,7 @@
+ - Allow * and / on the stretch action shifted user input.
+ - Hold shift on pitch buttons to use stretch instead of the resample method to affect the pitch.
+ - Break-word on blend filenames to help prevent column width issues.
+
 2023-08-09 1.4.6
  - Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data. When converted to a spaced chain, if the grid-size is set to a value, the new chain will be padded to this number.
  - Ctrl+Click to preview slices before slicing a sample.

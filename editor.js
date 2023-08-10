@@ -501,7 +501,7 @@ function resetSelectionPoints() {
   updateSelectionEl();
 }
 
-function perSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = true, volumeAdjust = 1, bitDepthOverride) {
+function reSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = true, volumeAdjust = 1, bitDepthOverride) {
   item = item || editing;
 
   if (item.buffer.length < 1024 && pitchValue > 1) {
@@ -746,6 +746,14 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
   item.waveform = false;
 }
 
+function perSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = true, volumeAdjust = 1, bitDepthOverride) {
+  if (event.shiftKey) {
+    stretch(event, item, renderEditPanel, ((item || editing).buffer.length / pitchValue));
+  } else {
+    reSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel, volumeAdjust, bitDepthOverride);
+  }
+}
+
 function stretch(event, item, renderEditPanel = true, targetLength) {
   if (!renderEditPanel && item) {
     selection.start = 0;
@@ -781,18 +789,25 @@ function stretch(event, item, renderEditPanel = true, targetLength) {
   item.buffer = audioArrayBuffer;
   item.meta = {
     ...item.meta,
+    //opPitch: (item.meta.opPitch??0) + (512 * pitchSteps),
     length: audioArrayBuffer.length,
     duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
-    startFrame: 0, endFrame: audioArrayBuffer.length
+    startFrame: 0, endFrame: audioArrayBuffer.length,
+    note: false,
+    slices: item.meta.slices ? item.meta.slices.map(slice => ({
+      ...slice,
+      n: slice.n, s: Math.round(slice.s * factor),
+      e: Math.round(slice.e * factor)
+    })) : false
   };
-  if (item.meta.slices) {
-    item.meta.slices = false;
-  }
-  digichain.removeMetaFile(item.meta.id);
   if (renderEditPanel) {
-    showEditor(editing, conf, 'sample', folders);
+    renderEditPanelWaveform(multiplier);
+    selection.end = Math.round(selection.end * factor);
+    selection.start = Math.round(selection.start * factor);
+    selection.step = item.buffer.length / (1024 * multiplier);
+    updateSelectionEl();
+    item.waveform = false;
   }
-  item.waveform = false;
 
 }
 

@@ -644,15 +644,25 @@ function truncateSelected(event) {
 }
 
 function stretchSelected(event, shortest = false) {
-  let stretchLength = files.filter(
+  let sortedItems = files.filter(
       f => f.meta.checked
   ).sort(
-      (a, b) => a.meta.length > b.meta.length ? 1 : 0
-  ).at(shortest ? -1 : 0).meta.length;
+      (a, b) => b.buffer.length - a.buffer.length
+  );
+  if (shortest === true) {
+    sortedItems.reverse();
+  }
+  let stretchLength = sortedItems[0].buffer.length;
   if (event.shiftKey || modifierKeys.shiftKey) {
     const userResponse = prompt(`Please enter a custom length in seconds to stretch the selected samples to...`);
-    if (userResponse && !isNaN(userResponse)) {
-      stretchLength = Math.floor(Math.abs(+userResponse) * masterSR);
+    if (userResponse) {
+      if (['x', '*'].includes(userResponse[0])) {
+        stretchLength = (bufferLength) => Math.floor(bufferLength * (+userResponse.replace(/[^0-9.]/g, '')))
+      } else if (['/', '%', '÷'].includes(userResponse[0])) {
+        stretchLength = (bufferLength) => Math.floor(bufferLength / (+userResponse.replace(/[^0-9.]/g, '')))
+      } else if (!isNaN(userResponse)) {
+        stretchLength = Math.floor(Math.abs(+userResponse) * masterSR);
+      }
     }
   }
   files.forEach(f => f.meta.checked ? f.source?.stop() : '');
@@ -661,7 +671,11 @@ function stretchSelected(event, shortest = false) {
   setTimeout(() => {
     const selected = files.filter(f => f.meta.checked);
     selected.forEach((f, idx) => {
-      editor.stretch(event, f, false, stretchLength);
+      if (typeof stretchLength === 'function') {
+        editor.stretch(event, f, false, stretchLength(f.buffer.length));
+      } else {
+        editor.stretch(event, f, false, stretchLength);
+      }
       if (idx === selected.length - 1) {
         document.body.classList.remove('loading');
       }
@@ -1277,7 +1291,7 @@ function performBlend(mFiles, blendLength) {
       Math.floor(blendLength / mFiles.length) + (i === mFiles.length - 1 ? blendLength % mFiles.length : 0)
   );
 
-  let blendName = `${getNiceFileName(mFiles.at(0).file.name)}__${getNiceFileName(mFiles.at(-1).file.name)}_blend`;
+  let blendName = `${getNiceFileName(mFiles.at(0).file.name)}-${getNiceFileName(mFiles.at(-1).file.name)}_blend`;
   let newItemBuffer = audioCtx.createBuffer(
       1,
       mFiles.reduce((a, f, i) => a += f.buffer.length * blendLengths[i], 0),

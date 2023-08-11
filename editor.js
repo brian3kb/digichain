@@ -468,6 +468,7 @@ function setSelStart(value) {
 
 function changeSelectionPoint(event, shiftKey = false) {
   event.preventDefault();
+  const lastSelection = {...selection};
   const max =  (1024 * multiplier);
   if ((event.shiftKey || shiftKey) || !selection.selStart) { //set end point if shift key is down
     let end = 0;
@@ -477,6 +478,9 @@ function changeSelectionPoint(event, shiftKey = false) {
       end = editing.buffer.length;
     }
     selection.end = end;
+    if (event.ctrlKey) {
+      selection.start = lastSelection.end;
+    }
     selection.start = selection.start >= selection.end? selection.end - 1: selection.start;
   } else {
     let start = 0;
@@ -486,6 +490,9 @@ function changeSelectionPoint(event, shiftKey = false) {
       start = editing.buffer.length;
     }
     selection.start = start;
+    if (event.ctrlKey) {
+      selection.end = lastSelection.start;
+    }
     selection.end = selection.end <= selection.start? selection.start + 1 : selection.end;
   }
   selection.end = selection.end >= editing.buffer.length? editing.buffer.length : selection.end;

@@ -3176,7 +3176,8 @@ const getRandomFileSelectionFrom = (fileCollection) => {
   let selection = [...fileCollection].sort(
       f => crypto.randomUUID().localeCompare(crypto.randomUUID())
   );
-  return selection.slice(0, (sliceGrid > 0 ? sliceGrid : 256));
+  return selection.filter((file, idx) =>  idx < (sliceGrid > 0 ? sliceGrid : 256) || file.fromArchive);
+  //return selection.slice(0, (sliceGrid > 0 ? sliceGrid : 256));
 };
 
 const consumeFileInput = (event, inputFiles) => {
@@ -3194,6 +3195,37 @@ const consumeFileInput = (event, inputFiles) => {
   const isAudioCtxClosed = checkAudioContextState();
   if (isAudioCtxClosed) { return; }
 
+  inputFiles = [...inputFiles];
+
+  let _zips = [...inputFiles].filter(
+      f => ['zip', 'dtprj'].includes(
+          f?.name?.split('.')?.reverse()[0].toLowerCase())
+  );
+
+  if (_zips.length > 0) {
+    _zips.forEach((archive, zidx) => {
+      const zip = new JSZip();
+      let prog = 1;
+      inputFiles[inputFiles.findIndex(f => f === archive)] = false;
+      zip.loadAsync(archive).then(() => {
+        const fileCount = Object.keys(zip.files).length;
+        for (let key in zip.files) {
+          zip.files[key].async('blob').then(blobData => {
+            blobData.name = key.split('/').at(-1);
+            blobData.fullPath = `${archive.name}/${key}`;
+            blobData.fromArchive = archive.name;
+            inputFiles.push(blobData);
+            if (zidx === _zips.length - 1 && prog === fileCount) {
+              consumeFileInput(event, inputFiles);
+            }
+            prog++;
+          });
+        }
+      });
+    });
+    return;
+  }
+
   let _files = [...inputFiles].filter(
       f => ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a'].includes(
           f?.name?.split('.')?.reverse()[0].toLowerCase())
@@ -3207,7 +3239,7 @@ const consumeFileInput = (event, inputFiles) => {
   }
 
   if (importFileLimit && _files.length > 750) {
-    _files = _files.slice(0, 750);
+    _files = _files.filter((file, idx) => idx < 750 || file.fromArchive );
   }
 
   _mFiles.forEach((file, idx) => {
@@ -3240,72 +3272,94 @@ const consumeFileInput = (event, inputFiles) => {
     //}
   };
   let count = [];
+  let error = {
+    encountered: false,
+    text: '',
+    count: 0
+  };
 
   _files.forEach((file, idx) => {
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-      file.uuid = crypto.randomUUID();
-      file.fullPath = file.fullPath || '';
-      const buffer = e.target.result;
-      if (file.name.toLowerCase().endsWith('.syx') ||
-          file.name.toLowerCase().endsWith('.aif')) {
-        // binary data
-        const bufferByteLength = buffer.byteLength;
-        const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
-        count.push(file.uuid);
-        let result = file.name.toLowerCase().endsWith('.aif') ?
-            await parseAif(buffer, bufferUint8Array, file, file.fullPath) :
-            parseSds(bufferUint8Array, file, file.fullPath);
-        if (result.failed) {
-          count.splice(count.findIndex(c => c === result.uuid), 1);
-        }
-        setLoadingProgress(idx + 1, _files.length);
-        checkCount(idx, _files.length);
-      }
-
-      if ((
-          file.name.toLowerCase().endsWith('.wav') ||
-          file.type === 'audio/wav') ||
-          file.name.toLowerCase().endsWith('.flac') ||
-          file.name.toLowerCase().endsWith('.webm') ||
-          file.name.toLowerCase().endsWith('.m4a')
-      ) {
-        count.push(file.uuid);
-        const fb = buffer.slice(0);
-
-        if (file.name.toLowerCase().endsWith('.wav') ||
-            file.type === 'audio/wav') {
-          let dv = new DataView(buffer);
-          for (let i = 0; i < dv.byteLength - 4; i++) {
-            const code = String.fromCharCode(dv.getUint8(i), dv.getUint8(i + 1),
-                dv.getUint8(i + 2), dv.getUint8(i + 3));
-            if (i > dv.byteLength || code === 'PAD ') {
-              break;
-            }
-            if (code === 'fmt ') {
-              file.channels = dv.getUint16(i + 10, true);
-              file.sampleRate = dv.getUint32(i + 12, true);
-              break;
-            }
-          }
-        }
-
-        await (masterSR !== file.sampleRate ? new AudioContext({sampleRate: file.sampleRate, latencyHint: 'interactive'}) : audioCtx).decodeAudioData(buffer, data => {
-          let result = parseWav(data, fb, file, file.fullPath);
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+        file.uuid = crypto.randomUUID();
+        file.fullPath = file.fullPath || '';
+        const buffer = e.target.result;
+        if (file.name.toLowerCase().endsWith('.syx') ||
+            file.name.toLowerCase().endsWith('.aif')) {
+          // binary data
+          const bufferByteLength = buffer.byteLength;
+          const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
+          count.push(file.uuid);
+          let result = file.name.toLowerCase().endsWith('.aif') ?
+              await parseAif(buffer, bufferUint8Array, file, file.fullPath) :
+              parseSds(bufferUint8Array, file, file.fullPath);
           if (result.failed) {
             count.splice(count.findIndex(c => c === result.uuid), 1);
           }
           setLoadingProgress(idx + 1, _files.length);
           checkCount(idx, _files.length);
-        }, (error) => {
-          count.splice(count.findIndex(c => c === file.uuid), 1);
-          setLoadingProgress(idx + 1, _files.length);
-          checkCount(idx, _files.length);
-        });
-      }
-    };
-    reader.readAsArrayBuffer(file);
+        }
+
+        if ((
+            file.name.toLowerCase().endsWith('.wav') ||
+            file.type === 'audio/wav') ||
+            file.name.toLowerCase().endsWith('.flac') ||
+            file.name.toLowerCase().endsWith('.webm') ||
+            file.name.toLowerCase().endsWith('.m4a')
+        ) {
+          count.push(file.uuid);
+          const fb = buffer.slice(0);
+
+          if (file.name.toLowerCase().endsWith('.wav') ||
+              file.type === 'audio/wav') {
+            let dv = new DataView(buffer);
+            for (let i = 0; i < dv.byteLength - 4; i++) {
+              const code = String.fromCharCode(dv.getUint8(i),
+                  dv.getUint8(i + 1),
+                  dv.getUint8(i + 2), dv.getUint8(i + 3));
+              if (i > dv.byteLength || code === 'PAD ') {
+                break;
+              }
+              if (code === 'fmt ') {
+                file.channels = dv.getUint16(i + 10, true);
+                file.sampleRate = dv.getUint32(i + 12, true);
+                break;
+              }
+            }
+          }
+
+          await (masterSR !== file.sampleRate
+              ? new AudioContext(
+                  {sampleRate: file.sampleRate, latencyHint: 'interactive'})
+              : audioCtx).decodeAudioData(buffer, data => {
+            let result = parseWav(data, fb, file, file.fullPath);
+            if (result.failed) {
+              count.splice(count.findIndex(c => c === result.uuid), 1);
+            }
+            setLoadingProgress(idx + 1, _files.length);
+            checkCount(idx, _files.length);
+          }, (error) => {
+            count.splice(count.findIndex(c => c === file.uuid), 1);
+            setLoadingProgress(idx + 1, _files.length);
+            checkCount(idx, _files.length);
+          });
+        }
+        } catch (err) {
+          error.encountered = true;
+          error.count++;
+          if (file.fromArchive) {
+            error.text = `There was an error extracting files from the zip archive, not all zip files are readable.\n
+            Please use store or deflate compression methods, and generate files with either 7zip as zip, or Windows Explorer.`;
+          }
+          if (error.encountered && error.text && idx === _files.length -1) {
+            alert(error.text + ` (failed: ${error.count})`);
+          }
+        }
+      };
+      reader.readAsArrayBuffer(file);
   });
+
   if (digichain.importInt) { clearInterval(digichain.importInt); }
   digichain.importInt = setInterval(() => {
     if (!document.body.classList.contains('loading')) {
@@ -3455,6 +3509,14 @@ document.body.addEventListener('keydown', (event) => {
     }
     return closePopUps();
   }
+
+  if (
+      document.activeElement.nodeName === 'INPUT' &&
+      document.activeElement.disabled === false
+  ) {
+    return;
+  }
+
   if (arePopUpsOpen()) {
     // Don't listen for keyboard commands when popups are open.
     // If editor panel is open, use these shortcuts.
@@ -3468,6 +3530,12 @@ document.body.addEventListener('keydown', (event) => {
               'KeyS' || event.code === 'KeyD')) {
           digichain.editor.changeChannel(event,
               event.code.replace('Key', ''));
+      } else if (event.code === 'KeyN') {
+        digichain.editor.sliceCreate(event);
+      } else if (event.code === 'KeyU') {
+        digichain.editor.sliceUpdate(event);
+      } else if (event.code === 'KeyX') {
+        digichain.editor.sliceRemove(event);
       }
     }
     return;

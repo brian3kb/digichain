@@ -1,6 +1,12 @@
+ - Load samples from within zip files and Digitakt project files. (ignores max file limit setting as all files in the zip need to be decompressed to memory, so be careful with zip sizes!).
  - Allow * and / on the stretch action shifted user input.
  - Hold shift on pitch buttons to use stretch instead of the resample method to affect the pitch.
  - Break-word on blend filenames to help prevent column width issues.
+ - Fixed bug where keyboard shortcuts activated in name editing on edit panel.
+ - Ctrl + Shift + Click On the edit panel, when clicking the waveform, this will set the end point selection to the clicked position and move the start point to the previous end point value.
+ - Edit Panel, N : Create new slice.
+ - Edit Panel, U : Update current slice.
+ - Edit Panel, X : Remove current slice.
 
 2023-08-09 1.4.6
  - Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data. When converted to a spaced chain, if the grid-size is set to a value, the new chain will be padded to this number.

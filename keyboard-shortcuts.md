@@ -9,6 +9,9 @@
  - Number keys 1 through 0 : play the selected sample in the position of the key with 0 == 10.
  - E: Opens the edit panel for the currently highlighted sample.
  - Holding Shift Key while dropping files: will randomly select files upto the currently set grid-size value.
+ - Edit Panel, N : Create new slice.
+ - Edit Panel, U : Update current slice.
+ - Edit Panel, X : Remove current slice.
 
 **Shift + Click / Shift + Key**
  - Up / Down Keys : moves the highlighted sample up or down in the list.
@@ -40,3 +43,6 @@
 
 **Alt + Key**
  - Number 1 - 0, P : Stops the playback and looping of the sample.
+
+**Ctrl + Shift + Click**
+ - On the edit panel, when clicking the waveform, this will set the end point selection to the clicked position and move the start point to the previous end point value.

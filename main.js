@@ -70,6 +70,8 @@ let attemptToFindCrossingPoint = JSON.parse(
     localStorage.getItem('attemptToFindCrossingPoint')) ?? false;
 let deClick = JSON.parse(
     localStorage.getItem('deClick')) ?? 0.4;
+let treatDualMonoStereoAsMono = JSON.parse(
+    localStorage.getItem('treatDualMonoStereoAsMono')) ?? true;
 let secondsPerFile = 0;
 let audioCtx;
 let files = [];
@@ -845,6 +847,11 @@ function toggleSetting(param, value) {
     localStorage.setItem('zipDownloads', zipDownloads);
     showExportSettingsPanel();
   }
+  if (param === 'treatDualMonoStereoAsMono') {
+    treatDualMonoStereoAsMono = !treatDualMonoStereoAsMono;
+    localStorage.setItem('treatDualMonoStereoAsMono', treatDualMonoStereoAsMono);
+    showExportSettingsPanel();
+  }
   if (param === 'embedSliceData') {
     embedSliceData = !embedSliceData;
     localStorage.setItem('embedSliceData', embedSliceData);
@@ -1069,6 +1076,13 @@ function showExportSettingsPanel() {
 <td><button onclick="digichain.toggleSetting('zipDl')" class="check ${zipDownloads
       ? 'button'
       : 'button-outline'}">${zipDownloads ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<tr>
+<td><span>When exporting stereo, export dual mono files as mono? &nbsp;&nbsp;&nbsp;</span></td>
+<td><button title="Often, stereo files are just the same mono audio data on both channels, if this is the case, export the file as mono." onclick="digichain.toggleSetting('treatDualMonoStereoAsMono')" class="check ${treatDualMonoStereoAsMono
+      ? 'button'
+      : 'button-outline'}">${treatDualMonoStereoAsMono ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Embed slice information in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
@@ -2580,7 +2594,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
           `<div class="channel-options channel-options-stereo" title="${f.buffer.numberOfChannels ===
           1
               ? 'Mono sample'
-              : 'Stereo sample'}" style="display: ${masterChannels === 2
+              : 'Stereo sample' + (f.meta.dualMono ? ' (Dual Mono)' : '')}" style="display: ${masterChannels === 2
               ? 'block'
               : 'none'}">
               <i class="gg-shape-circle"></i>
@@ -3145,6 +3159,7 @@ const parseWav = (
         startFrame: 0, endFrame: (resampledArrayBuffer || audioArrayBuffer).length,
         checked: checked, id: uuid,
         channel: (resampledArrayBuffer || audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
+        dualMono: false,
         slices: slices,
         note: noteFromFileName(file.name)
       }

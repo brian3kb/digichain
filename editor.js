@@ -260,6 +260,7 @@ export function renderEditor(item) {
     </div>
     <br>
       <button title="Trims any zero valued audio from the end of the sample." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
+      <button class="trim-right button button-outline hide ${editing.buffer.numberOfChannels > 1 ? '' : 'hide'}" onclick="digichain.editor.interpolate(event)">Interpolate</button>
   </div>
 </div>
   <span class="edit-info">
@@ -332,13 +333,17 @@ export function drawWaveform(file, el, channel, dimensions) {
   } else {
     drawBuffer = bufferToFloat32Array(file.buffer, Number.isInteger(channel) ? file.meta?.channel : channel);
   }
-  for (let y = 0; y < file.buffer.length; y += Math.floor(file.buffer.length / drawResolution)) {
-    drawData.push(drawBuffer[y]);
-
-      // drawData.push(
-      //     (file.buffer.getChannelData(0)[y] + file.buffer.getChannelData(file.buffer.numberOfChannels - 1)[y]) / 2
-      // );
-
+  if (file.buffer.numberOfChannels > 1) {
+    let dualMonoCheck = [];
+    for (let y = 0; y < file.buffer.length; y += Math.floor(file.buffer.length / drawResolution)) {
+      drawData.push(drawBuffer[y]);
+      dualMonoCheck.push((file.buffer.getChannelData(0)[y] - file.buffer.getChannelData(1)[y]) / 2);
+    }
+    file.meta.dualMono = dualMonoCheck.every(x => x === 0);
+  } else {
+    for (let y = 0; y < file.buffer.length; y += Math.floor(file.buffer.length / drawResolution)) {
+      drawData.push(drawBuffer[y]);
+    }
   }
   draw(drawData, file.meta.id, el, dimensions);
 }
@@ -624,6 +629,37 @@ function normalize(event, item, renderEditPanel = true, findPeakOnly = false) {
   }
   if (renderEditPanel) {
     renderEditPanelWaveform(multiplier);
+  }
+  item.waveform = false;
+}
+
+function interpolate(event, item, renderEditPanel = true) {
+  if (!renderEditPanel && item) {
+    selection.start = 0;
+    selection.end = item.buffer.length;
+  }
+  item = item || editing;
+
+  const audioArrayBuffer = conf.audioCtx.createBuffer(
+      1,
+      item.buffer.length,
+      conf.masterSR
+  );
+
+  for (let i = 0; i < item.buffer.length; i++) {
+    const value = i + 2 < item.buffer.length ? (item.buffer.getChannelData(i % 2)[i] + item.buffer.getChannelData(i % 2)[i + 2]) / 2 :
+        item.buffer.getChannelData(i % 2)[i];
+    audioArrayBuffer.getChannelData(0)[i] = value;
+  }
+
+  item.buffer = audioArrayBuffer;
+  item.meta.channel = 'L';
+  showStereoWaveform = false;
+
+  if (renderEditPanel) {
+    editPanelEl.close();
+    digichain.stopPlayFile(false, digichain.editor.getLastItem());
+    setTimeout(() => digichain.showEditPanel(event, item.meta.id), 250);
   }
   item.waveform = false;
 }
@@ -951,6 +987,7 @@ export const editor = {
   fade,
   trimRight,
   truncate,
+  interpolate,
   perSamplePitch,
   double,
   stretch,

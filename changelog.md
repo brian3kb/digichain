@@ -7,6 +7,7 @@
  - Edit Panel, N : Create new slice.
  - Edit Panel, U : Update current slice.
  - Edit Panel, X : Remove current slice.
+ - Option to export dual mono stereo files as a mono file (toggle in settings, on by default).
 
 2023-08-09 1.4.6
  - Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data. When converted to a spaced chain, if the grid-size is set to a value, the new chain will be padded to this number.

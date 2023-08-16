@@ -622,6 +622,48 @@ function trimRightSelected(event) {
   }, 250);
 }
 
+function shortenNameSelected(event, restore = false) {
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked);
+    let nameList = {};
+    let nameListArr = [];
+    if (!restore) {
+      nameList = {};
+      nameListArr = files.map(f => {
+        nameList[f.meta.id] = {
+          path: f.file.path.split('/').map(p => p.substring(0,12)).join('/'),
+          name: f.file.name.substring(0,12) + (f.meta.note ? `_${f.meta.note}` : '')
+        };
+        nameList[f.meta.id].joined = `${nameList[f.meta.id].path}${nameList[f.meta.id].name}`;
+        return { name: nameList[f.meta.id].joined, available: true };
+      });
+    }
+    selected.forEach((f, idx) => {
+      f.file.origPath = f.file.origPath || f.file.path;
+      f.file.origName = f.file.origName || f.file.name;
+      if (restore) {
+        f.file.path = f.file.origPath;
+        f.file.name = f.file.origName;
+      } else {
+        const sn = nameList[f.meta.id];
+        const names = nameListArr.filter(n => n.name === sn.joined && n.available);
+        f.file.path = sn.path;
+        f.file.name = names.length === 1 ? sn.name : sn.name + `_${names.length}`;
+        names[0].available = false;
+        //f.file.path = f.file.path.split('/').map(p => p.substring(0,12)).join('/');
+        //f.file.name = f.file.name.substring(0,12) + f.meta.note;
+      }
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
+}
+
 function truncateSelected(event) {
   let truncLength = 3;
   if (event.shiftKey || modifierKeys.shiftKey) {
@@ -1009,7 +1051,8 @@ function showExportSettingsPanel() {
   const panelContentEl = document.querySelector(
       '#exportSettingsPanel .content');
   panelContentEl.innerHTML = `
-  <h5>Settings</h5>
+  <h5 style="margin-bottom: 0;">Settings</h5>
+  <span class="settings-info">All settings here will persist when the app re-opens.</span>
   <table style="padding-top:0;">
   <thead>
   <tr>
@@ -1129,7 +1172,6 @@ function showExportSettingsPanel() {
 </tr>
 </tbody>
 </table>
-<span class="settings-info">All settings here will persist when the app re-opens.</span>
 `;
   if (!panelEl.open) {
     panelEl.showModal();
@@ -2699,11 +2741,8 @@ const bytesToInt = (bh, bm, bl) => {
 };
 
 function noteFromFileName(name) {
-  //const match = name.match(/[-_. ](?![EB]#)([A-G])([#b])?([0-9]|[0-9]{2})?[-_. ]/);
-  //return match? match[0].replace(/_|-|\./g, '').trim() : '';
-  const match = name.match(/_([A-Ga-g](?:#|b)?)(-?\d+)\.\w+$/);
-  return match && match.length > 2 ? (match[1] + match[2]).replace(/_|-|\./g, '').trim() : '';
-
+  const match = name.match(/(_| |-)([A-Ga-g](?:#|b)?)(-?\d+)\.\w+$/);
+  return match && match.length > 2 ? (match[1] + match[2] + (match[3]||'')).replace(/_|-|\./g, '').trim() : '';
 }
 function createAndSetOtFileLink(slices, bufferLength, fileName, linkEl) {
   if (checkShouldExportOtFile() && slices && slices.length > 0) {
@@ -3705,6 +3744,7 @@ window.digichain = {
   crushSelected,
   fadeSelected,
   stretchSelected,
+  shortenNameSelected,
   showMergePanel,
   showBlendPanel,
   sort,

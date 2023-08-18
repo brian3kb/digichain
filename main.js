@@ -653,8 +653,6 @@ function shortenNameSelected(event, restore = false) {
         f.file.path = sn.path;
         f.file.name = names.length === 1 ? sn.name : sn.name + `_${names.length}`;
         names[0].available = false;
-        //f.file.path = f.file.path.split('/').map(p => p.substring(0,12)).join('/');
-        //f.file.name = f.file.name.substring(0,12) + f.meta.note;
       }
       if (idx === selected.length - 1) {
         document.body.classList.remove('loading');
@@ -2583,6 +2581,10 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
           : ''}"></canvas>
       </td>
       <td class="file-path-td">
+      ${(f.file.path + f.file.name).length + 4 > 127 ? 
+          '<div title="This files path and name will exceed 127 chars." class="path-exceeds-127">' :
+          '<div>'
+      }
           <span class="file-path">${f.file.path}</span>
           <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true)">${getNiceFileName(
           f.file.name)}</a>
@@ -2592,6 +2594,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
           ${f.meta.sliceNumber ? ' s' + f.meta.sliceNumber : ''}
           <a class="wav-link-hidden" target="_blank"></a>
           <a class="meta-link-hidden" target="_blank"></a>
+          </div>
       </td>
       <td class="duration-td">
           <span>${f.meta.duration} s</span>

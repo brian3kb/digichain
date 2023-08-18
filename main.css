@@ -300,7 +300,7 @@ td button { margin: 0.5rem; }
 .is-chain-count::after {
     content: attr(data-count);
 }
-.file-path { display: block; }
+.file-path { display: block; word-break: break-word; }
 .toggle-check, .sort-check {
     border: 0.2rem solid #40392e;
     width: 3.25rem;
@@ -800,6 +800,23 @@ table#mergeList td.file-path-td {
     font-size: 1.1rem;
     opacity: .5;
     padding-left: 0.5rem;
+}
+
+.path-exceeds-127 {
+    /*border-left: 2px solid #5d1d1d;*/
+    padding-left: .25rem;
+    border: 2px solid;
+    border-image-slice: 1;
+    border-width: 2px;
+    border-image-source: linear-gradient(to bottom, transparent, #5f404b, transparent);
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    padding-left: 1rem;
+    margin-left: -1rem;
+}
+body.grid-view .path-exceeds-127 {
+    margin-left: 0;
 }
 
 /*OP Editor*/

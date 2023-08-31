@@ -263,7 +263,7 @@ export function renderEditor(item) {
       <button class="trim-right button button-outline hide ${editing.buffer.numberOfChannels > 1 ? '' : 'hide'}" onclick="digichain.editor.interpolate(event)">Interpolate</button>
   </div>
 </div>
-  <span class="edit-info" style="position: relative;float: left;">
+  <span class="edit-info">
     Normalize, Silence, Fade In, Fade Out, Crop, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo. Pitch adjustments are done via sample-rate, cumulative changes will affect sample quality.
   </span>

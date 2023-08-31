@@ -1313,7 +1313,7 @@ function showBlendPanel() {
    </table>
  </div>
 </div>
-<div class="row" style="padding-left: 1rem;">
+<div class="row" style="padding-left: 1rem; padding-top: 2rem;">
 <label for="blendLength">Blend length: </label>
 <select class="btn-audio-config" style="max-width: 100px;margin-left: 1rem;margin-top: -.75rem;" name="blendLength" id="blendLength">
 ${[16, 32, 64, 128, 256, 512, 1024, 2048, 4096].reduce((a, c) => 
@@ -1937,7 +1937,7 @@ const duplicate = (event, id, prepForEdit = false) => {
   item.waveform = false;
   item.meta.playing = false;
   item.meta.id = crypto.randomUUID();
-  item.file.name = getUniqueName(files, item.file.filename);
+  item.file.name = getUniqueName(files, item.file.name);
   if (prepForEdit) {
     item.meta.editOf = id;
     return {

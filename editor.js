@@ -157,7 +157,7 @@ function sliceRemove(event) {
   digichain.removeMetaFile(editing.meta.id);
   sliceSelectEl.value = -1;
   selection.start = 0;
-  selection.end = 0;
+  selection.end = editing.buffer.length;
   updateSelectionEl();
   renderSliceList();
 }

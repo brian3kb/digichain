@@ -11,6 +11,8 @@
  - Shorten file path and names selected actions (and restore names).
  - Tweaks to note detection from filename.
  - Visual indicator on row name left-border if file path and name will be longer than 127 chars from root of the exported zip file.
+ - Fixed bug (issue#2) where looped playback on edit panel spawned multiple audio playbacks when clicked repeatedly.
+ - Changed behavior when removing all slices to default to whole waveform selected. (issue#3)
 
 2023-08-09 1.4.6
  - Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data. When converted to a spaced chain, if the grid-size is set to a value, the new chain will be padded to this number.

@@ -263,7 +263,7 @@ export function renderEditor(item) {
       <button class="trim-right button button-outline hide ${editing.buffer.numberOfChannels > 1 ? '' : 'hide'}" onclick="digichain.editor.interpolate(event)">Interpolate</button>
   </div>
 </div>
-  <span class="edit-info">
+  <span class="edit-info" style="position: relative;float: left;">
     Normalize, Silence, Fade In, Fade Out, Crop, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo. Pitch adjustments are done via sample-rate, cumulative changes will affect sample quality.
   </span>
@@ -963,8 +963,8 @@ function double(event, item, reverse = false, renderEditPanel = true) {
 function editorPlayFile(event, loop = false, stop = false) {
   const start = selection.start / conf.masterSR;
   const end = (selection.end / conf.masterSR) - start;
+  clearTimeout(editorPlayFile.nextLoop);
   if (stop || !editPanelEl.open) {
-    clearTimeout(editorPlayFile.nextLoop);
     digichain.stopPlayFile(event, editing.meta.id);
     return;
   }

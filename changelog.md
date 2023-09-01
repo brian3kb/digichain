@@ -1,3 +1,4 @@
+2023-08-31 1.4.7
  - Load samples from within zip files and Digitakt project files. (if max file limit setting is off, all files in the zip will be decompressed to memory, so be careful with zip sizes if setting that to off! If the zipped supported file count + file count already loaded is larger than the limit, the whole zip gets skipped).
  - Allow * and / on the stretch action shifted user input.
  - Hold shift on pitch buttons to use stretch instead of the resample method to affect the pitch.

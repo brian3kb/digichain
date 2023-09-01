@@ -23,8 +23,6 @@
     "/index.html",
     "/lib.css",
     "/main.css",
-    "/resources.js",
-    "/editor.js",
     "/main.js"
   ],
   "dir": "auto",

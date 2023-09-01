@@ -782,7 +782,7 @@ body.shiftKey-down .has-shift-mod-i {
     max-height: 60vh;
     overflow: auto;
 }
-.merge-info, .edit-info, .settings-info {
+.merge-info, .edit-info {
     position: relative;
     font-size: 1.05rem;
     opacity: .8;
@@ -790,6 +790,12 @@ body.shiftKey-down .has-shift-mod-i {
     max-width: 80%;
     margin-top: 1rem;
 }
+.settings-info {
+    position: absolute;
+    font-size: 1.05rem;
+    opacity: .8;
+}
+
 table#mergeList th {
     padding-left: 0;
 }
@@ -1196,9 +1202,12 @@ body.grid-view .path-exceeds-127 {
     }
 
     .merge-info, .edit-info, .settings-info {
-        position: absolute;
+        position: relative;
         font-size: 1.05rem;
         opacity: .8;
+        float: left;
+        max-width: 80%;
+        margin-top: 1rem;
     }
 
     .edit-btn-group.float-left {

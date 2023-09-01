@@ -41,6 +41,7 @@ const audioConfigOptions = {
   m4410016a: { sr: 44100, bd: 16, c: 1, f: 'a' },
   s4410016a: { sr: 44100, bd: 16, c: 2, f: 'a' }
 };
+const importFileLimitValue = 750;
 let masterSR = 48000;
 let masterBitDepth = 16;
 let masterChannels = 1;
@@ -3090,13 +3091,10 @@ const parseWav = (
     for (let i = 0; i < dv.byteLength - 4; i++) {
       const code = String.fromCharCode(dv.getUint8(i), dv.getUint8(i + 1),
           dv.getUint8(i + 2), dv.getUint8(i + 3));
-      if (i > dv.byteLength || code === 'PAD ') {
-        break;
-      }
       if (code === 'data') {
         const size = dv.getUint32(i + 4, true);
         if (size && size < dv.byteLength) {
-          i = size - 8;
+          i = i < size ? size - 8 : i;
           continue;
         }
       }
@@ -3238,7 +3236,9 @@ const getRandomFileSelectionFrom = (fileCollection) => {
 };
 
 const consumeFileInput = (event, inputFiles) => {
-  document.getElementById('loadingText').textContent = 'Loading samples';
+  const supportedAudioTypes = ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a'];
+  const loadingEl = document.getElementById('loadingText');
+  loadingEl.textContent = 'Loading samples';
   document.body.classList.add('loading');
   if (!audioCtx) {
     audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
@@ -3266,6 +3266,16 @@ const consumeFileInput = (event, inputFiles) => {
       inputFiles[inputFiles.findIndex(f => f === archive)] = false;
       zip.loadAsync(archive).then(() => {
         const fileCount = Object.keys(zip.files).length;
+        const supportedFileCount = importFileLimit && Object.keys(zip.files).filter(
+            zf => supportedAudioTypes.includes(zf.split('.').at(-1).toLowerCase())
+        ).length;
+        if (supportedFileCount + files.length > importFileLimitValue) {
+          loadingEl.textContent =`skipping zip '${archive.name}', files (${supportedFileCount}) will exceed ${importFileLimitValue} file import limit...`;
+          if (zidx === _zips.length - 1) {
+            setTimeout(() => consumeFileInput(event, inputFiles), 3000);
+          }
+          return; /*Don't process zip contents if the files count exceed the importLimit if limit is on*/
+        }
         for (let key in zip.files) {
           zip.files[key].async('blob').then(blobData => {
             blobData.name = key.split('/').at(-1);
@@ -3284,7 +3294,7 @@ const consumeFileInput = (event, inputFiles) => {
   }
 
   let _files = [...inputFiles].filter(
-      f => ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a'].includes(
+      f => supportedAudioTypes.includes(
           f?.name?.split('.')?.reverse()[0].toLowerCase())
   );
   let _mFiles = [...inputFiles].filter(
@@ -3295,8 +3305,8 @@ const consumeFileInput = (event, inputFiles) => {
     _files = getRandomFileSelectionFrom(_files);
   }
 
-  if (importFileLimit && _files.length > 750) {
-    _files = _files.filter((file, idx) => idx < 750 || file.fromArchive );
+  if (importFileLimit && _files.length > importFileLimitValue) {
+    _files = _files.filter((file, idx) => idx < importFileLimitValue || file.fromArchive );
   }
 
   _mFiles.forEach((file, idx) => {

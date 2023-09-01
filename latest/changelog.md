@@ -1,4 +1,5 @@
- - Load samples from within zip files and Digitakt project files. (ignores max file limit setting as all files in the zip need to be decompressed to memory, so be careful with zip sizes!).
+2023-08-31 1.4.7
+ - Load samples from within zip files and Digitakt project files. (if max file limit setting is off, all files in the zip will be decompressed to memory, so be careful with zip sizes if setting that to off! If the zipped supported file count + file count already loaded is larger than the limit, the whole zip gets skipped).
  - Allow * and / on the stretch action shifted user input.
  - Hold shift on pitch buttons to use stretch instead of the resample method to affect the pitch.
  - Break-word on blend filenames to help prevent column width issues.
@@ -7,6 +8,15 @@
  - Edit Panel, N : Create new slice.
  - Edit Panel, U : Update current slice.
  - Edit Panel, X : Remove current slice.
+ - Option to export dual mono stereo files as a mono file (toggle in settings, on by default).
+ - Shorten file path and names selected actions (and restore names).
+ - Tweaks to note detection from filename.
+ - Visual indicator on row name left-border if file path and name will be longer than 127 chars from root of the exported zip file.
+ - Fixed bug (issue#2) where looped playback on edit panel spawned multiple audio playbacks when clicked repeatedly.
+ - Changed behavior when removing all slices to default to whole waveform selected. (issue#3)
+ - Fixed issue where duplicate samples inherited the filename instead of the name property. (issue#4)
+ - Fixed padding issue on panel info text, and blend dropdown control.
+ - Ignore multiple data chunk headers in the wav files to prevent instability when importing wav files. Fixes bug where tab might hang on import of some oddly structured wav file chunks.
 
 2023-08-09 1.4.6
  - Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data. When converted to a spaced chain, if the grid-size is set to a value, the new chain will be padded to this number.

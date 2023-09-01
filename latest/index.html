@@ -161,50 +161,55 @@
       <div class="row">
         <button title="Show actions that will affect all the currently selected samples." onclick="digichain.toggleSelectedActionsList(event)" class="button">Selected Actions</button>
         <div class="selected-actions-button-list" style="display: none;">
+
           <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline">
             Trim Right
           </button>
-
           <button title="Truncate all selected. 3 seconds is the default, shift+click to set custom length." onclick="digichain.truncateSelected(event)" class="button-outline has-shift-mod">
             Truncate
           </button>
-          <br>
           <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)" class="button-outline">
             Normalize
           </button>
+          <br>
 
           <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline">
             Reverse
           </button>
-          <br>
           <button title="Pitch all selected up by 1 octave." onclick="digichain.pitchUpSelected(event)"
                   class="button-outline">Pitch Up an Octave
           </button>
-
           <button title="Add a reversed version of the sample to the end of itself." onclick="digichain.pingPongSelected(event)"
                   class="button-outline">Ping-Pong
           </button>
           <br>
+
           <button title="Create small fade-in on all selected samples." onclick="digichain.fadeSelected(event, 'in')"
                   class="button-outline">Fade In
           </button>
-
           <button title="Create small fade-out on all selected samples." onclick="digichain.fadeSelected(event, 'out')"
                   class="button-outline">Fade Out
           </button>
-          <br>
           <button title="Introduces noise into the sample." onclick="digichain.fuzzSelected(event)"
                   class="button-outline">Fuzz
           </button>
+          <br>
+
           <button title="Crushes the sample, shift+click to set custom amount between 1 and 128 (default is 25)." onclick="digichain.crushSelected(event)"
                   class="button-outline has-shift-mod">Crush
           </button>
-          <br>
           <button title="Stretch all selected samples to the same length as the shortest sample in the selection. Hold shift to set a custom length in seconds." onclick="digichain.stretchSelected(event, true)"
                   class="button-outline has-shift-mod">Stretch Shortest
           </button>
           <button title="Stretch all selected samples to the same length as the longest sample in the selection. Hold shift to set a custom length in seconds."  onclick="digichain.stretchSelected(event)"
                   class="button-outline has-shift-mod">Stretch Longest
+          </button>
+          <br>
+          <button title="Shorten the file path and name of selected." onclick="digichain.shortenNameSelected(event)"
+                  class="button-outline">Shorten Names
+          </button>
+          <button title="Restore the original file path and name of selected." onclick="digichain.shortenNameSelected(event, true)"
+                  class="button-outline">Restore Names
           </button>
         </div>
         <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)"
@@ -295,7 +300,6 @@
   if ( window.location !== window.parent.location ) {
     document.documentElement.classList.add('scaled');
   }
-
 </script>
 
 </body>

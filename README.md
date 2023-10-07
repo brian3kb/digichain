@@ -4,7 +4,7 @@ DigiChain is a web app made to make the creation of sample chains as easy as pos
 
 Split the slices out of Octatrack, OP-1/OP-1 Field/OP-Z, or DigiChains own exported files.
 
-Export samples chains for the Octatrack, OP-1/OP-1 Field/OP-Z with slice information auto-created.
+Export samples chains for the Octatrack, OP-1/OP-1 Field/OP-Z, Dirtywave M8 with slice information auto-created.
 
 Supports batch converting of files to a chosen bit depth and sample rate (mono/stereo).
 Choose the way stereo files get processed to mono, with Left, Right, Sum, and Difference (Side) with live preview of the choice from the sample list.

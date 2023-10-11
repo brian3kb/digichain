@@ -199,8 +199,8 @@ function deClick(audioArray, threshold) {
 }
 
 export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, deClickThreshold = false, renderAsAif = false, pitchModifier = 1, embedSliceData = true, embedCuePoints = true) {
-  const treatDualMonoStereoAsMono = JSON.parse(
-      localStorage.getItem('treatDualMonoStereoAsMono')) ?? true;
+  const treatDualMonoStereoAsMono = (JSON.parse(
+      localStorage.getItem('treatDualMonoStereoAsMono')) ?? true) && !meta.editing;
   let numChannels = buffer.numberOfChannels;
   let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
   sampleRate = sampleRate * pitchModifier;

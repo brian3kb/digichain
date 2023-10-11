@@ -36,6 +36,9 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
   conf = options;
   folders = folderOptions;
   if (view === 'sample') {
+    if (editing && editing.meta) {
+      editing.meta.editing = false;
+    }
     editing = data;
     multiplier = 1;
     selection.end = editing.buffer.length;
@@ -43,6 +46,7 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
     selection.step = editing.buffer.length / (1024 * multiplier);
     selection.selStart = true;
     showStereoWaveform = conf.masterChannels > 1;
+    editing.meta.editing = true;
     render();
     return;
   }
@@ -357,10 +361,10 @@ export function getNiceFileName(name, file, excludeExtension, includePath) {
 }
 
 export function getUniqueName(files, name) {
-  const count = files.filter(f => f.file.filename === name).length;
   const parts = name.split('.');
   const ext = parts.pop();
   const fname = parts.join('.');
+  const count = files.filter(f => (f.file.name || f.file.filename).includes(fname)).length;
   return count > 0 ? `${fname}_${count + 1}.${ext}` : name;
 }
 
@@ -582,6 +586,7 @@ function reSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = tr
         duration: Number(resampledArrayBuffer.length / conf.masterSR).toFixed(3),
         startFrame: 0, endFrame: resampledArrayBuffer.length,
         note: false,
+        editing: false,
         slices: item.meta.slices ? item.meta.slices.map(slice => ({
           ...slice,
           n: slice.n, s: Math.round(slice.s / pitchValue),
@@ -657,6 +662,7 @@ function interpolate(event, item, renderEditPanel = true) {
   showStereoWaveform = false;
 
   if (renderEditPanel) {
+    item.meta.editing = false;
     editPanelEl.close();
     digichain.stopPlayFile(false, digichain.editor.getLastItem());
     setTimeout(() => digichain.showEditPanel(event, item.meta.id), 250);
@@ -790,6 +796,7 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
 }
 
 function perSamplePitch(event, pitchValue, pitchSteps, item, renderEditPanel = true, volumeAdjust = 1, bitDepthOverride) {
+  (item || editing).meta.editing = true;
   if (event.shiftKey) {
     stretch(event, item, renderEditPanel, ((item || editing).buffer.length / pitchValue));
   } else {
@@ -837,6 +844,7 @@ function stretch(event, item, renderEditPanel = true, targetLength) {
     duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
     startFrame: 0, endFrame: audioArrayBuffer.length,
     note: false,
+    editing: false,
     slices: item.meta.slices ? item.meta.slices.map(slice => ({
       ...slice,
       n: slice.n, s: Math.round(slice.s * factor),
@@ -864,7 +872,7 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
   }
   item = item || editing;
 
-  if (renderEditPanel || attemptToFindCrossingPoint) {
+  if (attemptToFindCrossingPoint) {
     // match start and end sample values
     for (let i = (selection.start - Math.floor(((selection.start/4)*3))); i < selection.end; i++) {
       if (

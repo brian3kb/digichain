@@ -785,7 +785,7 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
     duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
     startFrame: 0, endFrame: audioArrayBuffer.length
   };
-  if (item.meta.slices) {
+  if (item.meta.slices && item.meta.slices.length > 0) {
     item.meta.slices[item.meta.slices.length - 1].e = item.buffer.length;
   }
   if (renderEditPanel) {

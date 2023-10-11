@@ -1846,8 +1846,17 @@ const changeChannel = (
     return renderList();
   }
   file.meta.channel = channel;
-  file.waveform = false;
-  renderRow(file);
+
+  if (tableId === '#masterList') {
+    file.waveform = false;
+    return renderRow(file);
+  }
+  if (document.getElementById('mergePanel').open &&
+    document.getElementById('blendLength')) {
+    showBlendPanel();
+  } else {
+    showMergePanel();
+  }
   //file.waveform.getContext('2d').clear();
   //drawWaveform(file, file.waveform, file.buffer.numberOfChannels);
   // getRowElementById(id, tableId).

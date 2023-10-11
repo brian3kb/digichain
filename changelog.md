@@ -2,6 +2,8 @@ latest
  - Dual mono exports setting error #5.
  - Prevent find crossing point on edit panel.
  - Issue with auto-naming of duplicate files/same file imported multiple times.
+ - Trim-right on sample that had slices removed threw unhandled error.
+ - Merge/Blend panel mono/pan controls not consistently updating UI when clicked.
 
 2023-08-31 1.4.7
  - Load samples from within zip files and Digitakt project files. (if max file limit setting is off, all files in the zip will be decompressed to memory, so be careful with zip sizes if setting that to off! If the zipped supported file count + file count already loaded is larger than the limit, the whole zip gets skipped).

@@ -1,5 +1,6 @@
 latest
- - Dual mono exports setting error #5.
+ - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.
+ - Dual mono exports setting error.
  - Prevent find crossing point on edit panel.
  - Issue with auto-naming of duplicate files/same file imported multiple times.
  - Trim-right on sample that had slices removed threw unhandled error.

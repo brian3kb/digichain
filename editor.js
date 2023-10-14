@@ -968,6 +968,47 @@ function double(event, item, reverse = false, renderEditPanel = true) {
   item.waveform = false;
 }
 
+function serialize(event, item, renderEditPanel = true, method = 'LR') {
+  if (!renderEditPanel && item) {
+    selection.start = 0;
+    selection.end = item.buffer.length;
+  }
+  item = item || editing;
+
+  const audioArrayBuffer = conf.audioCtx.createBuffer(
+    1,
+    item.buffer.length * method.split('').length,
+    conf.masterSR
+  );
+
+  let x = 0;
+  method.split('').forEach(channel => {
+    const buffer = bufferToFloat32Array(item.buffer, channel);
+    for (let i = selection.start; i < selection.end; i++) {
+      audioArrayBuffer.getChannelData(0)[x] = buffer[i];
+      x++;
+    }
+  });
+
+  item.buffer = audioArrayBuffer;
+  item.meta = {
+    ...item.meta,
+    length: audioArrayBuffer.length,
+    duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
+    startFrame: 0, endFrame: audioArrayBuffer.length
+  };
+  if (item.meta.slices) {
+    item.meta.slices = false;
+  }
+  if (item.meta.op1Json) {
+    item.meta.op1Json = false;
+  }
+  if (renderEditPanel) {
+    showEditor(editing, conf, 'sample', folders);
+  }
+  item.waveform = false;
+}
+
 function editorPlayFile(event, loop = false, stop = false) {
   const start = selection.start / conf.masterSR;
   const end = (selection.end / conf.masterSR) - start;
@@ -1006,5 +1047,6 @@ export const editor = {
   sliceSelect,
   changeChannel,
   getLastItem : () => editing?.meta?.id,
-  reverse
+  reverse,
+  serialize
 };

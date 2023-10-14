@@ -743,6 +743,22 @@ function reverseSelected(event) {
   }, 250);
 }
 
+function serializeSelected(event, method = 'LR') {
+  files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+  document.getElementById('loadingText').textContent = 'Processing';
+  document.body.classList.add('loading');
+  setTimeout(() => {
+    const selected = files.filter(f => f.meta.checked && f.buffer.numberOfChannels === 2);
+    selected.forEach((f, idx) => {
+      editor.serialize(event, f, false, method);
+      if (idx === selected.length - 1) {
+        document.body.classList.remove('loading');
+      }
+    });
+    renderList();
+  }, 250);
+}
+
 function pitchUpSelected(event) {
   files.forEach(f => f.meta.checked ? f.source?.stop() : '');
   document.getElementById('loadingText').textContent = 'Processing';
@@ -3767,6 +3783,7 @@ window.digichain = {
   fadeSelected,
   stretchSelected,
   shortenNameSelected,
+  serializeSelected,
   showMergePanel,
   showBlendPanel,
   sort,

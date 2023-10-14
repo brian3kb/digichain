@@ -205,6 +205,17 @@
                   class="button-outline has-shift-mod">Stretch Longest
           </button>
           <br>
+
+          <button title="Serialize stereo samples to mono, left and right channels." onclick="digichain.serializeSelected(event, 'LR')"
+                  class="button-outline">Serialize L/R
+          </button>
+          <button title="Serialize stereo samples to mono, side and mid." onclick="digichain.serializeSelected(event, 'SD')"
+                  class="button-outline">Serialize S/M
+          </button>
+          <button title="Serialize stereo samples to mono, left and right channels, side and mid." onclick="digichain.serializeSelected(event, 'LRSD')"
+                  class="button-outline">Serialize L/R/S/M
+          </button>
+          <br>
           <button title="Shorten the file path and name of selected." onclick="digichain.shortenNameSelected(event)"
                   class="button-outline">Shorten Names
           </button>

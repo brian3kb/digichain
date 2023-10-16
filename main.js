@@ -3276,7 +3276,7 @@ const addBlankFile = () => {
   checkAndSetAudioContext();
   const audioArrayBuffer = audioCtx.createBuffer(
     masterChannels,
-    1,
+    8,
     masterSR
   );
 

@@ -1,597 +1,652 @@
 export function buildOpData(slices = [], numChannels, returnTemplate = false) {
-  const template = slices?.length ? {
-    attack: new Array(24).fill(0),
-    drum_version: 2,
-    dyna_env: [0, 8192, 0, 8192, 0, 0, 0, 0],
-    end: new Array(24).fill(0),
-    fx_active: false,
-    fx_params: [8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
-    fx_type: 'delay',
-    lfo_active: false,
-    lfo_params: [16000, 16000, 16000, 16000, 0, 0, 0, 0],
-    lfo_type: 'tremolo',
-    mtime: 1682173750,
-    name: 'DigiChain Kit',
-    octave: 0,
-    original_folder: 'digichain',
-    pan: new Array(24).fill(16384),
-    pan_ab: new Array(24).fill(false),
-    pitch: new Array(24).fill(0),
-    playmode:new Array(24).fill(5119),
-    reverse: new Array(24).fill(12000),
-    start: new Array(24).fill(0),
-    stereo: numChannels === 2,
-    type: 'drum',
-    volume:new Array(24).fill(8192)
-  } : {
-    adsr: [64, 10746, 32767, 10000, 4000, 64, 4000, 18021],
-    base_freq: 440,
-    fade: 0,
-    fx_active: false,
-    fx_params: [8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
-    fx_type: 'delay',
-    knobs: [0, 0, 0, 8600, 12000, 0, 0, 8192],
-    lfo_active: false,
-    lfo_params: [16000, 0, 0, 16000, 0, 0, 0, 0],
-    lfo_type: 'tremolo',
-    mtime: 1683144375,
-    name: 'DigiChain Sample',
-    octave: 0,
-    original_folder: 'DigiChain',
-    stereo: numChannels === 2,
-    synth_version: 3,
-    type: 'sampler'
-  };
-  if (returnTemplate) { return template; }
-  const opData = JSON.parse(JSON.stringify(template));
-  if (!slices?.length || slices?.length === 0) {
-    return opData; /*Return single synth sampler template*/
-  }
+    const template = slices?.length ? {
+        attack: new Array(24).fill(0),
+        drum_version: 2,
+        dyna_env: [0, 8192, 0, 8192, 0, 0, 0, 0],
+        end: new Array(24).fill(0),
+        fx_active: false,
+        fx_params: [8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
+        fx_type: 'delay',
+        lfo_active: false,
+        lfo_params: [16000, 16000, 16000, 16000, 0, 0, 0, 0],
+        lfo_type: 'tremolo',
+        mtime: 1682173750,
+        name: 'DigiChain Kit',
+        octave: 0,
+        original_folder: 'digichain',
+        pan: new Array(24).fill(16384),
+        pan_ab: new Array(24).fill(false),
+        pitch: new Array(24).fill(0),
+        playmode: new Array(24).fill(5119),
+        reverse: new Array(24).fill(12000),
+        start: new Array(24).fill(0),
+        stereo: numChannels === 2,
+        type: 'drum',
+        volume: new Array(24).fill(8192)
+    } : {
+        adsr: [64, 10746, 32767, 10000, 4000, 64, 4000, 18021],
+        base_freq: 440,
+        fade: 0,
+        fx_active: false,
+        fx_params: [8000, 8000, 8000, 8000, 8000, 8000, 8000, 8000],
+        fx_type: 'delay',
+        knobs: [0, 0, 0, 8600, 12000, 0, 0, 8192],
+        lfo_active: false,
+        lfo_params: [16000, 0, 0, 16000, 0, 0, 0, 0],
+        lfo_type: 'tremolo',
+        mtime: 1683144375,
+        name: 'DigiChain Sample',
+        octave: 0,
+        original_folder: 'DigiChain',
+        stereo: numChannels === 2,
+        synth_version: 3,
+        type: 'sampler'
+    };
+    if (returnTemplate) { return template; }
+    const opData = JSON.parse(JSON.stringify(template));
+    if (!slices?.length || slices?.length === 0) {
+        return opData; /*Return single synth sampler template*/
+    }
 
-  const scale = numChannels === 2 ? 2434 : 4058;
+    const scale = numChannels === 2 ? 2434 : 4058;
 
-  const s = slices.map((slice, idx) => ({
-    p: slice.p,
-    pab: slice.pab,
-    st: slice.st > 24576 ? 24576 : (slice.st < -24576 ? -24576 : slice.st),
-    s: Math.floor((slice.s * scale) + (idx*13)),
-    e: Math.floor((slice.e * scale) + (idx*13))
-  }));
+    const s = slices.map((slice, idx) => ({
+        p: slice.p,
+        pab: slice.pab,
+        st: slice.st > 24576 ? 24576 : (slice.st < -24576 ? -24576 : slice.st),
+        s: Math.floor((slice.s * scale) + (idx * 13)),
+        e: Math.floor((slice.e * scale) + (idx * 13))
+    }));
 
-  for (let idx = 0; idx < 24; idx++) {
-    let slice = s.shift();
-    opData.pan[idx] = slice.p;
-    opData.pan_ab[idx] = slice.pab;
-    opData.pitch[idx] = slice.st;
-    opData.start[idx] = slice.s;
-    opData.end[idx] = slice.e;
-    s.push(slice);
-  }
-  return opData;
+    for (let idx = 0; idx < 24; idx++) {
+        let slice = s.shift();
+        opData.pan[idx] = slice.p;
+        opData.pan_ab[idx] = slice.pab;
+        opData.pitch[idx] = slice.st;
+        opData.start[idx] = slice.s;
+        opData.end[idx] = slice.e;
+        s.push(slice);
+    }
+    return opData;
 }
 
 export function bufferToFloat32Array(
-    buffer, channel, getAudioBuffer = false, audioCtx, masterChannels, masterSR) {
-  let result = getAudioBuffer ?
+  buffer, channel, getAudioBuffer = false, audioCtx, masterChannels, masterSR) {
+    let result = getAudioBuffer ?
       audioCtx.createBuffer(
-          masterChannels,
-          buffer.length,
-          masterSR
+        masterChannels,
+        buffer.length,
+        masterSR
       ) : new Float32Array(buffer.length);
 
-  if (channel === 'S') {
-    for (let i = 0; i < buffer.length; i++) {
-      (getAudioBuffer
-          ? result.getChannelData(0)
-          : result)[i] = (buffer.getChannelData(0)[i] +
-          buffer.getChannelData(1)[i]) / 2;
+    if (channel === 'S') {
+        for (let i = 0; i < buffer.length; i++) {
+            (getAudioBuffer
+              ? result.getChannelData(0)
+              : result)[i] = (buffer.getChannelData(0)[i] +
+              buffer.getChannelData(1)[i]) / 2;
+        }
+    } else if (channel === 'D') {
+        for (let i = 0; i < buffer.length; i++) {
+            (getAudioBuffer
+              ? result.getChannelData(0)
+              : result)[i] = (buffer.getChannelData(0)[i] -
+              buffer.getChannelData(1)[i]) / 2;
+        }
+    } else {
+        const _channel = channel === 'R' ? 1 : 0;
+        for (let i = 0; i < buffer.length; i++) {
+            (getAudioBuffer
+              ? result.getChannelData(0)
+              : result)[i] = buffer.getChannelData(_channel)[i];
+        }
     }
-  } else if (channel === 'D') {
-    for (let i = 0; i < buffer.length; i++) {
-      (getAudioBuffer
-          ? result.getChannelData(0)
-          : result)[i] = (buffer.getChannelData(0)[i] -
-          buffer.getChannelData(1)[i]) / 2;
-    }
-  } else {
-    const _channel = channel === 'R' ? 1 : 0;
-    for (let i = 0; i < buffer.length; i++) {
-      (getAudioBuffer
-          ? result.getChannelData(0)
-          : result)[i] = buffer.getChannelData(_channel)[i];
-    }
-  }
-  return result;
+    return result;
 }
 
 export function joinToMono(audioArrayBuffer, _files, largest, pad) {
-  let totalWrite = 0;
-  _files.forEach((file, idx) => {
-    const bufferLength = pad ? largest : file.buffer.length;
+    let totalWrite = 0;
+    _files.forEach((file, idx) => {
+        const bufferLength = pad ? largest : file.buffer.length;
 
-    let result = bufferToFloat32Array(file.buffer,
-        file?.meta?.channel);
+        let result = bufferToFloat32Array(file.buffer,
+          file?.meta?.channel);
 
-    for (let i = 0; i < bufferLength; i++) {
-      audioArrayBuffer.getChannelData(0)[totalWrite] = result[i] || 0;
-      totalWrite++;
-    }
-  });
+        for (let i = 0; i < bufferLength; i++) {
+            audioArrayBuffer.getChannelData(0)[totalWrite] = result[i] || 0;
+            totalWrite++;
+        }
+    });
 }
 
 export function joinToStereo(audioArrayBuffer, _files, largest, pad) {
-  let totalWrite = 0;
-  _files.forEach((file, idx) => {
-    const bufferLength = pad ? largest : file.buffer.length;
-    let result = [
-      new Float32Array(file.buffer.length),
-      new Float32Array(file.buffer.length)];
+    let totalWrite = 0;
+    _files.forEach((file, idx) => {
+        const bufferLength = pad ? largest : file.buffer.length;
+        let result = [
+            new Float32Array(file.buffer.length),
+            new Float32Array(file.buffer.length)];
 
-    for (let i = 0; i < file.buffer.length; i++) {
-      result[0][i] = file.buffer.getChannelData(0)[i];
-      result[1][i] = file.buffer.getChannelData(
-          file.buffer.numberOfChannels === 2 ? 1 : 0)[i];
-    }
+        for (let i = 0; i < file.buffer.length; i++) {
+            result[0][i] = file.buffer.getChannelData(0)[i];
+            result[1][i] = file.buffer.getChannelData(
+              file.buffer.numberOfChannels === 2 ? 1 : 0)[i];
+        }
 
-    for (let i = 0; i < bufferLength; i++) {
-      audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i] || 0;
-      audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i] || 0;
-      totalWrite++;
-    }
-  });
+        for (let i = 0; i < bufferLength; i++) {
+            audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i] || 0;
+            audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i] || 0;
+            totalWrite++;
+        }
+    });
 }
 
 export function encodeOt(slices, bufferLength, tempo = 120) {
-  const dv = new DataView(new ArrayBuffer(0x340));
-  const header =
-      [0x46,0x4F,0x52,0x4D,0x00,0x00,0x00,0x00,0x44,0x50,0x53,0x31,0x53,0x4D,0x50,0x41, 0x00,0x00,0x00,0x00,0x00,0x02,0x00];
-  const bpm = tempo * 6 * 4;
-  const samplesLength = bufferLength;
-  // const samplesLength = items.reduce((total, item) => total += item.buffer.length, 0);
+    const dv = new DataView(new ArrayBuffer(0x340));
+    const header = [
+          0x46,
+          0x4F,
+          0x52,
+          0x4D,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x44,
+          0x50,
+          0x53,
+          0x31,
+          0x53,
+          0x4D,
+          0x50,
+          0x41,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x00,
+          0x02,
+          0x00
+    ];
+    const bpm = tempo * 6 * 4;
+    const samplesLength = bufferLength;
+    // const samplesLength = items.reduce((total, item) => total += item.buffer.length, 0);
 
-  const bars = Math.round(((124 * samplesLength) / (44100 * 60) + 0.5) * 25);
+    const bars = Math.round(((124 * samplesLength) / (44100 * 60) + 0.5) * 25);
 
-  header.forEach((x, i) => dv.setUint8(i, x));
-  dv.setUint32(0x17, bpm);
-  dv.setUint32(0x1B, bars); // trim length
-  dv.setUint32(0x1F, bars); // loop length
-  dv.setUint32(0x23, 0); // time stretch
-  dv.setUint32(0x27, 0); // loop?
-  dv.setUint16(0x2B, 48); // gain
-  dv.setUint16(0x2D, 255); // quantize
-  dv.setUint32(0x2E, 0); // trim start
-  dv.setUint32(0x32, samplesLength); // trim end
-  dv.setUint32(0x36, 0); // loop start
+    header.forEach((x, i) => dv.setUint8(i, x));
+    dv.setUint32(0x17, bpm);
+    dv.setUint32(0x1B, bars); // trim length
+    dv.setUint32(0x1F, bars); // loop length
+    dv.setUint32(0x23, 0); // time stretch
+    dv.setUint32(0x27, 0); // loop?
+    dv.setUint16(0x2B, 48); // gain
+    dv.setUint16(0x2D, 255); // quantize
+    dv.setUint32(0x2E, 0); // trim start
+    dv.setUint32(0x32, samplesLength); // trim end
+    dv.setUint32(0x36, 0); // loop start
 
-  let offset = 0x3A;
- for (let i = 0; i < 64; i++) {
-   dv.setUint32(offset, slices[i]?.s??0);
-   dv.setUint32(offset + 4, slices[i]?.e??0);
-   dv.setUint32(offset + 8, slices[i]?.s??0);
-   offset += 12;
- }
+    let offset = 0x3A;
+    for (let i = 0; i < 64; i++) {
+        dv.setUint32(offset, slices[i]?.s ?? 0);
+        dv.setUint32(offset + 4, slices[i]?.e ?? 0);
+        dv.setUint32(offset + 8, slices[i]?.s ?? 0);
+        offset += 12;
+    }
 
-  dv.setUint32(0x33A, slices.length); // slice count
+    dv.setUint32(0x33A, slices.length); // slice count
 
-  let checksum = 0;
-  for (let i = 0x10; i < dv.byteLength; i++) {
-    checksum += dv.getUint8(i);
-  }
+    let checksum = 0;
+    for (let i = 0x10; i < dv.byteLength; i++) {
+        checksum += dv.getUint8(i);
+    }
 
-  dv.setUint16(0x33E, checksum);
+    dv.setUint16(0x33E, checksum);
 
-  return dv;
+    return dv;
 }
 
 function deClick(audioArray, threshold) {
-  const bufferLength = audioArray.length;
-  if (!threshold || threshold === 0) {
-    return audioArray;
-  }
-  const _threshold = +threshold;
-  for (let i = 1; i < bufferLength - 1; i++) {
-    const average = (audioArray[i - 1] + audioArray[i + 1]) / 2;
-    if (Math.abs(audioArray[i] - average) > _threshold) {
-      audioArray[i] = average;
+    const bufferLength = audioArray.length;
+    if (!threshold || threshold === 0) {
+        return audioArray;
     }
-  }
-  return audioArray;
+    const _threshold = +threshold;
+    for (let i = 1; i < bufferLength - 1; i++) {
+        const average = (audioArray[i - 1] + audioArray[i + 1]) / 2;
+        if (Math.abs(audioArray[i] - average) > _threshold) {
+            audioArray[i] = average;
+        }
+    }
+    return audioArray;
 }
 
-export function audioBufferToWav(buffer, meta, sampleRate, bitDepth, masterNumChannels, deClickThreshold = false, renderAsAif = false, pitchModifier = 1, embedSliceData = true, embedCuePoints = true) {
-  const treatDualMonoStereoAsMono = (JSON.parse(
-      localStorage.getItem('treatDualMonoStereoAsMono')) ?? true) && !meta.editing;
-  let numChannels = buffer.numberOfChannels;
-  let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
-  sampleRate = sampleRate * pitchModifier;
+export function audioBufferToWav(
+  buffer, meta, sampleRate, bitDepth, masterNumChannels,
+  deClickThreshold = false, renderAsAif = false, pitchModifier = 1,
+  embedSliceData = true, embedCuePoints = true) {
+    const treatDualMonoStereoAsMono = (JSON.parse(
+        localStorage.getItem('treatDualMonoStereoAsMono')) ?? true) &&
+      !meta.editing;
+    let numChannels = buffer.numberOfChannels;
+    let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
+    sampleRate = sampleRate * pitchModifier;
 
-  let result;
-  if (meta.channel && masterNumChannels === 1) {
-    numChannels = 1;
-    if (meta.channel === 'L') { result = buffer.getChannelData(0); }
-    if (meta.channel === 'R') { result = buffer.getChannelData(1); }
-    if (meta.channel === 'S') {
-      result = new Float32Array(buffer.length);
-      for (let i = 0; i < buffer.length; i++) {
-        result[i] = (buffer.getChannelData(0)[i] + buffer.getChannelData(1)[i]) / 2;
-      }
-    }
-    if (meta.channel === 'D') {
-      result = new Float32Array(buffer.length);
-      for (let i = 0; i < buffer.length; i++) {
-        result[i] = (buffer.getChannelData(0)[i] - buffer.getChannelData(1)[i]) / 2;
-      }
-    }
-    result = deClick(result, deClickThreshold);
-  } else {
-    if (numChannels === 2 && !(meta.dualMono && treatDualMonoStereoAsMono)) {
-      //result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
-      result = interleave(deClick(buffer.getChannelData(0), deClickThreshold), deClick(buffer.getChannelData(1), deClickThreshold));
+    let result;
+    if (meta.channel && masterNumChannels === 1) {
+        numChannels = 1;
+        if (meta.channel === 'L') { result = buffer.getChannelData(0); }
+        if (meta.channel === 'R') { result = buffer.getChannelData(1); }
+        if (meta.channel === 'S') {
+            result = new Float32Array(buffer.length);
+            for (let i = 0; i < buffer.length; i++) {
+                result[i] = (buffer.getChannelData(0)[i] +
+                  buffer.getChannelData(1)[i]) / 2;
+            }
+        }
+        if (meta.channel === 'D') {
+            result = new Float32Array(buffer.length);
+            for (let i = 0; i < buffer.length; i++) {
+                result[i] = (buffer.getChannelData(0)[i] -
+                  buffer.getChannelData(1)[i]) / 2;
+            }
+        }
+        result = deClick(result, deClickThreshold);
     } else {
-      numChannels = 1;
-      result = deClick(buffer.getChannelData(0), deClickThreshold);
+        if (numChannels === 2 &&
+          !(meta.dualMono && treatDualMonoStereoAsMono)) {
+            //result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+            result = interleave(
+              deClick(buffer.getChannelData(0), deClickThreshold),
+              deClick(buffer.getChannelData(1), deClickThreshold));
+        } else {
+            numChannels = 1;
+            result = deClick(buffer.getChannelData(0), deClickThreshold);
+        }
     }
-  }
 
-  return renderAsAif ?
-      encodeAif(result, sampleRate, numChannels, buildOpData(meta?.slices, numChannels)) :
-      encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices, pitchModifier, embedSliceData, embedCuePoints);
+    return renderAsAif ?
+      encodeAif(result, sampleRate, numChannels,
+        buildOpData(meta?.slices, numChannels)) :
+      encodeWAV(result, format, sampleRate, numChannels, bitDepth, meta?.slices,
+        pitchModifier, embedSliceData, embedCuePoints);
 }
 
 DataView.prototype.setInt24 = function(pos, val, littleEndian) {
-  this.setInt8(pos, val & ~4294967040, littleEndian);
-  this.setInt16(pos + 1, val >> 8, littleEndian);
-}
+    this.setInt8(pos, val & ~4294967040, littleEndian);
+    this.setInt16(pos + 1, val >> 8, littleEndian);
+};
 
-export function encodeWAV(samples, format, sampleRate, numChannels, bitDepth, slices, pitchModifier = 1, embedSliceData = true, embedCuePoints = true) {
-  const hasSlices = slices && Array.isArray(slices) && slices.length !== 0;
-  let bytesPerSample = bitDepth / 8;
-  let blockAlign = numChannels * bytesPerSample;
-  let sliceData = [];
-  let buffer;
-  let riffSize = 36 + samples.length * bytesPerSample;
-  let bufferLength = 44 + samples.length * bytesPerSample;
-  let sliceCueLength = 0;
+export function encodeWAV(
+  samples, format, sampleRate, numChannels, bitDepth, slices, pitchModifier = 1,
+  embedSliceData = true, embedCuePoints = true) {
+    const hasSlices = slices && Array.isArray(slices) && slices.length !== 0;
+    let bytesPerSample = bitDepth / 8;
+    let blockAlign = numChannels * bytesPerSample;
+    let sliceData = [];
+    let buffer;
+    let riffSize = 36 + samples.length * bytesPerSample;
+    let bufferLength = 44 + samples.length * bytesPerSample;
+    let sliceCueLength = 0;
 
-  let _slices = hasSlices ? (pitchModifier === 1 ? slices : slices.map(slice => ({
-    n: slice.n, s: Math.round(slice.s / pitchModifier),
-    e: Math.round(slice.e / pitchModifier),
-    l: (!slice.l || slice.l === -1) ? -1 : Math.round(slice.l / pitchModifier)
-  }))) : [];
+    let _slices = hasSlices ? (pitchModifier === 1 ? slices : slices.map(
+      slice => ({
+          n: slice.n, s: Math.round(slice.s / pitchModifier),
+          e: Math.round(slice.e / pitchModifier),
+          l: (!slice.l || slice.l === -1) ? -1 : Math.round(
+            slice.l / pitchModifier)
+      }))) : [];
 
-  if (hasSlices) {
-    if (embedSliceData) {
-      sliceData = `{"sr": ${sampleRate}, "dcs":` + JSON.stringify(_slices) + '}';
-      sliceData = sliceData.padEnd(sliceData.length + sliceData.length%4, ' ');
-      bufferLength += (sliceData.length + 8);
-      riffSize += (sliceData.length + 8);
-    }
-    if (embedCuePoints) {
-      sliceCueLength = (12 + (24 * slices.length));
-      bufferLength += sliceCueLength;
-      riffSize += sliceCueLength;
-    }
-  }
-
-  buffer = new ArrayBuffer(bufferLength);
-  let view = new DataView(buffer);
-
-  /* RIFF identifier */
-  writeString(view, 0, 'RIFF');
-  /* RIFF chunk length */
-  view.setUint32(4, riffSize, true);
-  /* RIFF type */
-  writeString(view, 8, 'WAVE');
-  /* format chunk identifier */
-  writeString(view, 12, 'fmt ');
-  /* format chunk length */
-  view.setUint32(16, 16, true);
-  /* sample format (raw) */
-  view.setUint16(20, format, true);
-  /* channel count */
-  view.setUint16(22, numChannels, true);
-  /* sample rate */
-  view.setUint32(24, sampleRate, true);
-  /* byte rate (sample rate * block align) */
-  view.setUint32(28, sampleRate * blockAlign, true);
-  /* block align (channel count * bytes per sample) */
-  view.setUint16(32, blockAlign, true);
-  /* bits per sample */
-  view.setUint16(34, bitDepth, true);
-  /* data chunk identifier */
-  writeString(view, 36, 'data');
-  /* data chunk length */
-  view.setUint32(40, samples.length * bytesPerSample, true);
-  if (bitDepth === 16) { // Raw PCM
-    floatTo16BitPCM(view, 44, samples);
-  } else if (bitDepth === 24) {
-    floatTo24BitPCM(view, 44, samples);
-  } else if (bitDepth === 8) {
-    floatTo8BitPCM(view, 44, samples);
-  } else {
-    writeFloat32(view, 44, samples);
-  }
-  if (hasSlices) {
-    if (embedSliceData) {
-      /*DCSD custom chunk header*/
-      writeString(view,
-          view.byteLength - (sliceData.length + 8) - sliceCueLength, 'DCSD');
-      /*DCSD custom chunk size*/
-      view.setUint32(view.byteLength - (sliceData.length + 4) - sliceCueLength,
-          sliceData.length, true);
-      /*DCSD custom chunk data*/
-      writeString(view, view.byteLength - sliceData.length - sliceCueLength,
-          sliceData);
-    }
-    if (embedCuePoints) {
-      writeString(view, view.byteLength - sliceCueLength, 'cue ');
-      view.setUint32(view.byteLength - sliceCueLength + 4, sliceCueLength - 4,
-          true);
-      view.setUint32(view.byteLength - sliceCueLength + 8, slices.length, true);
-
-      for (let sIdx = 0; sIdx < slices.length; sIdx++) {
-        const increment = 12 + (sIdx * 24);
-        /*Cue id*/
-        view.setUint32(view.byteLength - sliceCueLength + increment, sIdx,
-            true);
-        /*Cue position*/
-        view.setUint32(view.byteLength - sliceCueLength + increment + 4, 0,
-            true);
-        /*Cue data chunk sig*/
-        writeString(view, view.byteLength - sliceCueLength + increment + 8,
-            'data');
-        /*Cue chunk start zero value*/
-        view.setUint32(view.byteLength - sliceCueLength + increment + 12, 0,
-            true);
-        /*Cue block start zero value*/
-        view.setUint32(view.byteLength - sliceCueLength + increment + 16, 0,
-            true);
-        /*Cue point sample start position*/
-        view.setUint32(view.byteLength - sliceCueLength + increment + 20,
-            _slices[sIdx].s, true);
-      }
-    }
-  }
-
-  return buffer;
-}
-
-export function getAifSampleRate(input) {
-  const sampleRateTable = {
-    8000: [64, 11, 250, 0, 0, 0, 0, 0, 0, 0],
-    11025: [64, 12, 172, 68, 0, 0, 0, 0, 0, 0],
-    16000: [64, 12, 250, 0, 0, 0, 0, 0, 0, 0],
-    22050: [64, 13, 172, 68, 0, 0, 0, 0, 0, 0],
-    32000: [64, 13, 250, 0, 0, 0, 0, 0, 0, 0],
-    37800: [64, 14, 147, 168, 0, 0, 0, 0, 0, 0],
-    44056: [64, 14, 172, 24, 0, 0, 0, 0, 0, 0],
-    44100: [64, 14, 172, 68, 0, 0, 0, 0, 0, 0],
-    47250: [64, 14, 184, 146, 0, 0, 0, 0, 0, 0],
-    48000: [64, 14, 187, 128, 0, 0, 0, 0, 0, 0],
-    50000: [64, 14, 195, 80, 0, 0, 0, 0, 0, 0],
-    50400: [64, 14, 196, 224, 0, 0, 0, 0, 0, 0],
-    88200: [64, 15, 172, 68, 0, 0, 0, 0, 0, 0],
-    96000: [64, 15, 187, 128, 0, 0, 0, 0, 0, 0],
-    176400: [64, 16, 172, 68, 0, 0, 0, 0, 0, 0],
-    192000: [64, 16, 187, 128, 0, 0, 0, 0, 0, 0],
-    352800: [64, 17, 172, 68, 0, 0, 0, 0, 0, 0],
-    2822400: [64, 20, 172, 68, 0, 0, 0, 0, 0, 0],
-    5644800: [64, 21, 172, 68, 0, 0, 0, 0, 0, 0]
-  };
-  if (typeof input === 'number') {
-    return sampleRateTable[input]??false;
-  }
-  if (Array.isArray(input) && input.length === 10) {
-    for (let sr in sampleRateTable) {
-      if (sampleRateTable[sr].every((v, i) => v === input[i])) {
-        return +sr;
-      }
-    }
-  }
-}
-
-function addSampleRateToAiffData(view, offset, sr = 44100) {
-  const sampleRate = getAifSampleRate(sr);
-  for (let i = 0; i < 10; i++) {
-    view.setUint8(offset + i, sampleRate[i]);
-  }
-}
-
-export function encodeAif(audioData, sampleRate, numberOfChannels, opJsonData) {
-  let jsonData = JSON.parse(JSON.stringify(opJsonData));
-  jsonData.stereo = numberOfChannels === 2;
-  
-  function audioBufferToAiff(buffer) {
-    const numChannels = buffer.numberOfChannels;
-    const sampleRate = buffer.sampleRate;
-
-    let result;
-    if (numChannels === 2) {
-      result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
-    } else {
-      result = buffer.getChannelData(0);
+    if (hasSlices) {
+        if (embedSliceData) {
+            sliceData = `{"sr": ${sampleRate}, "dcs":` +
+              JSON.stringify(_slices) + '}';
+            sliceData = sliceData.padEnd(
+              sliceData.length + sliceData.length % 4, ' ');
+            bufferLength += (sliceData.length + 8);
+            riffSize += (sliceData.length + 8);
+        }
+        if (embedCuePoints) {
+            sliceCueLength = (12 + (24 * slices.length));
+            bufferLength += sliceCueLength;
+            riffSize += sliceCueLength;
+        }
     }
 
-    return encodeAIFF(result, sampleRate, numChannels);
-  }
-
-  function encodeAIFF(samples, sampleRate, numChannels) {
-    let numBytesPerSample = 2;
-    let totalNumAudioSampleBytes = samples.length * numBytesPerSample;
-    let soundDataChunkSize = totalNumAudioSampleBytes + 8;
-    let fileSizeInBytes = 0x1042 + totalNumAudioSampleBytes - 8;
-
-    let buffer = new ArrayBuffer(0x1042 + samples.length * numBytesPerSample);
+    buffer = new ArrayBuffer(bufferLength);
     let view = new DataView(buffer);
 
-    // HEADER
-    writeString(view, 0, 'FORM');
+    /* RIFF identifier */
+    writeString(view, 0, 'RIFF');
+    /* RIFF chunk length */
+    view.setUint32(4, riffSize, true);
+    /* RIFF type */
+    writeString(view, 8, 'WAVE');
+    /* format chunk identifier */
+    writeString(view, 12, 'fmt ');
+    /* format chunk length */
+    view.setUint32(16, 16, true);
+    /* sample format (raw) */
+    view.setUint16(20, format, true);
+    /* channel count */
+    view.setUint16(22, numChannels, true);
+    /* sample rate */
+    view.setUint32(24, sampleRate, true);
+    /* byte rate (sample rate * block align) */
+    view.setUint32(28, sampleRate * blockAlign, true);
+    /* block align (channel count * bytes per sample) */
+    view.setUint16(32, blockAlign, true);
+    /* bits per sample */
+    view.setUint16(34, bitDepth, true);
+    /* data chunk identifier */
+    writeString(view, 36, 'data');
+    /* data chunk length */
+    view.setUint32(40, samples.length * bytesPerSample, true);
+    if (bitDepth === 16) { // Raw PCM
+        floatTo16BitPCM(view, 44, samples);
+    } else if (bitDepth === 24) {
+        floatTo24BitPCM(view, 44, samples);
+    } else if (bitDepth === 8) {
+        floatTo8BitPCM(view, 44, samples);
+    } else {
+        writeFloat32(view, 44, samples);
+    }
+    if (hasSlices) {
+        if (embedSliceData) {
+            /*DCSD custom chunk header*/
+            writeString(view,
+              view.byteLength - (sliceData.length + 8) - sliceCueLength,
+              'DCSD');
+            /*DCSD custom chunk size*/
+            view.setUint32(
+              view.byteLength - (sliceData.length + 4) - sliceCueLength,
+              sliceData.length, true);
+            /*DCSD custom chunk data*/
+            writeString(view,
+              view.byteLength - sliceData.length - sliceCueLength,
+              sliceData);
+        }
+        if (embedCuePoints) {
+            writeString(view, view.byteLength - sliceCueLength, 'cue ');
+            view.setUint32(view.byteLength - sliceCueLength + 4,
+              sliceCueLength - 4,
+              true);
+            view.setUint32(view.byteLength - sliceCueLength + 8, slices.length,
+              true);
 
-    view.setInt32(4, fileSizeInBytes);
-
-    writeString(view, 8, 'AIFF')
-
-    // COMM
-    writeString(view, 12, 'COMM');
-    view.setInt32(16, 18);
-    view.setInt16(20, numChannels);
-    view.setInt32(22, samples.length / numChannels); // num samples per channel
-    view.setInt16(26, 16); // bit depth
-    addSampleRateToAiffData(view, 28, sampleRate);
-
-    // APPL
-    writeString(view, 38, 'APPL');
-    view.setInt32(42, 0x1004);
-    writeString(view, 46, 'op-1');
-    writeApplData(view, jsonData, 50);
-
-    let offset = 0x1032;
-
-    // SSND
-    writeString(view, offset, 'SSND');
-    view.setInt32(offset + 4, soundDataChunkSize);
-    view.setInt32(offset + 8, 0); // offset
-    view.setInt32(offset + 12, 0); // block size
-
-    offset = offset + 16; //0x1042
-
-    for (let i = 0; i < samples.length; i++) {
-      let byte = Math.round(samples[i] * 32767);
-      view.setInt16(offset, byte);
-      offset += 2;
+            for (let sIdx = 0; sIdx < slices.length; sIdx++) {
+                const increment = 12 + (sIdx * 24);
+                /*Cue id*/
+                view.setUint32(view.byteLength - sliceCueLength + increment,
+                  sIdx,
+                  true);
+                /*Cue position*/
+                view.setUint32(view.byteLength - sliceCueLength + increment + 4,
+                  0,
+                  true);
+                /*Cue data chunk sig*/
+                writeString(view,
+                  view.byteLength - sliceCueLength + increment + 8,
+                  'data');
+                /*Cue chunk start zero value*/
+                view.setUint32(
+                  view.byteLength - sliceCueLength + increment + 12, 0,
+                  true);
+                /*Cue block start zero value*/
+                view.setUint32(
+                  view.byteLength - sliceCueLength + increment + 16, 0,
+                  true);
+                /*Cue point sample start position*/
+                view.setUint32(
+                  view.byteLength - sliceCueLength + increment + 20,
+                  _slices[sIdx].s, true);
+            }
+        }
     }
 
     return buffer;
-  }
+}
 
-  function writeApplData(dataView, data, offset) {
-    const encDataRaw = JSON.stringify(data) + "\n";
-    const encData = encDataRaw.length%2 === 0 ? encDataRaw : (encDataRaw + "\n");
-    let pad = 0x1004 - encData.length - 4;
-    writeString(dataView, offset, encData);
-    offset += encData.length;
-    if (pad > 0) {
-      new Array(pad).fill(0x20).forEach(p => {
-        dataView.setUint8(offset, p);
-        offset++;
-      });
+export function getAifSampleRate(input) {
+    const sampleRateTable = {
+        8000: [64, 11, 250, 0, 0, 0, 0, 0, 0, 0],
+        11025: [64, 12, 172, 68, 0, 0, 0, 0, 0, 0],
+        16000: [64, 12, 250, 0, 0, 0, 0, 0, 0, 0],
+        22050: [64, 13, 172, 68, 0, 0, 0, 0, 0, 0],
+        32000: [64, 13, 250, 0, 0, 0, 0, 0, 0, 0],
+        37800: [64, 14, 147, 168, 0, 0, 0, 0, 0, 0],
+        44056: [64, 14, 172, 24, 0, 0, 0, 0, 0, 0],
+        44100: [64, 14, 172, 68, 0, 0, 0, 0, 0, 0],
+        47250: [64, 14, 184, 146, 0, 0, 0, 0, 0, 0],
+        48000: [64, 14, 187, 128, 0, 0, 0, 0, 0, 0],
+        50000: [64, 14, 195, 80, 0, 0, 0, 0, 0, 0],
+        50400: [64, 14, 196, 224, 0, 0, 0, 0, 0, 0],
+        88200: [64, 15, 172, 68, 0, 0, 0, 0, 0, 0],
+        96000: [64, 15, 187, 128, 0, 0, 0, 0, 0, 0],
+        176400: [64, 16, 172, 68, 0, 0, 0, 0, 0, 0],
+        192000: [64, 16, 187, 128, 0, 0, 0, 0, 0, 0],
+        352800: [64, 17, 172, 68, 0, 0, 0, 0, 0, 0],
+        2822400: [64, 20, 172, 68, 0, 0, 0, 0, 0, 0],
+        5644800: [64, 21, 172, 68, 0, 0, 0, 0, 0, 0]
+    };
+    if (typeof input === 'number') {
+        return sampleRateTable[input] ?? false;
     }
-  }
+    if (Array.isArray(input) && input.length === 10) {
+        for (let sr in sampleRateTable) {
+            if (sampleRateTable[sr].every((v, i) => v === input[i])) {
+                return +sr;
+            }
+        }
+    }
+}
 
-  return audioData.numberOfChannels ?
+function addSampleRateToAiffData(view, offset, sr = 44100) {
+    const sampleRate = getAifSampleRate(sr);
+    for (let i = 0; i < 10; i++) {
+        view.setUint8(offset + i, sampleRate[i]);
+    }
+}
+
+export function encodeAif(audioData, sampleRate, numberOfChannels, opJsonData) {
+    let jsonData = JSON.parse(JSON.stringify(opJsonData));
+    jsonData.stereo = numberOfChannels === 2;
+
+    function audioBufferToAiff(buffer) {
+        const numChannels = buffer.numberOfChannels;
+        const sampleRate = buffer.sampleRate;
+
+        let result;
+        if (numChannels === 2) {
+            result = interleave(buffer.getChannelData(0),
+              buffer.getChannelData(1));
+        } else {
+            result = buffer.getChannelData(0);
+        }
+
+        return encodeAIFF(result, sampleRate, numChannels);
+    }
+
+    function encodeAIFF(samples, sampleRate, numChannels) {
+        let numBytesPerSample = 2;
+        let totalNumAudioSampleBytes = samples.length * numBytesPerSample;
+        let soundDataChunkSize = totalNumAudioSampleBytes + 8;
+        let fileSizeInBytes = 0x1042 + totalNumAudioSampleBytes - 8;
+
+        let buffer = new ArrayBuffer(
+          0x1042 + samples.length * numBytesPerSample);
+        let view = new DataView(buffer);
+
+        // HEADER
+        writeString(view, 0, 'FORM');
+
+        view.setInt32(4, fileSizeInBytes);
+
+        writeString(view, 8, 'AIFF');
+
+        // COMM
+        writeString(view, 12, 'COMM');
+        view.setInt32(16, 18);
+        view.setInt16(20, numChannels);
+        view.setInt32(22, samples.length / numChannels); // num samples per channel
+        view.setInt16(26, 16); // bit depth
+        addSampleRateToAiffData(view, 28, sampleRate);
+
+        // APPL
+        writeString(view, 38, 'APPL');
+        view.setInt32(42, 0x1004);
+        writeString(view, 46, 'op-1');
+        writeApplData(view, jsonData, 50);
+
+        let offset = 0x1032;
+
+        // SSND
+        writeString(view, offset, 'SSND');
+        view.setInt32(offset + 4, soundDataChunkSize);
+        view.setInt32(offset + 8, 0); // offset
+        view.setInt32(offset + 12, 0); // block size
+
+        offset = offset + 16; //0x1042
+
+        for (let i = 0; i < samples.length; i++) {
+            let byte = Math.round(samples[i] * 32767);
+            view.setInt16(offset, byte);
+            offset += 2;
+        }
+
+        return buffer;
+    }
+
+    function writeApplData(dataView, data, offset) {
+        const encDataRaw = JSON.stringify(data) + '\n';
+        const encData = encDataRaw.length % 2 === 0 ? encDataRaw : (encDataRaw +
+          '\n');
+        let pad = 0x1004 - encData.length - 4;
+        writeString(dataView, offset, encData);
+        offset += encData.length;
+        if (pad > 0) {
+            new Array(pad).fill(0x20).forEach(p => {
+                dataView.setUint8(offset, p);
+                offset++;
+            });
+        }
+    }
+
+    return audioData.numberOfChannels ?
       new DataView(audioBufferToAiff(audioData)) :
       encodeAIFF(audioData, sampleRate, numberOfChannels);
 }
 
-
 function interleave(inputL, inputR) {
-  var length = inputL.length + inputR.length;
-  var result = new Float32Array(length);
+    var length = inputL.length + inputR.length;
+    var result = new Float32Array(length);
 
-  var index = 0;
-  var inputIndex = 0;
+    var index = 0;
+    var inputIndex = 0;
 
-  while (index < length) {
-    result[index++] = inputL[inputIndex];
-    result[index++] = inputR[inputIndex];
-    inputIndex++;
-  }
-  return result;
+    while (index < length) {
+        result[index++] = inputL[inputIndex];
+        result[index++] = inputR[inputIndex];
+        inputIndex++;
+    }
+    return result;
 }
 
 function writeFloat32(output, offset, input) {
-  for (let i = 0; i < input.length; i++, offset += 4) {
-    output.setFloat32(offset, input[i], true);
-  }
+    for (let i = 0; i < input.length; i++, offset += 4) {
+        output.setFloat32(offset, input[i], true);
+    }
 }
 
-function floatTo8BitPCM(output, offset, input){
-  for (let i = 0; i < input.length; i++, offset++){
-    //const s = Math.max(-1, Math.min(1, input[i]));
-    const s = Math.floor(Math.max(-1, Math.min(1, input[i])) * 127 + 128);
-    output.setInt8(offset, s);
-  }
+function floatTo8BitPCM(output, offset, input) {
+    for (let i = 0; i < input.length; i++, offset++) {
+        //const s = Math.max(-1, Math.min(1, input[i]));
+        const s = Math.floor(Math.max(-1, Math.min(1, input[i])) * 127 + 128);
+        output.setInt8(offset, s);
+    }
 }
 
 function floatTo16BitPCM(output, offset, input) {
-  for (let i = 0; i < input.length; i++, offset += 2) {
-    const s = Math.max(-1, Math.min(1, input[i]));
-    output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-  }
+    for (let i = 0; i < input.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, input[i]));
+        output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
 }
 
 function floatTo24BitPCM(output, offset, input) {
-  for (let i = 0; i < input.length; i++, offset += 3) {
-    const s = Math.floor(input[i] * 8388608 + 0.5);
-    output.setInt24(offset, s, true);
-  }
+    for (let i = 0; i < input.length; i++, offset += 3) {
+        const s = Math.floor(input[i] * 8388608 + 0.5);
+        output.setInt24(offset, s, true);
+    }
 }
 
 function writeString(view, offset, string) {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
-  }
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
 }
+
 export function Resampler(fromSampleRate, toSampleRate, channels, inputBuffer) {
-  //JavaScript Audio Resampler
-  //Copyright (C) 2011-2015 Grant Galitz
-  //Released to Public Domain https://raw.githubusercontent.com/taisel/XAudioJS/master/resampler.js
-  //Input Sample Rate:
-  this.fromSampleRate = +fromSampleRate;
-  //Output Sample Rate:
-  this.toSampleRate = +toSampleRate;
-  //Number of channels:
-  this.channels = channels | 0;
-  //Type checking the input buffer:
-  if (typeof inputBuffer != "object") {
-    throw(new Error("inputBuffer is not an object."));
-  }
-  if (!(inputBuffer instanceof Array) && !(inputBuffer instanceof Float32Array) && !(inputBuffer instanceof Float64Array)) {
-    throw(new Error("inputBuffer is not an array or a float32 or a float64 array."));
-  }
-  this.inputBuffer = inputBuffer;
-  //Initialize the resampler:
-  this.initialize();
-}
-Resampler.prototype.initialize = function () {
-  //Perform some checks:
-  if (this.fromSampleRate > 0 && this.toSampleRate > 0 && this.channels > 0) {
-    if (this.fromSampleRate == this.toSampleRate) {
-      //Setup a resampler bypass:
-      this.resampler = this.bypassResampler;		//Resampler just returns what was passed through.
-      this.ratioWeight = 1;
-      this.outputBuffer = this.inputBuffer;
+    //JavaScript Audio Resampler
+    //Copyright (C) 2011-2015 Grant Galitz
+    //Released to Public Domain https://raw.githubusercontent.com/taisel/XAudioJS/master/resampler.js
+    //Input Sample Rate:
+    this.fromSampleRate = +fromSampleRate;
+    //Output Sample Rate:
+    this.toSampleRate = +toSampleRate;
+    //Number of channels:
+    this.channels = channels | 0;
+    //Type checking the input buffer:
+    if (typeof inputBuffer != 'object') {
+        throw (new Error('inputBuffer is not an object.'));
     }
-    else {
-      this.ratioWeight = this.fromSampleRate / this.toSampleRate;
-      if (this.fromSampleRate < this.toSampleRate) {
-        /*
-          Use generic linear interpolation if upsampling,
-          as linear interpolation produces a gradient that we want
-          and works fine with two input sample points per output in this case.
-        */
-        this.compileLinearInterpolationFunction();
-        this.lastWeight = 1;
-      }
-      else {
-        /*
-          Custom resampler I wrote that doesn't skip samples
-          like standard linear interpolation in high downsampling.
-          This is more accurate than linear interpolation on downsampling.
-        */
-        this.compileMultiTapFunction();
-        this.tailExists = false;
-        this.lastWeight = 0;
-      }
-      this.initializeBuffers();
+    if (!(inputBuffer instanceof Array) &&
+      !(inputBuffer instanceof Float32Array) &&
+      !(inputBuffer instanceof Float64Array)) {
+        throw (new Error(
+          'inputBuffer is not an array or a float32 or a float64 array.'));
     }
-  }
-  else {
-    throw(new Error("Invalid settings specified for the resampler."));
-  }
+    this.inputBuffer = inputBuffer;
+    //Initialize the resampler:
+    this.initialize();
 }
-Resampler.prototype.compileLinearInterpolationFunction = function () {
-  var toCompile = "var outputOffset = 0;\
+
+Resampler.prototype.initialize = function() {
+    //Perform some checks:
+    if (this.fromSampleRate > 0 && this.toSampleRate > 0 && this.channels > 0) {
+        if (this.fromSampleRate == this.toSampleRate) {
+            //Setup a resampler bypass:
+            this.resampler = this.bypassResampler;		//Resampler just returns what was passed through.
+            this.ratioWeight = 1;
+            this.outputBuffer = this.inputBuffer;
+        } else {
+            this.ratioWeight = this.fromSampleRate / this.toSampleRate;
+            if (this.fromSampleRate < this.toSampleRate) {
+                /*
+                  Use generic linear interpolation if upsampling,
+                  as linear interpolation produces a gradient that we want
+                  and works fine with two input sample points per output in this case.
+                */
+                this.compileLinearInterpolationFunction();
+                this.lastWeight = 1;
+            } else {
+                /*
+                  Custom resampler I wrote that doesn't skip samples
+                  like standard linear interpolation in high downsampling.
+                  This is more accurate than linear interpolation on downsampling.
+                */
+                this.compileMultiTapFunction();
+                this.tailExists = false;
+                this.lastWeight = 0;
+            }
+            this.initializeBuffers();
+        }
+    } else {
+        throw (new Error('Invalid settings specified for the resampler.'));
+    }
+};
+Resampler.prototype.compileLinearInterpolationFunction = function() {
+    var toCompile = 'var outputOffset = 0;\
     if (bufferLength > 0) {\
         var buffer = this.inputBuffer;\
         var weight = this.lastWeight;\
@@ -600,40 +655,47 @@ Resampler.prototype.compileLinearInterpolationFunction = function () {
         var sourceOffset = 0;\
         var outputOffset = 0;\
         var outputBuffer = this.outputBuffer;\
-        for (; weight < 1; weight += " + this.ratioWeight + ") {\
+        for (; weight < 1; weight += ' + this.ratioWeight + ') {\
             secondWeight = weight % 1;\
-            firstWeight = 1 - secondWeight;";
-  for (var channel = 0; channel < this.channels; ++channel) {
-    toCompile += "outputBuffer[outputOffset++] = (this.lastOutput[" + channel + "] * firstWeight) + (buffer[" + channel + "] * secondWeight);";
-  }
-  toCompile += "}\
+            firstWeight = 1 - secondWeight;';
+    for (var channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'outputBuffer[outputOffset++] = (this.lastOutput[' +
+          channel + '] * firstWeight) + (buffer[' + channel +
+          '] * secondWeight);';
+    }
+    toCompile += '}\
         weight -= 1;\
-        for (bufferLength -= " + this.channels + ", sourceOffset = Math.floor(weight) * " + this.channels + "; sourceOffset < bufferLength;) {\
+        for (bufferLength -= ' + this.channels +
+      ', sourceOffset = Math.floor(weight) * ' + this.channels + '; sourceOffset < bufferLength;) {\
             secondWeight = weight % 1;\
-            firstWeight = 1 - secondWeight;";
-  for (var channel = 0; channel < this.channels; ++channel) {
-    toCompile += "outputBuffer[outputOffset++] = (buffer[sourceOffset" + ((channel > 0) ? (" + " + channel) : "") + "] * firstWeight) + (buffer[sourceOffset + " + (this.channels + channel) + "] * secondWeight);";
-  }
-  toCompile += "weight += " + this.ratioWeight + ";\
-            sourceOffset = Math.floor(weight) * " + this.channels + ";\
-        }";
-  for (var channel = 0; channel < this.channels; ++channel) {
-    toCompile += "this.lastOutput[" + channel + "] = buffer[sourceOffset++];";
-  }
-  toCompile += "this.lastWeight = weight % 1;\
+            firstWeight = 1 - secondWeight;';
+    for (var channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'outputBuffer[outputOffset++] = (buffer[sourceOffset' +
+          ((channel > 0) ? (' + ' + channel) : '') +
+          '] * firstWeight) + (buffer[sourceOffset + ' +
+          (this.channels + channel) + '] * secondWeight);';
+    }
+    toCompile += 'weight += ' + this.ratioWeight + ';\
+            sourceOffset = Math.floor(weight) * ' + this.channels + ';\
+        }';
+    for (var channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'this.lastOutput[' + channel +
+          '] = buffer[sourceOffset++];';
+    }
+    toCompile += 'this.lastWeight = weight % 1;\
     }\
-    return outputOffset;";
-  this.resampler = Function("bufferLength", toCompile);
-}
-Resampler.prototype.compileMultiTapFunction = function () {
-  var toCompile = "var outputOffset = 0;\
+    return outputOffset;';
+    this.resampler = Function('bufferLength', toCompile);
+};
+Resampler.prototype.compileMultiTapFunction = function() {
+    var toCompile = 'var outputOffset = 0;\
     if (bufferLength > 0) {\
         var buffer = this.inputBuffer;\
-        var weight = 0;";
-  for (var channel = 0; channel < this.channels; ++channel) {
-    toCompile += "var output" + channel + " = 0;"
-  }
-  toCompile += "var actualPosition = 0;\
+        var weight = 0;';
+    for (var channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'var output' + channel + ' = 0;';
+    }
+    toCompile += 'var actualPosition = 0;\
         var amountToNext = 0;\
         var alreadyProcessedTail = !this.tailExists;\
         this.tailExists = false;\
@@ -641,112 +703,128 @@ Resampler.prototype.compileMultiTapFunction = function () {
         var currentPosition = 0;\
         do {\
             if (alreadyProcessedTail) {\
-                weight = " + this.ratioWeight + ";";
-  for (channel = 0; channel < this.channels; ++channel) {
-    toCompile += "output" + channel + " = 0;"
-  }
-  toCompile += "}\
+                weight = ' + this.ratioWeight + ';';
+    for (channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'output' + channel + ' = 0;';
+    }
+    toCompile += '}\
             else {\
-                weight = this.lastWeight;";
-  for (channel = 0; channel < this.channels; ++channel) {
-    toCompile += "output" + channel + " = this.lastOutput[" + channel + "];"
-  }
-  toCompile += "alreadyProcessedTail = true;\
+                weight = this.lastWeight;';
+    for (channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'output' + channel + ' = this.lastOutput[' + channel + '];';
+    }
+    toCompile += 'alreadyProcessedTail = true;\
             }\
             while (weight > 0 && actualPosition < bufferLength) {\
                 amountToNext = 1 + actualPosition - currentPosition;\
-                if (weight >= amountToNext) {";
-  for (channel = 0; channel < this.channels; ++channel) {
-    toCompile += "output" + channel + " += buffer[actualPosition++] * amountToNext;"
-  }
-  toCompile += "currentPosition = actualPosition;\
+                if (weight >= amountToNext) {';
+    for (channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'output' + channel +
+          ' += buffer[actualPosition++] * amountToNext;';
+    }
+    toCompile += 'currentPosition = actualPosition;\
                     weight -= amountToNext;\
                 }\
-                else {";
-  for (channel = 0; channel < this.channels; ++channel) {
-    toCompile += "output" + channel + " += buffer[actualPosition" + ((channel > 0) ? (" + " + channel) : "") + "] * weight;"
-  }
-  toCompile += "currentPosition += weight;\
+                else {';
+    for (channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'output' + channel + ' += buffer[actualPosition' +
+          ((channel > 0) ? (' + ' + channel) : '') + '] * weight;';
+    }
+    toCompile += 'currentPosition += weight;\
                     weight = 0;\
                     break;\
                 }\
             }\
-            if (weight <= 0) {";
-  for (channel = 0; channel < this.channels; ++channel) {
-    toCompile += "outputBuffer[outputOffset++] = output" + channel + " / " + this.ratioWeight + ";"
-  }
-  toCompile += "}\
+            if (weight <= 0) {';
+    for (channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'outputBuffer[outputOffset++] = output' + channel + ' / ' +
+          this.ratioWeight + ';';
+    }
+    toCompile += '}\
             else {\
-                this.lastWeight = weight;";
-  for (channel = 0; channel < this.channels; ++channel) {
-    toCompile += "this.lastOutput[" + channel + "] = output" + channel + ";"
-  }
-  toCompile += "this.tailExists = true;\
+                this.lastWeight = weight;';
+    for (channel = 0; channel < this.channels; ++channel) {
+        toCompile += 'this.lastOutput[' + channel + '] = output' + channel + ';';
+    }
+    toCompile += 'this.tailExists = true;\
                 break;\
             }\
         } while (actualPosition < bufferLength);\
     }\
-    return outputOffset;";
-  this.resampler = Function("bufferLength", toCompile);
-}
-Resampler.prototype.bypassResampler = function (upTo) {
-  return upTo;
-}
-Resampler.prototype.initializeBuffers = function () {
-  //Initialize the internal buffer:
-  var outputBufferSize = (Math.ceil(this.inputBuffer.length * this.toSampleRate / this.fromSampleRate / this.channels * 1.000000476837158203125) * this.channels) + this.channels;
-  try {
-    this.outputBuffer = new Float32Array(outputBufferSize);
-    this.lastOutput = new Float32Array(this.channels);
-  }
-  catch (error) {
-    this.outputBuffer = [];
-    this.lastOutput = [];
-  }
-}
+    return outputOffset;';
+    this.resampler = Function('bufferLength', toCompile);
+};
+Resampler.prototype.bypassResampler = function(upTo) {
+    return upTo;
+};
+Resampler.prototype.initializeBuffers = function() {
+    //Initialize the internal buffer:
+    var outputBufferSize = (Math.ceil(
+      this.inputBuffer.length * this.toSampleRate / this.fromSampleRate /
+      this.channels * 1.000000476837158203125) * this.channels) + this.channels;
+    try {
+        this.outputBuffer = new Float32Array(outputBufferSize);
+        this.lastOutput = new Float32Array(this.channels);
+    } catch (error) {
+        this.outputBuffer = [];
+        this.lastOutput = [];
+    }
+};
 
 CanvasRenderingContext2D.prototype.clear =
-    CanvasRenderingContext2D.prototype.clear || function (preserveTransform) {
+  CanvasRenderingContext2D.prototype.clear || function(preserveTransform) {
       if (preserveTransform) {
-        this.save();
-        this.setTransform(1, 0, 0, 1, 0, 0);
+          this.save();
+          this.setTransform(1, 0, 0, 1, 0, 0);
       }
 
       this.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.beginPath();
 
       if (preserveTransform) {
-        this.restore();
+          this.restore();
       }
-    };
+  };
 
 /*scrollIntoViewIfNeeded shim*/
 if (!Element.prototype.scrollIntoViewIfNeeded) {
-  Element.prototype.scrollIntoViewIfNeeded = function(centerIfNeeded) {
-    centerIfNeeded = arguments.length === 0 ? true : !!centerIfNeeded;
+    Element.prototype.scrollIntoViewIfNeeded = function(centerIfNeeded) {
+        centerIfNeeded = arguments.length === 0 ? true : !!centerIfNeeded;
 
-    const parent = this.parentElement;
-    const parentComputedStyle = window.getComputedStyle(parent, null);
-    const parentBorderTopWidth = parseInt(parentComputedStyle.getPropertyValue('border-top-width'));
-    const parentBorderLeftWidth = parseInt(parentComputedStyle.getPropertyValue('border-left-width'));
-    const overTop = this.offsetTop - parent.offsetTop < parent.scrollTop;
-    const overBottom = (this.offsetTop - parent.offsetTop + this.clientHeight - parentBorderTopWidth) > (parent.scrollTop + parent.clientHeight);
-    const overLeft = this.offsetLeft - parent.offsetLeft < parent.scrollLeft;
-    const overRight = (this.offsetLeft - parent.offsetLeft + this.clientWidth - parentBorderLeftWidth) > (parent.scrollLeft + parent.clientWidth);
-    const alignWithTop = overTop && !overBottom;
+        const parent = this.parentElement;
+        const parentComputedStyle = window.getComputedStyle(parent, null);
+        const parentBorderTopWidth = parseInt(
+          parentComputedStyle.getPropertyValue('border-top-width'));
+        const parentBorderLeftWidth = parseInt(
+          parentComputedStyle.getPropertyValue('border-left-width'));
+        const overTop = this.offsetTop - parent.offsetTop < parent.scrollTop;
+        const overBottom = (this.offsetTop - parent.offsetTop +
+            this.clientHeight - parentBorderTopWidth) >
+          (parent.scrollTop + parent.clientHeight);
+        const overLeft = this.offsetLeft - parent.offsetLeft <
+          parent.scrollLeft;
+        const overRight = (this.offsetLeft - parent.offsetLeft +
+            this.clientWidth - parentBorderLeftWidth) >
+          (parent.scrollLeft + parent.clientWidth);
+        const alignWithTop = overTop && !overBottom;
 
-    if ((overTop || overBottom) && centerIfNeeded) {
-      parent.scrollTop = this.offsetTop - parent.offsetTop - parent.clientHeight / 2 - parentBorderTopWidth + this.clientHeight / 2;
-    }
+        if ((overTop || overBottom) && centerIfNeeded) {
+            parent.scrollTop = this.offsetTop - parent.offsetTop -
+              parent.clientHeight / 2 - parentBorderTopWidth +
+              this.clientHeight / 2;
+        }
 
-    if ((overLeft || overRight) && centerIfNeeded) {
-      parent.scrollLeft = this.offsetLeft - parent.offsetLeft - parent.clientWidth / 2 - parentBorderLeftWidth + this.clientWidth / 2;
-    }
+        if ((overLeft || overRight) && centerIfNeeded) {
+            parent.scrollLeft = this.offsetLeft - parent.offsetLeft -
+              parent.clientWidth / 2 - parentBorderLeftWidth +
+              this.clientWidth / 2;
+        }
 
-    if ((overTop || overBottom || overLeft || overRight) && !centerIfNeeded) {
-      this.scrollIntoView(alignWithTop);
-    }
-  };
+        if ((overTop || overBottom || overLeft || overRight) &&
+          !centerIfNeeded) {
+            this.scrollIntoView(alignWithTop);
+        }
+    };
 }
 
 /*JSZIP*/

@@ -1,4 +1,4 @@
-latest
+2023.10.15 1.4.8
  - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.
  - Dual mono exports setting error.
  - Prevent find crossing point on edit panel.
@@ -6,6 +6,7 @@ latest
  - Trim-right on sample that had slices removed threw unhandled error.
  - Merge/Blend panel mono/pan controls not consistently updating UI when clicked.
  - Fixed rendering bugs with Firefox 118.x when page zoom higher than 100%.
+ - Removed arcs in svg for better representation of the waveform graphics.
  - Ctrl + Click on the 'add samples' icon will add a blank sample (1 sample in length) to the list to use for padding chains.
 
 2023-08-31 1.4.7

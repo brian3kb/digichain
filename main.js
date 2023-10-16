@@ -194,6 +194,17 @@ function getSlicesFromMetaFile(file) {
   return metaFiles.getByFileInDcFormat(file);
 }
 
+function checkAndSetAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
+    setEditorConf({
+      audioCtx,
+      masterSR,
+      masterChannels,
+      masterBitDepth
+    });
+  }
+}
 function changeAudioConfig(event, option, onloadRestore = false) {
   const selection = option ||
       event?.target?.selectedOptions[0]?.value ||
@@ -223,7 +234,7 @@ function changeAudioConfig(event, option, onloadRestore = false) {
     audioConfigOptions[selection].c];
   event.target.dataset.selection = selection;
   if (!onloadRestore) {
-    audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
+    checkAndSetAudioContext();
   }
   secondsPerFile = lastUsedAudioConfig.includes('a') ? 20 : secondsPerFile;
   toggleSecondsPerFile(false,
@@ -3260,20 +3271,52 @@ const getRandomFileSelectionFrom = (fileCollection) => {
   //return selection.slice(0, (sliceGrid > 0 ? sliceGrid : 256));
 };
 
+const addBlankFile = () => {
+  const uuid = crypto.randomUUID();
+  checkAndSetAudioContext();
+  const audioArrayBuffer = audioCtx.createBuffer(
+    masterChannels,
+    1,
+    masterSR
+  );
+
+  for (let channel = 0; channel < masterChannels; channel++) {
+    for (let i = 0; i < audioArrayBuffer.length; i++) {
+      audioArrayBuffer.getChannelData(channel)[i] = 0;
+    }
+  }
+
+  const insertAt = lastSelectedRow ? getFileIndexById(lastSelectedRow.dataset.id) + 1 : files.length;
+
+  files.splice(insertAt, 0, {
+    file: {
+      lastModified: Date.now(),
+      name: getUniqueName(files, 'blank.wav'),
+      filename: 'blank.wav',
+      path: '',
+      size: 0
+    },
+    buffer: audioArrayBuffer, meta: {
+      length: audioArrayBuffer.length,
+      duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
+      startFrame: 0, endFrame: audioArrayBuffer.length,
+      checked: true, id: uuid,
+      channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
+      dualMono: false,
+      slices: false,
+      note: ''
+    }
+  });
+  unsorted.push(uuid);
+  renderList();
+};
+
 const consumeFileInput = (event, inputFiles) => {
   const supportedAudioTypes = ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a'];
   const loadingEl = document.getElementById('loadingText');
   loadingEl.textContent = 'Loading samples';
   document.body.classList.add('loading');
-  if (!audioCtx) {
-    audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
-    setEditorConf({
-      audioCtx,
-      masterSR,
-      masterChannels,
-      masterBitDepth
-    });
-  }
+checkAndSetAudioContext();
   const isAudioCtxClosed = checkAudioContextState();
   if (isAudioCtxClosed) { return; }
 
@@ -3466,15 +3509,7 @@ const consumeFileInput = (event, inputFiles) => {
 
 const dropHandler = (event) => {
   event.preventDefault();
-  if (!audioCtx) {
-    audioCtx = new AudioContext({sampleRate: masterSR, latencyHint: 'interactive'});
-    setEditorConf({
-      audioCtx,
-      masterSR,
-      masterChannels,
-      masterBitDepth
-    });
-  }
+  checkAndSetAudioContext();
   if (event?.dataTransfer?.items?.length &&
       event?.dataTransfer?.items[0].kind === 'string') {
     try {
@@ -3566,6 +3601,17 @@ uploadInput.addEventListener(
     'change',
     () => consumeFileInput({shiftKey: modifierKeys.shiftKey}, uploadInput.files),
     false
+);
+uploadInput.addEventListener(
+  'click',
+  (event) => {
+    if (event.ctrlKey || modifierKeys.ctrlKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      addBlankFile();
+    }
+  },
+  false
 );
 
 document.body.addEventListener(

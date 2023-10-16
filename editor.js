@@ -332,6 +332,7 @@ export function drawWaveform(file, el, channel, dimensions) {
   } else {
     drawResolution = file.buffer.length;
   }
+  drawResolution = drawResolution > file.buffer.length ? file.buffer.length : drawResolution;
   if (channel === 0 || channel === 1) {
     drawBuffer = file.buffer.getChannelData(channel);
   } else {
@@ -376,7 +377,6 @@ function draw(normalizedData, id, canvas, dimensions) {
     height = isEven ? height : -height;
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
-    ctx.arc(x + width / 2, height, width / 2, Math.PI, 0, isEven);
     ctx.lineTo(x + width, 0);
     ctx.stroke();
   };

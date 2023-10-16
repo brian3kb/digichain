@@ -3723,7 +3723,7 @@ window.addEventListener('beforeunload', (event) => {
   files = [];
   unsorted = [];
   metaFiles = [];
-  audioCtx.close();
+  audioCtx?.close();
 });
 
 /*Actions based on restored local storage states*/

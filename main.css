@@ -1162,7 +1162,6 @@ body.grid-view .path-exceeds-127 {
         overflow-x: hidden;
     }
     .all-options {
-        width: 100vw;
         padding-right: 1rem;
     }
     .info-panel-md, .split-panel-options, .edit-panel-options, .merge-panel-options, .not-served-md, .export-settings-panel-md, .op-export-panel-options, .chain-name-list-panel-md {

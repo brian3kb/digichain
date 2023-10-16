@@ -5,6 +5,7 @@ latest
  - Issue with auto-naming of duplicate files/same file imported multiple times.
  - Trim-right on sample that had slices removed threw unhandled error.
  - Merge/Blend panel mono/pan controls not consistently updating UI when clicked.
+ - Fixed rendering bugs with Firefox 118.x when page zoom higher than 100%.
 
 2023-08-31 1.4.7
  - Load samples from within zip files and Digitakt project files. (if max file limit setting is off, all files in the zip will be decompressed to memory, so be careful with zip sizes if setting that to off! If the zipped supported file count + file count already loaded is larger than the limit, the whole zip gets skipped).

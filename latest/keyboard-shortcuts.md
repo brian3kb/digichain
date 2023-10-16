@@ -40,6 +40,7 @@
  - Row Slice Icon : Clear any related slice data.
  - Row Selected Header : Toggles select / de-select all samples in list.
  - Sample Slice : In slicing panel, previews (plays) the slice clicked on.
+ - Add Samples Icon: Adds a blank sample to list.
 
 **Alt + Key**
  - Number 1 - 0, P : Stops the playback and looping of the sample.

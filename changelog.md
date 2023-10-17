@@ -1,5 +1,7 @@
 latest
  - Store list in indexedDb for optional restoring of the last session on next load.
+ - Map the Ctrl key to the Cmd key for macOS keyboard shortcuts.
+
 
 2023.10.15 1.4.8
  - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.

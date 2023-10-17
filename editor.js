@@ -516,7 +516,7 @@ function changeSelectionPoint(event, shiftKey = false) {
             end = editing.buffer.length;
         }
         selection.end = end;
-        if (event.ctrlKey) {
+        if (event.ctrlKey || event.metaKey) {
             selection.start = lastSelection.end;
         }
         selection.start = selection.start >= selection.end
@@ -530,7 +530,7 @@ function changeSelectionPoint(event, shiftKey = false) {
             start = editing.buffer.length;
         }
         selection.start = start;
-        if (event.ctrlKey) {
+        if (event.ctrlKey || event.metaKey) {
             selection.end = lastSelection.start;
         }
         selection.end = selection.end <= selection.start

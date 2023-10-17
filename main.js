@@ -279,7 +279,8 @@ const getRowElementById = (id, tableId = '#masterList') => {
     return document.querySelector(`${tableId} tr[data-id="${id}"]`);
 };
 const toggleModifier = (key) => {
-    if (key === 'shiftKey' || key === 'ctrlKey') {
+    if (key === 'shiftKey' || key === 'ctrlKey' || key === 'metaKey') {
+        key = key === 'metaKey' ? 'ctrlKey' : key;
         modifierKeys[key] = !modifierKeys[key];
         document.getElementById('modifierKey' + key).classList[modifierKeys[key]
           ? 'add'
@@ -1057,7 +1058,7 @@ function toggleSecondsPerFile(event, value) {
     const toggleEl = document.querySelector('.toggle-seconds-per-file');
     const toggleSpanEl = document.querySelector(
       '.toggle-seconds-per-file span');
-    if (event.ctrlKey || modifierKeys.ctrlKey) {
+    if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
         value = setCustomSecondsPerFileValue(toggleSpanEl, secondsPerFile) ||
           value;
     }
@@ -1883,7 +1884,7 @@ const playFile = (event, id, loop, start, end) => {
 };
 
 const playSlice = (event, id, startPoint, endPoint, loop) => {
-    if ((event.ctrlKey || modifierKeys.ctrlKey)) {
+    if ((event.ctrlKey || event.metaKey || modifierKeys.ctrlKey)) {
         const start = startPoint / masterSR;
         const end = (endPoint / masterSR) - start;
         playFile(event, id, loop, start, end);
@@ -1903,7 +1904,7 @@ const toggleCheck = (event, id, silent = false) => {
             const to = Math.max(lastRowId, thisRowId);
             for (let i = from; i <= to; i++) {
                 const loopRow = getRowElementById(files[i].meta.id);
-                const check = !(event.ctrlKey || modifierKeys.ctrlKey);
+                const check = !(event.ctrlKey || event.metaKey || modifierKeys.ctrlKey);
                 files[i].meta.checked = check;
                 loopRow.querySelector('.toggle-check').classList[check
                   ? 'remove'
@@ -2008,7 +2009,7 @@ const changeSliceOption = (targetEl, size, silent = false) => {
 
 const selectSliceAmount = (event, size) => {
     if (!event.target) { return; }
-    if ((event.ctrlKey || modifierKeys.ctrlKey)) {
+    if ((event.ctrlKey || event.metaKey || modifierKeys.ctrlKey)) {
         if (size === 0) {
             DefaultSliceOptions.forEach((option, index) => changeSliceOption(
               document.querySelector(`.master-slices .sel-${index}`), option,
@@ -2469,7 +2470,7 @@ const sort = (event, by, prop = 'meta') => {
 };
 
 const selectedHeaderClick = (event, id) => {
-    if (event.ctrlKey || modifierKeys.ctrlKey) {
+    if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
         const allChecked = files.every(f => f.meta.checked);
         files.forEach(f => f.meta.checked = !allChecked);
         renderList();
@@ -2551,7 +2552,7 @@ const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
     let pushInPlace = (event.shiftKey || modifierKeys.shiftKey);
     if ((event.target.className.includes('is-') ||
         event.target.parentElement.className.includes('is-')) &&
-      (event.ctrlKey || modifierKeys.ctrlKey)) {
+      (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey)) {
         item = getFileById(id || lastSelectedRow.dataset.id);
         const confirmClear = confirm(`Clear slice data for ${item.file.name}?`);
         if (confirmClear) {
@@ -3779,7 +3780,7 @@ uploadInput.addEventListener(
 uploadInput.addEventListener(
   'click',
   (event) => {
-      if (event.ctrlKey || modifierKeys.ctrlKey) {
+      if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
           event.preventDefault();
           event.stopPropagation();
           addBlankFile();
@@ -3837,7 +3838,7 @@ document.body.addEventListener('keydown', (event) => {
     ];
     if (keyboardShortcutsDisabled) { return; }
     if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
-    if (event.ctrlKey) { document.body.classList.add('ctrlKey-down'); }
+    if (event.ctrlKey || event.metaKey) { document.body.classList.add('ctrlKey-down'); }
     if (event.code === 'Escape') {
         if (files.length && !(event.shiftKey || modifierKeys.shiftKey)) {
             files.filter(f => f.meta.playing && f.meta.id).
@@ -4107,35 +4108,7 @@ function clearDbBuffers() {
 
 configDb();
 
-// function getBufferById(uuid) {
-//     const transaction = db.transaction(['buffers'], 'readwrite', {durability: 'relaxed'});
-//     const objectStore = transaction.objectStore('buffers');
-//     let request = objectStore.get(uuid);
-//     return new Promise(resolve => {
-//         request.onerror = () => {
-//             console.warn(`buffer for ${uuid} not found`);
-//             resolve(false);
-//         }
-//         request.onsuccess = () => {
-//             resolve(request.result);
-//         }
-//     });
-// }
-// function setBufferById(uuid, buffer) {
-//     let request = db.transaction(['buffers'], 'readwrite', {durability: 'relaxed'}).objectStore('buffers').add({uuid, data: buffer});
-//     return new Promise(resolve => {
-//         request.onerror = () => {
-//             console.warn(`buffer for ${uuid} not stored`);
-//             resolve(false);
-//         }
-//         request.onsuccess = (event) => {
-//             resolve(event);
-//         }
-//     });
-// }
-// function removeBufferById(uuid) {
-//     let request = db.transaction(['buffers'], 'readwrite', {durability: 'relaxed'}).objectStore('buffers').delete(uuid);
-// }
+document.getElementById('modifierKeyctrlKey').textContent= navigator.userAgent.indexOf('Mac') !== -1 ? 'CMD' : 'CTRL';
 
 if ('launchQueue' in window) {
     window.launchQueue.setConsumer((launchParams) => {

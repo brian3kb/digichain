@@ -635,6 +635,7 @@ function removeSelected() {
         files = [];
         unsorted = [];
     }
+    storeState();
     //renderList();
 }
 
@@ -2898,13 +2899,16 @@ const renderRow = (item, type) => {
     document.body.classList.remove('loading');
 };
 
-const renderList = () => {
+const renderList = (fromIdb = false) => {
     listEl.innerHTML = files.map(f => buildRowMarkupFromFile(f)).join('');
     if (files.length === 0) {
         listEl.innerHTML = '';
     }
     document.body.classList.remove('loading');
     drawEmptyWaveforms(files);
+    if (files.length && !fromIdb) {
+        storeState();
+    }
 };
 const bytesToInt = (bh, bm, bl) => {
     return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
@@ -3349,18 +3353,9 @@ const parseWav = (
               masterSR
             );
 
+            resampledArrayBuffer.copyToChannel(resample.outputBuffer, 0);
             if (file.channels === 2) {
-                for (let i = 0; i < resample.outputBuffer.length; i++) {
-                    resampledArrayBuffer.getChannelData(
-                      0)[i] = resample.outputBuffer[i];
-                    resampledArrayBuffer.getChannelData(
-                      1)[i] = resampleR.outputBuffer[i];
-                }
-            } else {
-                for (let i = 0; i < resample.outputBuffer.length; i++) {
-                    resampledArrayBuffer.getChannelData(
-                      0)[i] = resample.outputBuffer[i];
-                }
+                resampledArrayBuffer.copyToChannel(resampleR.outputBuffer, 1);
             }
         }
 
@@ -3386,7 +3381,8 @@ const parseWav = (
                 size: file.size,
                 type: file.type
             },
-            buffer: (resampledArrayBuffer || audioArrayBuffer), meta: {
+            buffer: (resampledArrayBuffer || audioArrayBuffer),
+            meta: {
                 length: (resampledArrayBuffer || audioArrayBuffer).length,
                 duration: Number(
                   (resampledArrayBuffer || audioArrayBuffer).length / masterSR).
@@ -3972,9 +3968,6 @@ document.body.addEventListener('keydown', (event) => {
 });
 
 window.addEventListener('beforeunload', (event) => {
-    files = [];
-    unsorted = [];
-    metaFiles = [];
     audioCtx?.close();
 });
 
@@ -4010,6 +4003,139 @@ if (restoreLastUsedAudioConfig) {
     });
 }
 setTimeout(() => toggleOptionsPanel(), 250);
+
+let db, dbReq;
+function configDb() {
+    dbReq = indexedDB.open('digichain', 1);
+    dbReq.onsuccess = () => {
+        db = dbReq.result;
+        checkAndSetAudioContext();
+        document.body.classList.add('loading');
+        loadState();
+    };
+
+    dbReq.onupgradeneeded = event => {
+        db = event.target.result;
+        db.createObjectStore('state');
+    };
+}
+function storeState() {
+    const transaction = db.transaction(['state'], 'readwrite', {durability: 'relaxed'});
+    const objectStore = transaction.objectStore('state');
+    objectStore.put(unsorted, 'unsorted');
+    objectStore.put(files.map(f => ({
+        file: f.file,
+        meta: f.meta,
+        buffer: {
+            duraton: f.buffer.duration,
+            length: f.buffer.length,
+            numberOfChannels: f.buffer.numberOfChannels,
+            sampleRate: f.buffer.sampleRate,
+            channel0: f.buffer.getChannelData(0),
+            channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
+        }
+    })), 'files');
+}
+function loadState() {
+    const transaction = db.transaction(['state'], 'readonly');
+    const objectStore = transaction.objectStore('state');
+    let requestUnsorted = objectStore.get('unsorted');
+    requestUnsorted.onsuccess = () => {
+        if (requestUnsorted.result) {
+            unsorted = requestUnsorted.result;
+        }
+    }
+    let requestFiles = objectStore.get('files');
+    requestFiles.onsuccess = () => {
+        if (requestFiles.result && requestFiles.result.length > 0) {
+            const proceed = confirm(`There are ${requestFiles.result.length} files from your last session, would you like to restore them?`);
+            if (!proceed) {
+                clearDbBuffers();
+                document.body.classList.remove('loading');
+                return ;
+            }
+            files = requestFiles.result.map(f => {
+                let audioBuffer;
+                if (f.buffer.sampleRate !== masterSR) {
+                    let resample, resampleR;
+                    resample = new Resampler(f.buffer.sampleRate, masterSR, 1,
+                        f.buffer.channel0);
+                    resample.resampler(resample.inputBuffer.length);
+
+                    if (f.buffer.numberOfChannels === 2) {
+                        resampleR = new Resampler(f.buffer.sampleRate, masterSR, 1,
+                            f.buffer.channel1);
+                        resampleR.resampler(resampleR.inputBuffer.length);
+                    }
+
+                    audioBuffer = audioCtx.createBuffer(
+                        f.buffer.numberOfChannels,
+                        resample.outputBuffer.length,
+                        masterSR
+                    );
+
+                    audioBuffer.copyToChannel(resample.outputBuffer, 0);
+                    if (f.buffer.numberOfChannels === 2) {
+                        audioBuffer.copyToChannel(resampleR.outputBuffer, 1);
+                    }
+                } else {
+                    audioBuffer = audioCtx.createBuffer(
+                        f.buffer.numberOfChannels,
+                        f.buffer.length,
+                        masterSR
+                    );
+                    audioBuffer.copyToChannel(f.buffer.channel0, 0);
+                    if (f.buffer.numberOfChannels === 2) {
+                        audioBuffer.copyToChannel(f.buffer.channel1, 1);
+                    }
+                }
+                return {
+                file: f.file,
+                meta: f.meta,
+                buffer: audioBuffer
+                };
+            });
+            renderList(true);
+        } else {
+            document.body.classList.remove('loading');
+        }
+    }
+}
+function clearDbBuffers() {
+    db.transaction(['state'], 'readwrite', {durability: 'relaxed'}).objectStore('state').clear();
+}
+
+configDb();
+
+// function getBufferById(uuid) {
+//     const transaction = db.transaction(['buffers'], 'readwrite', {durability: 'relaxed'});
+//     const objectStore = transaction.objectStore('buffers');
+//     let request = objectStore.get(uuid);
+//     return new Promise(resolve => {
+//         request.onerror = () => {
+//             console.warn(`buffer for ${uuid} not found`);
+//             resolve(false);
+//         }
+//         request.onsuccess = () => {
+//             resolve(request.result);
+//         }
+//     });
+// }
+// function setBufferById(uuid, buffer) {
+//     let request = db.transaction(['buffers'], 'readwrite', {durability: 'relaxed'}).objectStore('buffers').add({uuid, data: buffer});
+//     return new Promise(resolve => {
+//         request.onerror = () => {
+//             console.warn(`buffer for ${uuid} not stored`);
+//             resolve(false);
+//         }
+//         request.onsuccess = (event) => {
+//             resolve(event);
+//         }
+//     });
+// }
+// function removeBufferById(uuid) {
+//     let request = db.transaction(['buffers'], 'readwrite', {durability: 'relaxed'}).objectStore('buffers').delete(uuid);
+// }
 
 if ('launchQueue' in window) {
     window.launchQueue.setConsumer((launchParams) => {

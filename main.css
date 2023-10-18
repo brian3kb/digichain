@@ -268,9 +268,9 @@ td button { margin: 0.5rem; }
     width: 4.2rem;
 }
 .waveform-td { padding: 0 1rem; }
-.is-ot-file::after, .is-op-file::after, .is-dc-file::after, .sff-button::after, .is-chain-count::after {
+.is-ot-file::after, .is-op-file::after, .is-dc-file::after, .sff-button::after, .is-chain-count::after, .file-has-slice-data::after {
     text-align: center;
-    content: 'OT';
+    content: 'DC';
     color: #b91c1c;
     font-size: .75rem;
     margin-top: -0.55rem;
@@ -278,12 +278,10 @@ td button { margin: 0.5rem; }
     margin-left: 0.9rem;
     background-color: #202124;
     line-height: 1rem;
+    min-width: 1rem;
 }
-.is-op-file::after {
-    content: 'OP';
-}
-.is-dc-file::after {
-    content: 'DC';
+.is-dc-file::after, .is-op-file::after {
+    content: attr(data-slice-count);
 }
 .sff-t1::after {
     content: 'T1';
@@ -438,6 +436,18 @@ td button { margin: 0.5rem; }
     max-width: 512px;
     transition: opacity .33s ease-in;
     display: none;
+}
+
+#exportSettingsPanel {
+    transform: scale(.95);
+}
+#exportSettingsPanel button {
+    padding: 0;
+    width: 4.2rem;
+    height: 2.5rem;
+    line-height: 2rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
 .above-waveform-buttons {

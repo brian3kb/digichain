@@ -21,16 +21,35 @@ const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
 const opSliceOptions = [4, 8, 12, 16, 20, 24];
 const otSliceOptions = [4, 8, 16, 32, 48, 64];
 const audioConfigOptions = {
+    m240008: {sr: 24000, bd: 8, c: 1},
+    s240008: {sr: 24000, bd: 8, c: 2},
+    m2400016: {sr: 24000, bd: 16, c: 1},
+    s2400016: {sr: 24000, bd: 16, c: 2},
+    m2400024: {sr: 24000, bd: 24, c: 1},
+    s2400024: {sr: 24000, bd: 24, c: 2},
+    m2400032: {sr: 24000, bd: 32, c: 1},
+    s2400032: {sr: 24000, bd: 32, c: 2},
+    
+    m320008: {sr: 32000, bd: 8, c: 1},
+    s320008: {sr: 32000, bd: 8, c: 2},
+    m3200016: {sr: 32000, bd: 16, c: 1},
+    s3200016: {sr: 32000, bd: 16, c: 2},
+    m3200024: {sr: 32000, bd: 24, c: 1},
+    s3200024: {sr: 32000, bd: 24, c: 2},
+    m3200032: {sr: 32000, bd: 32, c: 1},
+    s3200032: {sr: 32000, bd: 32, c: 2},
+    
     m441008: {sr: 44100, bd: 8, c: 1},
     s441008: {sr: 44100, bd: 8, c: 2},
-    m480008: {sr: 48000, bd: 8, c: 1},
-    s480008: {sr: 48000, bd: 8, c: 2},
     m4410016: {sr: 44100, bd: 16, c: 1},
     s4410016: {sr: 44100, bd: 16, c: 2},
     m4410024: {sr: 44100, bd: 24, c: 1},
     s4410024: {sr: 44100, bd: 24, c: 2},
     m4410032: {sr: 44100, bd: 32, c: 1},
     s4410032: {sr: 44100, bd: 32, c: 2},
+    
+    m480008: {sr: 48000, bd: 8, c: 1},
+    s480008: {sr: 48000, bd: 8, c: 2},
     m4800016: {sr: 48000, bd: 16, c: 1},
     s4800016: {sr: 48000, bd: 16, c: 2},
     m4800024: {sr: 48000, bd: 24, c: 1},
@@ -49,6 +68,8 @@ let lastUsedAudioConfig = localStorage.getItem('lastUsedAudioConfig') ??
   'm4800016';
 let restoreLastUsedAudioConfig = JSON.parse(
   localStorage.getItem('restoreLastUsedAudioConfig')) ?? true;
+let retainSessionState = JSON.parse(
+    localStorage.getItem('retainSessionState')) ?? true;
 let pitchModifier = JSON.parse(localStorage.getItem('pitchModifier')) ?? 1;
 let playWithPopMarker = JSON.parse(
   localStorage.getItem('playWithPopMarker')) ?? 0;
@@ -118,7 +139,10 @@ metaFiles.getByFile = function(file) {
         let opSlices = file.meta.op1Json.start.map(
           (s, i) => ({
               startPoint: s,
-              endPoint: file.meta.op1Json.end[i]
+              endPoint: file.meta.op1Json.end[i],
+              p: file.meta.op1Json.pan[i],
+              pab: file.meta.op1Json.pan_ab[i],
+              st: file.meta.op1Json.pitch[i]
           })).reduce((acc, curr, idx) => {
             if (acc?.pos && acc.pos > -1) {
                 if (curr.endPoint > acc.pos) {
@@ -151,7 +175,10 @@ metaFiles.getByFile = function(file) {
                   startPoint: slice.s,
                   endPoint: slice.e,
                   loopPoint: slice.l || -1,
-                  name: slice.n || ''
+                  name: slice.n || slice.name || '',
+                  p: slice.p ?? 16384,
+                  pab: slice.pab ?? false,
+                  st: slice.st ?? 0
               })
             )
         };
@@ -161,12 +188,19 @@ metaFiles.getByFileInDcFormat = function(file) {
     return (
       file === '---sliceToTransientCached---' ?
         metaFiles.getByFileName('---sliceToTransientCached---') :
-        metaFiles.getByFile(file) || {slices: []}).slices.map(slice => ({
-        s: slice.startPoint,
-        e: slice.endPoint,
-        l: slice.loopPoint,
-        n: slice.name || ''
-    }));
+        metaFiles.getByFile(file) || {slices: []}).slices.map(slice => {
+            let _slice = {
+                s: slice.startPoint,
+                e: slice.endPoint,
+                l: slice.loopPoint,
+                n: slice.name || ''
+            };
+            ['p', 'pab', 'st'].forEach(k => {
+                if (slice[k]??false) { return ; }
+                _slice[k] = slice[k];
+            });
+            return _slice;
+    });
 };
 metaFiles.removeSelected = function() {
     files.forEach(f => {
@@ -178,6 +212,8 @@ metaFiles.removeByName = function(filename) {
     const idx = this.findIndex(i => i === this.getByFileName(filename));
     if (idx !== -1) {
         this.splice(idx, 1);
+        unsorted = unsorted.filter(id => id !== idx);
+
     }
 };
 
@@ -207,26 +243,30 @@ function checkAndSetAudioContext() {
     }
 }
 
-function changeAudioConfig(event, option, onloadRestore = false) {
+async function changeAudioConfig(event, option, onloadRestore = false) {
     const selection = option ||
       event?.target?.selectedOptions[0]?.value ||
       'm4800016';
     if (files.length > 0 && audioConfigOptions[selection].sr !== masterSR) {
         let conf = confirm(
-          `Changing audio export sample rate will remove all files from the sample list.\n\n Do you want to continue?`);
+          `Frequently changing audio export sample rate can degrade the audio quality, particularly in the transients and higher frequencies.\n\n Do you want to continue?`);
         if (!conf) {
             event.target.selectedIndex = [...event.target.options].findIndex(
               s => s.value === event.target.dataset.selection);
             return false;
         }
     }
+    document.body.classList.add('loading');
     if (option) {
         document.getElementById('audioConfigOptions').value = option;
     } else {
         lastUsedAudioConfig = selection;
         localStorage.setItem('lastUsedAudioConfig', selection);
     }
-    files = audioConfigOptions[selection].sr !== masterSR ? [] : files;
+    let resampleState = false;
+    if (audioConfigOptions[selection].sr !== masterSR && !onloadRestore) {
+        resampleState = true;
+    }
     [
         masterSR,
         masterBitDepth,
@@ -253,6 +293,9 @@ function changeAudioConfig(event, option, onloadRestore = false) {
         files.filter(f => f.buffer.numberOfChannels > 1).
           forEach(f => f.waveform = false);
     }
+    if (resampleState) {
+        files = files.map(bufferRateResampler);
+    }
     renderList();
 }
 
@@ -267,6 +310,50 @@ function checkAudioContextState() {
         audioCtx.resume();
     }
     return false;
+}
+
+function bufferRateResampler(f) {
+    let audioBuffer;
+    let channel0 = (f.buffer.channel0 || f.buffer.getChannelData(0));
+    let channel1 = f.buffer.numberOfChannels === 2 ?(f.buffer.channel1 || f.buffer.getChannelData(1)) : false;
+    if (f.buffer.sampleRate !== masterSR) {
+        let resample, resampleR;
+        resample = new Resampler(f.buffer.sampleRate, masterSR, 1,
+            channel0);
+        resample.resampler(resample.inputBuffer.length);
+
+        if (f.buffer.numberOfChannels === 2) {
+            resampleR = new Resampler(f.buffer.sampleRate, masterSR, 1,
+                channel1);
+            resampleR.resampler(resampleR.inputBuffer.length);
+        }
+
+        audioBuffer = audioCtx.createBuffer(
+            f.buffer.numberOfChannels,
+            resample.outputBuffer.length,
+            masterSR
+        );
+
+        audioBuffer.copyToChannel(resample.outputBuffer, 0);
+        if (f.buffer.numberOfChannels === 2) {
+            audioBuffer.copyToChannel(resampleR.outputBuffer, 1);
+        }
+    } else {
+        audioBuffer = audioCtx.createBuffer(
+            f.buffer.numberOfChannels,
+            f.buffer.length,
+            masterSR
+        );
+        audioBuffer.copyToChannel(channel0, 0);
+        if (f.buffer.numberOfChannels === 2) {
+            audioBuffer.copyToChannel(channel1, 1);
+        }
+    }
+    return {
+        file: f.file,
+        meta: f.meta,
+        buffer: audioBuffer
+    };
 }
 
 const getFileById = (id) => {
@@ -1019,6 +1106,17 @@ function toggleSetting(param, value) {
           restoreLastUsedAudioConfig);
         showExportSettingsPanel();
     }
+    if (param === 'retainSessionState') {
+        retainSessionState = !retainSessionState;
+        localStorage.setItem('retainSessionState',
+            retainSessionState);
+        if (retainSessionState) {
+            configDb(true);
+        } else {
+            clearDbBuffers();
+        }
+        showExportSettingsPanel();
+    }
     if (param === 'showTouchModifierKeys') {
         showTouchModifierKeys = !showTouchModifierKeys;
         localStorage.setItem('showTouchModifierKeys', showTouchModifierKeys);
@@ -1157,6 +1255,12 @@ function showExportSettingsPanel() {
 <td><button onclick="digichain.toggleSetting('restoreLastUsedAudioConfig')" class="check ${restoreLastUsedAudioConfig
       ? 'button'
       : 'button-outline'}">${restoreLastUsedAudioConfig ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<td><span>Retain session data between browser refreshes? &nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('retainSessionState')" class="check ${retainSessionState
+        ? 'button'
+        : 'button-outline'}">${retainSessionState ? 'YES' : 'NO'}</button></td>
 </tr>
   <tr>
   <td><span>Play pop markers when playing back samples?&nbsp;&nbsp;&nbsp;</span></td>
@@ -1564,17 +1668,18 @@ async function joinAll(
     slices = [];
     let offset = 0;
     for (let x = 0; x < _files.length; x++) {
-        if (_files[x].meta.slices) {
+        const fileSliceData = _files[x].meta.slices || metaFiles.getByFileInDcFormat(_files[x]);
+        if (fileSliceData.length) {
             if (slices.length > 0) {
                 const _slices = JSON.parse(
-                  JSON.stringify(_files[x].meta.slices));
+                  JSON.stringify(fileSliceData));
                 _slices.forEach(slice => {
                     slice.s = slice.s + offset;
                     slice.e = slice.e + offset;
                 });
                 slices = [...slices, ..._slices];
             } else {
-                slices = [...slices, ..._files[x].meta.slices];
+                slices = [...slices, ...fileSliceData];
             }
         } else {
             slices.push({
@@ -1588,6 +1693,11 @@ async function joinAll(
         }
         offset += (pad ? largest : +_files[x].buffer.length);
     }
+    slices.forEach(s => {
+        s.s = s.s > totalLength ? totalLength : s.s;
+        s.e = s.e > totalLength ? totalLength : s.e;
+    });
+    slices = slices.filter(s => s.s < s.e);
 
     const audioArrayBuffer = audioCtx.createBuffer(
       masterChannels,
@@ -2149,6 +2259,7 @@ const splitByOtSlices = (
         file.meta.slices = file.meta.slices.length > 0
           ? file.meta.slices
           : false;
+        file.meta.op1Json = false;
         splitAction(event, id);
         return;
     }
@@ -2179,7 +2290,10 @@ const splitByOtSlices = (
             sliceNumber: `${file.meta.sliceNumber
               ? file.meta.sliceNumber + '-'
               : ''}${i + 1}`, slicedFrom: file.meta.id,
-            channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : ''
+            channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
+            opPan: otMeta.slices[i].p ?? 16384,
+            opPanAb: otMeta.slices[i].pab ?? false,
+            opPitch: otMeta.slices[i].st ?? 0
         };
         slice.meta.customSlices = false;
         slice.meta.op1Json = false;
@@ -2599,25 +2713,13 @@ const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
     fileNameEl.textContent = getNiceFileName('', item, true);
     sliceByOtButtonEl.style.display = otMeta ? 'inline-block' : 'none';
     sliceByOtButtonEl.textContent = otMeta ? `${otMeta.sliceCount}` : 'OT';
-    if (otMeta?.cssClass === 'is-op-file') {
-        sliceByOtButtonEl.classList.remove('is-ot-file');
-        sliceByOtButtonEl.classList.remove('is-dc-file');
-        sliceByOtButtonEl.classList.add('is-op-file');
-    } else if (otMeta?.cssClass === 'is-dc-file') {
-        sliceByOtButtonEl.classList.remove('is-ot-file');
-        sliceByOtButtonEl.classList.remove('is-op-file');
-        sliceByOtButtonEl.classList.add('is-dc-file');
-    } else {
-        sliceByOtButtonEl.classList.add('is-ot-file');
-        sliceByOtButtonEl.classList.remove('is-op-file');
-        sliceByOtButtonEl.classList.remove('is-dc-file');
-    }
     splitSizeAction(false, 0);
     if (!el.open) { el.showModal(); }
     drawWaveform(item, splitPanelWaveformEl, item.meta?.channel ?? 0, {
         width: +splitPanelWaveformContainerEl.dataset.waveformWidth, height: 128
     });
     item.meta.customSlices = false;
+    reRenderListRow(item.meta.id);
 };
 
 const secondsToMinutes = (time) => {
@@ -2815,7 +2917,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
       `</td>
       <td class="split-td">
           <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(
-        f)?.cssClass}"><i class="gg-menu-grid-r has-ctrl-mod-i"></i></button>
+        f)?.cssClass}" data-slice-count="${f.meta?.slices?.length || f.meta?.op1Json?.sliceCount || ''}"><i class="gg-menu-grid-r has-ctrl-mod-i"></i></button>
       </td>
       <td class="duplicate-td">
           <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button> 
@@ -3165,7 +3267,7 @@ const parseAif = async (
               (s, i) => Math.floor((getRelPosition(s, i) / 44100) * masterSR));
         }
 
-        files[pushToTop ? 'unshift' : 'push']({
+        const parsedFile = {
             file: {
                 lastModified: file.lastModified,
                 name: getUniqueName(files, file.name),
@@ -3184,7 +3286,12 @@ const parseAif = async (
                 slices: false,
                 note: noteFromFileName(file.name)
             }
-        });
+        };
+        const otMeta = metaFiles.getByFile(parsedFile);
+        if (otMeta && parsedFile.meta.op1Json) {
+            parsedFile.meta.op1Json.sliceCount = otMeta.sliceCount;
+        }
+        files[pushToTop ? 'unshift' : 'push'](parsedFile);
         unsorted.push(uuid);
         return uuid;
     } catch (err) {
@@ -3372,6 +3479,20 @@ const parseWav = (
                 : ddSlices.push(slice));
             slices = ddSlices;
         }
+        /*Prefer .ot file slices when available.*/
+        const metaFile = metaFiles.getByFileName(file.name);
+        if (metaFile && metaFile.slices && metaFile.slices.length > 0) {
+            slices = metaFile.slices.map((slice, idx) => ({
+                    s: slice.startPoint,
+                    e: slice.endPoint,
+                    l: slice.loopPoint,
+                    n: slice.name || `OT slice ${idx + 1}`
+                }));
+            metaFiles.removeByName(file.name);
+        }
+        if (Array.isArray(slices)) {
+            slices = slices.filter(s => s.s < s.e);
+        }
 
         files[pushToTop ? 'unshift' : 'push']({
             file: {
@@ -3395,7 +3516,10 @@ const parseWav = (
                 channel: (resampledArrayBuffer ||
                   audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
                 dualMono: false,
-                slices: slices,
+                slices: slices.length > 0 ? slices : false,
+                opPan: 16384,
+                opPanAb: false,
+                opPitch: 0,
                 note: noteFromFileName(file.name)
             }
         });
@@ -4006,13 +4130,16 @@ if (restoreLastUsedAudioConfig) {
 setTimeout(() => toggleOptionsPanel(), 250);
 
 let db, dbReq;
-function configDb() {
+function configDb(skipLoad = false) {
+    if (!retainSessionState) {return;}
     dbReq = indexedDB.open('digichain', 1);
     dbReq.onsuccess = () => {
         db = dbReq.result;
         checkAndSetAudioContext();
-        document.body.classList.add('loading');
-        loadState();
+        if (!skipLoad) {
+            document.body.classList.add('loading');
+            loadState();
+        }
     };
 
     dbReq.onupgradeneeded = event => {
@@ -4021,23 +4148,33 @@ function configDb() {
     };
 }
 function storeState() {
+    if (!retainSessionState) {return new Promise(resolve => resolve(true));}
     const transaction = db.transaction(['state'], 'readwrite', {durability: 'relaxed'});
     const objectStore = transaction.objectStore('state');
     objectStore.put(unsorted, 'unsorted');
-    objectStore.put(files.map(f => ({
-        file: f.file,
-        meta: f.meta,
-        buffer: {
-            duraton: f.buffer.duration,
-            length: f.buffer.length,
-            numberOfChannels: f.buffer.numberOfChannels,
-            sampleRate: f.buffer.sampleRate,
-            channel0: f.buffer.getChannelData(0),
-            channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
-        }
-    })), 'files');
+    return new Promise(resolve => {
+        objectStore.put(files.map(f => {
+            if (f === files.at(-1)) {
+                setTimeout(() => resolve(true), 2000);
+            }
+            return {
+                file: f.file,
+                meta: f.meta,
+                buffer: {
+                    duraton: f.buffer.duration,
+                    length: f.buffer.length,
+                    numberOfChannels: f.buffer.numberOfChannels,
+                    sampleRate: f.buffer.sampleRate,
+                    channel0: f.buffer.getChannelData(0),
+                    channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
+                }
+            };
+        }), 'files');
+    });
+
 }
-function loadState() {
+function loadState(skipConfirm = false) {
+    if (!retainSessionState) {return;}
     const transaction = db.transaction(['state'], 'readonly');
     const objectStore = transaction.objectStore('state');
     let requestUnsorted = objectStore.get('unsorted');
@@ -4049,53 +4186,17 @@ function loadState() {
     let requestFiles = objectStore.get('files');
     requestFiles.onsuccess = () => {
         if (requestFiles.result && requestFiles.result.length > 0) {
-            const proceed = confirm(`There are ${requestFiles.result.length} files from your last session, would you like to restore them?`);
-            if (!proceed) {
-                clearDbBuffers();
-                document.body.classList.remove('loading');
-                return ;
-            }
-            files = requestFiles.result.map(f => {
-                let audioBuffer;
-                if (f.buffer.sampleRate !== masterSR) {
-                    let resample, resampleR;
-                    resample = new Resampler(f.buffer.sampleRate, masterSR, 1,
-                        f.buffer.channel0);
-                    resample.resampler(resample.inputBuffer.length);
 
-                    if (f.buffer.numberOfChannels === 2) {
-                        resampleR = new Resampler(f.buffer.sampleRate, masterSR, 1,
-                            f.buffer.channel1);
-                        resampleR.resampler(resampleR.inputBuffer.length);
-                    }
-
-                    audioBuffer = audioCtx.createBuffer(
-                        f.buffer.numberOfChannels,
-                        resample.outputBuffer.length,
-                        masterSR
-                    );
-
-                    audioBuffer.copyToChannel(resample.outputBuffer, 0);
-                    if (f.buffer.numberOfChannels === 2) {
-                        audioBuffer.copyToChannel(resampleR.outputBuffer, 1);
-                    }
-                } else {
-                    audioBuffer = audioCtx.createBuffer(
-                        f.buffer.numberOfChannels,
-                        f.buffer.length,
-                        masterSR
-                    );
-                    audioBuffer.copyToChannel(f.buffer.channel0, 0);
-                    if (f.buffer.numberOfChannels === 2) {
-                        audioBuffer.copyToChannel(f.buffer.channel1, 1);
-                    }
+            if (!skipConfirm) {
+                const proceed = confirm(`There are ${requestFiles.result.length} files from your last session, would you like to restore them?`);
+                if (!proceed) {
+                    clearDbBuffers();
+                    document.body.classList.remove('loading');
+                    return ;
                 }
-                return {
-                file: f.file,
-                meta: f.meta,
-                buffer: audioBuffer
-                };
-            });
+            }
+
+            files = requestFiles.result.map(bufferRateResampler);
             renderList(true);
         } else {
             document.body.classList.remove('loading');
@@ -4107,6 +4208,44 @@ function clearDbBuffers() {
 }
 
 configDb();
+
+function saveSession() {
+    const zip = new JSZip();
+    const data = files.map(f => ({
+        file: f.file,
+        meta: f.meta,
+        buffer: {
+            duraton: f.buffer.duration,
+            length: f.buffer.length,
+            numberOfChannels: f.buffer.numberOfChannels,
+            sampleRate: f.buffer.sampleRate,
+            channel0: f.buffer.getChannelData(0),
+            channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
+        }
+    }));
+    zip.file('files', JSON.stringify(data), {
+        compression: "DEFLATE",
+        compressionOptions: {
+            level: 9
+        }
+    });
+    zip.file('unsorted', JSON.stringify(unsorted), {
+        compression: "DEFLATE",
+        compressionOptions: {
+            level: 9
+        }
+    });
+    zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE"
+    }).then(blob => {
+        const el = document.getElementById('getJoined');
+        el.href = URL.createObjectURL(blob);
+        el.setAttribute('download', 'digichain_session.dcsd');
+        el.click();
+        document.body.classList.remove('loading');
+    });
+}
 
 document.getElementById('modifierKeyctrlKey').textContent= navigator.userAgent.indexOf('Mac') !== -1 ? 'CMD' : 'CTRL';
 
@@ -4121,6 +4260,7 @@ if ('launchQueue' in window) {
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {
     sliceOptions,
+    saveSession,
     changeAudioConfig,
     removeSelected,
     toggleSelectedActionsList,

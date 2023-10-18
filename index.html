@@ -83,7 +83,7 @@
         </button>
         <button title="Slice based on the contents of an Octatrack .ot file / OP-x aiff data / DigiChain DC wav data."
                 id="sliceByOtButton" onclick="digichain.splitSizeAction(event, 'ot')"
-                class="button-outline check sel-7 sel-ot is-ot-file" data-sel="ot">OT
+                class="button-outline check sel-7 sel-ot is-ot-file file-has-slice-data" data-sel="ot">OT
         </button>
         <button title="Slice by transient detection." id="sliceByTransientButton"
                 onclick="digichain.splitSizeAction(event, 'transient', document.getElementById('transientThreshold').value)"
@@ -118,8 +118,7 @@
         </button>
         <button onclick="digichain.splitAction(event, false, true, true)" class="float-right button button-outline"
                 style="margin-top: 1rem; margin-right: .5rem;"
-                title="Save the changes to the slices, if no slices are shown, slice markers will be cleared.">Save
-            slices
+                title="Save the changes to the slices, if no slices are shown, slice markers will be cleared.">Save slices
         </button>
         <div id="convertChainButton" class="clear" style="display: none;">
             <button onclick="digichain.convertChain(event)" class="float-right button button-outline"
@@ -182,6 +181,24 @@
                 <select title="Change audio file export settings." onchange="digichain.changeAudioConfig(event)"
                         data-selection="m4800016" class="btn-audio-config gg-calibrate" name="audioConfigOptions"
                         id="audioConfigOptions">
+                    <option value="m240008">24K/8BIT MONO</option>
+                    <option value="s240008">24K/8BIT STEREO</option>
+                    <option value="m2400016">24K/16BIT MONO</option>
+                    <option value="s2400016">24K/16BIT STEREO</option>
+                    <option value="m2400024">24K/24BIT MONO</option>
+                    <option value="s2400024">24K/24BIT STEREO</option>
+                    <option value="m2400032">24K/32BIT MONO</option>
+                    <option value="s2400032">24K/32BIT STEREO</option>
+
+                    <option value="m320008">32K/8BIT MONO</option>
+                    <option value="s320008">32K/8BIT STEREO</option>
+                    <option value="m3200016">32K/16BIT MONO</option>
+                    <option value="s3200016">32K/16BIT STEREO</option>
+                    <option value="m3200024">32K/24BIT MONO</option>
+                    <option value="s3200024">32K/24BIT STEREO</option>
+                    <option value="m3200032">32K/32BIT MONO</option>
+                    <option value="s3200032">32K/32BIT STEREO</option>
+
                     <option value="m441008">44.1K/8BIT MONO</option>
                     <option value="s441008">44.1K/8BIT STEREO</option>
                     <option value="m4410016">44.1K/16BIT MONO</option>
@@ -190,6 +207,7 @@
                     <option value="s4410024">44.1K/24BIT STEREO</option>
                     <option value="m4410032">44.1K/32BIT MONO</option>
                     <option value="s4410032">44.1K/32BIT STEREO</option>
+
                     <option value="m480008">48K/8BIT MONO</option>
                     <option value="s480008">48K/8BIT STEREO</option>
                     <option value="m4800016" selected>48K/16BIT MONO</option>
@@ -198,6 +216,7 @@
                     <option value="s4800024">48K/24BIT STEREO</option>
                     <option value="m4800032">48K/32BIT MONO</option>
                     <option value="s4800032">48K/32BIT STEREO</option>
+
                     <option value="m4410016a">AIF 44.1K/16 MONO</option>
                     <option value="s4410016a">AIF 44.1K/16 STEREO</option>
                 </select>

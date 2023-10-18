@@ -164,6 +164,7 @@ function sliceRemove(event) {
       (slice, idx) => idx !== +sliceSelectEl.value
     );
     digichain.removeMetaFile(editing.meta.id);
+    editing.meta.slices = editing.meta.slices.length ? editing.meta.slices : false;
     sliceSelectEl.value = -1;
     selection.start = 0;
     selection.end = editing.buffer.length;

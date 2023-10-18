@@ -1,7 +1,14 @@
 latest
  - Store list in indexedDb for optional restoring of the last session on next load.
  - Map the Ctrl key to the Cmd key for macOS keyboard shortcuts.
-
+ - Automatically ignore empty or nonsense cue markers (e.g. zero length or start/end greater than file length, end greater than start).
+ - Improve handling of joining chains with other chains/files and slice types.
+ - Normalize the slice-type to the common format when processing internally.
+ - Show the number of slices if the file has any on the slice-grid icon instead of OT/DC/OP text.
+ - Improved the speed of conversion between spaced/none-spaced chains from the slice panel.
+ - Allow users to change audio context when files are loaded without emptying list; An advisory message to confirm the action is shown, as the sample rates of all files in the list are internally resampled to the new context.
+ - Added 24k and 32k sample rate options.
+ - 'Retain session data between browser refreshes?' setting on settings panel.
 
 2023.10.15 1.4.8
  - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.

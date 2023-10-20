@@ -92,15 +92,15 @@ body {
 .file-num {
     float: left;
 }
-input { color: #a8a8a8; }
-.input-set input {
+input, .btn-audio-config { color: #a8a8a8; }
+.input-set input, .btn-audio-config {
     width: 65%;
     float: left;
     padding: 0 0.5rem;
     border: 1px solid #8a5d2e;
     padding-left: 7.5rem;
 }
-.input-set[readonly] {
+.input-set[readonly], .btn-audio-config {
     border: 1px solid #312b25;
 }
 .input-set button {
@@ -439,7 +439,38 @@ td button { margin: 0.5rem; }
 }
 
 #exportSettingsPanel {
-    transform: scale(.95);
+    transform: scale(.97);
+}
+#exportSettingsPanel .export-options {
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid;
+    padding-bottom: 0.5rem;
+}
+#exportSettingsPanel .export-options span {
+    padding: 1rem;
+    border-top: 1px solid;
+    border-left: 1px solid;
+    border-right: 1px solid;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    cursor: pointer;
+}
+#exportSettingsPanel .export-options span.active {
+    border-color: #d79c4e;
+    color: #d79c4e;
+}
+#exportSettingsPanel .input-set input {
+    max-width: 28.5rem;
+    margin-top: 1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 3.5rem;
+}
+#exportSettingsPanel .input-set label {
+    padding-top: 1.4rem;
+}
+#exportSettingsPanel .input-set button {
+    padding-top: 1.4rem;
+    margin-left: -3rem;
 }
 #exportSettingsPanel button {
     padding: 0;
@@ -448,6 +479,20 @@ td button { margin: 0.5rem; }
     line-height: 2rem;
     margin-top: 0.75rem;
     margin-bottom: 0.75rem;
+}
+#exportSettingsPanel tr {
+    min-height: 2rem;
+}
+#exportSettingsPanel input[type=radio] {
+    background-color: transparent;
+    color: #d79c4e;
+}
+#exportSettingsPanel input[type=radio]:checked {
+    background-color: #d79c4e;
+    color: #fff;
+}
+#settingAudioConfig button.check {
+    width: 7rem;
 }
 
 .above-waveform-buttons {
@@ -687,7 +732,7 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     text-decoration: none;
     text-transform: uppercase;
     white-space: nowrap;
-    border-color: #313438;
+    border-color: #313438 !important;
     background-blend-mode: soft-light;
 }
 #splitOptions .slice-group {

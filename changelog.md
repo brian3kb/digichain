@@ -7,6 +7,7 @@ latest
  - Show the number of slices if the file has any on the slice-grid icon instead of OT/DC/OP text.
  - Improved the speed of conversion between spaced/none-spaced chains from the slice panel.
  - Allow users to change audio context when files are loaded without emptying list; An advisory message to confirm the action is shown, as the sample rates of all files in the list are internally resampled to the new context.
+ - Audio context options are now an audio config panel, allowing arbitrary sample rates, and choice of bit depth and channel combinations.
  - Added 24k and 32k sample rate options.
  - 'Retain session data between browser refreshes?' setting on settings panel.
 

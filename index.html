@@ -178,48 +178,9 @@
                 <label class="button button-clear load-file-label" for="uploadInput" aria="Load files..."
                        title="Load files..."><i class="gg-file-add has-ctrl-mod-i"></i></label>
                 <input id="uploadInput" type="file" multiple/>
-                <select title="Change audio file export settings." onchange="digichain.changeAudioConfig(event)"
-                        data-selection="m4800016" class="btn-audio-config gg-calibrate" name="audioConfigOptions"
-                        id="audioConfigOptions">
-                    <option value="m240008">24K/8BIT MONO</option>
-                    <option value="s240008">24K/8BIT STEREO</option>
-                    <option value="m2400016">24K/16BIT MONO</option>
-                    <option value="s2400016">24K/16BIT STEREO</option>
-                    <option value="m2400024">24K/24BIT MONO</option>
-                    <option value="s2400024">24K/24BIT STEREO</option>
-                    <option value="m2400032">24K/32BIT MONO</option>
-                    <option value="s2400032">24K/32BIT STEREO</option>
-
-                    <option value="m320008">32K/8BIT MONO</option>
-                    <option value="s320008">32K/8BIT STEREO</option>
-                    <option value="m3200016">32K/16BIT MONO</option>
-                    <option value="s3200016">32K/16BIT STEREO</option>
-                    <option value="m3200024">32K/24BIT MONO</option>
-                    <option value="s3200024">32K/24BIT STEREO</option>
-                    <option value="m3200032">32K/32BIT MONO</option>
-                    <option value="s3200032">32K/32BIT STEREO</option>
-
-                    <option value="m441008">44.1K/8BIT MONO</option>
-                    <option value="s441008">44.1K/8BIT STEREO</option>
-                    <option value="m4410016">44.1K/16BIT MONO</option>
-                    <option value="s4410016">44.1K/16BIT STEREO</option>
-                    <option value="m4410024">44.1K/24BIT MONO</option>
-                    <option value="s4410024">44.1K/24BIT STEREO</option>
-                    <option value="m4410032">44.1K/32BIT MONO</option>
-                    <option value="s4410032">44.1K/32BIT STEREO</option>
-
-                    <option value="m480008">48K/8BIT MONO</option>
-                    <option value="s480008">48K/8BIT STEREO</option>
-                    <option value="m4800016" selected>48K/16BIT MONO</option>
-                    <option value="s4800016">48K/16BIT STEREO</option>
-                    <option value="m4800024">48K/24BIT MONO</option>
-                    <option value="s4800024">48K/24BIT STEREO</option>
-                    <option value="m4800032">48K/32BIT MONO</option>
-                    <option value="s4800032">48K/32BIT STEREO</option>
-
-                    <option value="m4410016a">AIF 44.1K/16 MONO</option>
-                    <option value="s4410016a">AIF 44.1K/16 STEREO</option>
-                </select>
+                <input title="Change audio file export settings." onclick="digichain.showExportSettingsPanel('audio');"
+                        class="btn-audio-config gg-calibrate" name="audioConfigOptions"
+                        id="audioConfigOptions" readonly/>
             </div>
             <div class="row">
                 <button class="button" onclick="digichain.removeSelected()">Remove Selected</button>
@@ -327,7 +288,7 @@
                 <button title="Download all the selected samples converted to the current audio context as a zip file (with folder structure retained). Shift+click to get the files in a zip with their folders flattened into the file names."
                         class="btn-download btn-download-all has-shift-mod" onclick="digichain.downloadAll(event)"><i
                         class="gg-software-download"></i><span class="selection-count"> - </span></button>
-                <button title="Export settings" onclick="digichain.showExportSettingsPanel(event)"
+                <button title="Export settings" onclick="digichain.showExportSettingsPanel()"
                         class="button-clear toggle-export-settings"><i class="gg-options"></i></button>
                 <button title="Help info enabled" onclick="digichain.toggleHelp()"
                         class="button-clear toggle-help-panel fade">?

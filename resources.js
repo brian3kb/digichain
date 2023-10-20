@@ -141,6 +141,26 @@ export function joinToStereo(audioArrayBuffer, _files, largest, pad) {
     });
 }
 
+export function getSupportedSampleRates() {
+    let supportedSampleRates = [8000, 48000];
+    try {
+        new AudioContext({sampleRate: 1});
+        supportedSampleRates = [1, 96000];
+    } catch(e) {
+        const matches = e.toString().match(
+          /\[(.*?)\]/g
+        );
+        if (matches?.length) {
+            supportedSampleRates = matches[0].split(',').map(
+              sr => +sr.replace(/\D+/g, '')
+            );
+        }
+    }
+    supportedSampleRates[1] = supportedSampleRates[1] > 96000 ? 96000 : supportedSampleRates[1];
+    localStorage.setItem('supportedSampleRates', JSON.stringify(supportedSampleRates));
+    return supportedSampleRates;
+}
+
 export function encodeOt(slices, bufferLength, tempo = 120) {
     const dv = new DataView(new ArrayBuffer(0x340));
     const header = [

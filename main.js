@@ -227,6 +227,11 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
         f: document.getElementById('targetContainerGroup').dataset.container
     };
 
+    if (configData.f === 'a') {
+        configData.sr = 44100;
+        configData.bd = 16;
+    }
+
     if (configData.sr < supportedSampleRates[0] || configData.sr > supportedSampleRates[1]) {
         alert(
           `ERROR: The sample rate ${configData.sr}Hz is not supported by your browser.\n\nPlease select a sample rate between ${supportedSampleRates[0]}Hz and ${supportedSampleRates[1]}Hz`);
@@ -1378,8 +1383,9 @@ function showExportSettingsPanel(page = 'settings') {
   <tr>
       <td style="border: none;"><span>Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
-          <div class="input-set">
+          <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup">
               <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz" 
+              ${targetContainer === 'a' ? 'disabled="disabled"' : ''}
               onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
               onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
               id="settingsSampleRate" value="${masterSR}" data-sample-rate="${masterSR}" list="commonSR" 
@@ -1398,7 +1404,7 @@ function showExportSettingsPanel(page = 'settings') {
   <tr>
   <td><span>Bit Depth&nbsp;&nbsp;&nbsp;</span></td>
   <td>
-  <div style="padding: 1.5rem 0;" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onclick="((event, el) => {
+  <div style="padding: 1.5rem 0;" class="${targetContainer === 'a' ? 'disabled' : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onclick="((event, el) => {
       el.dataset.bitDepth = event.target.dataset.bitDepth || el.dataset.bitDepth;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.bitDepth === el.dataset.bitDepth ? 'check button' : 'check button-outline')
   })(event, this);">
@@ -1430,7 +1436,14 @@ function showExportSettingsPanel(page = 'settings') {
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.container === el.dataset.container ? 'check button' : 'check button-outline');
   if (el.dataset.container === 'a') {
       document.getElementById('bitDepth16').click();
+      document.getElementById('bitDepthGroup').classList.add('disabled');
       document.getElementById('settingsSampleRate').value = 44100;
+      document.getElementById('settingsSampleRate').disabled = true;
+      document.getElementById('settingsSampleRateGroup').classList.add('disabled');
+  } else {
+        document.getElementById('bitDepthGroup').classList.remove('disabled');
+        document.getElementById('settingsSampleRate').disabled = false
+        document.getElementById('settingsSampleRateGroup').classList.remove('disabled');
   }
   })(event, this);">
         <button data-container="w" class="check button${targetContainer !== 'w' ? '-outline' : ''}">WAV</button>

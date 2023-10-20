@@ -441,6 +441,11 @@ td button { margin: 0.5rem; }
 #exportSettingsPanel {
     transform: scale(.97);
 }
+#exportSettingsPanel .disabled {
+    pointer-events: none;
+    user-focus: none;
+    opacity: .33;
+}
 #exportSettingsPanel .export-options {
     margin-bottom: 0.5rem;
     border-bottom: 1px solid;

@@ -254,6 +254,8 @@ export function renderEditor(item) {
   <button title="Crop the sample to the selected area." class="trim-right button button-outline" onclick="digichain.editor.truncate(event)">Crop</button>
   <button title="Fade in the selected audio." class="fade-in button button-outline" onclick="digichain.editor.fade('in')">Fade In</button>
   <button title="Silence the selected audio." class="silence button button-outline" onclick="digichain.editor.fade()">Silence</button>
+  <button title="Increase the gain of the selected audio." class="louder button button-outline" onclick="digichain.editor.adjustGain(event, 1.1)">Louder</button>
+  <button title="Decrease the gain of the selected audio." class="quieter button button-outline" onclick="digichain.editor.adjustGain(event, 0.9)">Quieter</button>
   <button title="Fade out the selected audio." class="fade-out button button-outline" onclick="digichain.editor.fade('out')">Fade Out</button>
 </div>
 <div class="edit-btn-group float-right">
@@ -278,7 +280,7 @@ export function renderEditor(item) {
   </div>
 </div>
   <span class="edit-info">
-    Normalize, Silence, Fade In, Fade Out, Crop, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
+    Normalize, Silence, Louder, Quieter, Fade In, Fade Out, Crop, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo. Pitch adjustments are done via sample-rate, cumulative changes will affect sample quality.
   </span>
   `;
@@ -654,6 +656,38 @@ function reSamplePitch(
               }
           });
     })();
+}
+
+function adjustGain(event, gain, item, renderEditPanel = true) {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = item.buffer.length;
+    }
+    item = item || editing;
+
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        let data = item.buffer.getChannelData(channel);
+        for (let i = selection.start; i < selection.end; i++) {
+            if (item.buffer.getChannelData(channel)[i]) {
+                item.buffer.getChannelData(
+                  channel)[i] = item.buffer.getChannelData(channel)[i] * gain;
+            }
+        }
+    }
+
+    let maxSample = 0;
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        let data = item.buffer.getChannelData(channel);
+        for (let i = selection.start; i < selection.end; i++) {
+            maxSample = Math.max(Math.abs(data[i]), maxSample);
+        }
+    }
+    maxSample = !maxSample ? 1 : maxSample;
+    item.meta.peak = maxSample;
+    if (renderEditPanel) {
+        renderEditPanelWaveform(multiplier);
+    }
+    item.waveform = false;
 }
 
 function normalize(event, item, renderEditPanel = true, findPeakOnly = false) {
@@ -1106,6 +1140,7 @@ export const editor = {
     resetSelectionPoints,
     setSelStart,
     editorPlayFile,
+    adjustGain,
     normalize,
     fade,
     trimRight,

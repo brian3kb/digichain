@@ -1,3 +1,5 @@
+import {bufferRateResampler} from './main.js';
+
 export function buildOpData(slices = [], numChannels, returnTemplate = false) {
     const template = slices?.length ? {
         attack: new Array(24).fill(0),
@@ -241,6 +243,17 @@ function deClick(audioArray, threshold) {
     return audioArray;
 }
 
+function getResampleIfNeeded(meta, buffer) {
+    const targetSR = 44100;
+    const targetAudioCtx = new AudioContext(
+      {sampleRate: targetSR, latencyHint: 'interactive'});
+    return bufferRateResampler({
+        file: {sampleRate: targetSR},
+        meta,
+        buffer
+    }, targetSR, targetAudioCtx);
+}
+
 export function audioBufferToWav(
   buffer, meta, sampleRate, bitDepth, masterNumChannels,
   deClickThreshold = false, renderAsAif = false, pitchModifier = 1,
@@ -248,6 +261,15 @@ export function audioBufferToWav(
     const treatDualMonoStereoAsMono = (JSON.parse(
         localStorage.getItem('treatDualMonoStereoAsMono')) ?? true) &&
       !meta.editing;
+/*
+    let resample;
+    if (!meta.editing) {
+        resample = getResampleIfNeeded(meta, buffer);
+        sampleRate = resample.buffer.sampleRate;
+        meta = resample.meta;
+        buffer = resample.buffer;
+    }
+*/
     let numChannels = buffer.numberOfChannels;
     let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
     sampleRate = sampleRate * pitchModifier;
@@ -424,7 +446,7 @@ export function encodeWAV(
         }
     }
 
-    return buffer;
+    return {buffer, sampleRate};
 }
 
 export function getAifSampleRate(input) {
@@ -534,7 +556,7 @@ export function encodeAif(audioData, sampleRate, numberOfChannels, opJsonData) {
             offset += 2;
         }
 
-        return buffer;
+        return {buffer, sampleRate};
     }
 
     function writeApplData(dataView, data, offset) {

@@ -282,7 +282,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
           forEach(f => f.waveform = false);
     }
     if (resampleState) {
-        files = files.map(bufferRateResampler);
+        files = files.map(f => bufferRateResampler(f));
     }
     if (settingsPanelEl.open) {
         settingsPanelEl.close();
@@ -303,28 +303,29 @@ function checkAudioContextState() {
     return false;
 }
 
-function bufferRateResampler(f) {
+export function bufferRateResampler(f, workingSR, audioCtxOverride)  {
     let audioBuffer, slices;
     let channel0 = (f.buffer.channel0 || f.buffer.getChannelData(0));
-    let channel1 = f.buffer.numberOfChannels === 2 ?(f.buffer.channel1 || f.buffer.getChannelData(1)) : false;
-    if (f.buffer.sampleRate !== masterSR) {
+    let channel1 = f.buffer.numberOfChannels === 2 ? (f.buffer.channel1 || f.buffer.getChannelData(1)) : false;
+    workingSR = workingSR || masterSR;
+
+    if (f.buffer.sampleRate !== workingSR) {
         let resample, resampleR;
-        resample = new Resampler(f.buffer.sampleRate, masterSR, 1,
+        resample = new Resampler(f.buffer.sampleRate, workingSR, 1,
             channel0);
         resample.resampler(resample.inputBuffer.length);
 
         if (f.buffer.numberOfChannels === 2) {
-            resampleR = new Resampler(f.buffer.sampleRate, masterSR, 1,
+            resampleR = new Resampler(f.buffer.sampleRate, workingSR, 1,
                 channel1);
             resampleR.resampler(resampleR.inputBuffer.length);
         }
 
-        audioBuffer = audioCtx.createBuffer(
+        audioBuffer = (audioCtxOverride??audioCtx).createBuffer(
             f.buffer.numberOfChannels,
             resample.outputBuffer.length,
-            masterSR
+            workingSR
         );
-
         audioBuffer.copyToChannel(resample.outputBuffer, 0);
         if (f.buffer.numberOfChannels === 2) {
             audioBuffer.copyToChannel(resampleR.outputBuffer, 1);
@@ -332,17 +333,17 @@ function bufferRateResampler(f) {
         if (Array.isArray(f.meta.slices)) {
             slices = f.meta.slices.map(slice => ({
                 ...slice,
-                s: Math.round((slice.s / f.buffer.sampleRate) * masterSR),
-                e: Math.round((slice.e / f.buffer.sampleRate) * masterSR),
-                l: Math.round(((slice.l || -1) / f.buffer.sampleRate) * masterSR)
+                s: Math.round((slice.s / f.buffer.sampleRate) * workingSR),
+                e: Math.round((slice.e / f.buffer.sampleRate) * workingSR),
+                l: Math.round(((slice.l || -1) / f.buffer.sampleRate) * workingSR)
             }));
         }
 
     } else {
-        audioBuffer = audioCtx.createBuffer(
+        audioBuffer = (audioCtxOverride??audioCtx).createBuffer(
             f.buffer.numberOfChannels,
             f.buffer.length,
-            masterSR
+            workingSR
         );
         audioBuffer.copyToChannel(channel0, 0);
         if (f.buffer.numberOfChannels === 2) {
@@ -355,7 +356,7 @@ function bufferRateResampler(f) {
             ...f.meta,
             slices: Array.isArray(slices) ? slices : f.meta.slices || false,
             length: audioBuffer.length,
-            duration: Number(audioBuffer.length / masterSR).toFixed(3)
+            duration: Number(audioBuffer.length / workingSR).toFixed(3)
         },
         buffer: audioBuffer
     };
@@ -568,14 +569,14 @@ const showEditPanel = (event, id, view = 'sample') => {
 
 function checkShouldExportOtFile() {
     return exportWithOtFile && masterSR === 44100 &&
-      !lastUsedAudioConfig.includes('a');
+      !targetContainer === 'a';
 }
 
 async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
     let fileName = getNiceFileName('', file, false, true);
-    let wav, blob;
+    let wav, wavSR, blob;
 
-    fileName = lastUsedAudioConfig.includes('a') ?
+    fileName = targetContainer === 'a' ?
       fileName.replace('.wav', '.aif') :
       fileName;
 
@@ -587,6 +588,8 @@ async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
       (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData,
       embedCuePoints
     );
+    wavSR = wav.sampleRate;
+    wav = wav.buffer;
     blob = new window.Blob([new DataView(wav)], {
         type: renderAsAif && pitchModifier === 1 ? 'audio/aiff' : 'audio/wav'
     });
@@ -607,6 +610,8 @@ async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
           masterChannels, deClick,
           renderAsAif, 1, embedSliceData, embedCuePoints
         );
+        wavSR = wav.sampleRate;
+        wav = wav.buffer;
         blob = new window.Blob([new DataView(wav)], {
             type: renderAsAif ? 'audio/aiff' : 'audio/wav'
         });
@@ -614,7 +619,7 @@ async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
 
     linkEl.href = URL.createObjectURL(blob);
     linkEl.setAttribute('download', fileName);
-    return blob;
+    return {blob, sampleRate: wavSR};
 }
 
 async function downloadAll(event) {
@@ -622,7 +627,7 @@ async function downloadAll(event) {
     const flattenFolderStructure = (event.shiftKey || modifierKeys.shiftKey);
     const links = [];
     const el = document.getElementById('getJoined');
-    const renderAsAif = lastUsedAudioConfig.includes('a');
+    const renderAsAif = targetContainer === 'a';
     if (_files.length === 0) { return; }
     if (_files.length > 5 && !zipDownloads) {
         const userReadyForTheCommitment = confirm(
@@ -635,19 +640,19 @@ async function downloadAll(event) {
     if (zipDownloads && _files.length > 1) {
         const zip = new JSZip();
         for (const file of _files) {
-            const blob = await setWavLink(file, el, renderAsAif);
+            const wav = await setWavLink(file, el, renderAsAif);
             let fileName = '';
-            fileName = lastUsedAudioConfig.includes('a') ?
+            fileName = targetContainer === 'a' ?
               fileName.replace('.wav', '.aif') :
               fileName;
             if (flattenFolderStructure) {
                 fileName = getNiceFileName(
                   '', file, false, true
                 );
-                fileName = lastUsedAudioConfig.includes('a') ?
+                fileName = targetContainer === 'a' ?
                   fileName.replace('.wav', '.aif') :
                   fileName;
-                zip.file(fileName, blob, {binary: true});
+                zip.file(fileName, wav.blob, {binary: true});
                 let otFile = createAndSetOtFileLink(
                   file.meta.slices ?? [], file.buffer.length, fileName);
                 if (otFile) {
@@ -655,10 +660,10 @@ async function downloadAll(event) {
                 }
             } else {
                 let fileName = getNiceFileName('', file, false);
-                fileName = lastUsedAudioConfig.includes('a') ?
+                fileName = targetContainer === 'a' ?
                   fileName.replace('.wav', '.aif') :
                   fileName;
-                zip.file(file.file.path + fileName, blob, {binary: true});
+                zip.file(file.file.path + fileName, wav.blob, {binary: true});
                 let otFile = createAndSetOtFileLink(
                   file.meta.slices ?? [], file.buffer.length, fileName);
                 if (otFile) {
@@ -697,7 +702,7 @@ async function downloadFile(id, fireLink = false) {
     const el = getRowElementById(id).querySelector('.wav-link-hidden');
     const metaEl = getRowElementById(id).querySelector('.meta-link-hidden');
     const file = getFileById(id);
-    const renderAsAif = lastUsedAudioConfig.includes('a');
+    const renderAsAif = targetContainer === 'a';
     await setWavLink(file, el, renderAsAif);
     if (fireLink) {
         el.click();
@@ -1749,7 +1754,7 @@ async function joinAll(
     } else { /*Using max length in seconds (if aif also limit upto 24 files per chain)*/
         _files = _files.filter(f => f.meta.duration < secondsPerFile);
         let maxChainLength = (
-          lastUsedAudioConfig.includes('a') ? 24 : (sliceGrid === 0
+          targetContainer === 'a' ? 24 : (sliceGrid === 0
             ? 64
             : sliceGrid));
         const processing = _files.reduce((a, f) => {
@@ -1838,26 +1843,34 @@ async function joinAll(
     };
     if (toInternal) {
 
-        const blob = await setWavLink(fileData, joinedEl, false,
+        const wav = await setWavLink(fileData, joinedEl, false,
           (masterBitDepth === 8 ? 8 : 32));
         const fileReader = new FileReader();
-        fileReader.readAsArrayBuffer(blob);
+        fileReader.readAsArrayBuffer(wav.blob);
         fileReader.fileCount = fileCount;
-        fileReader.onload = (e) => {
+        fileReader.onload = async (e) => {
             const fb = e.target.result.slice(0);
-            audioCtx.decodeAudioData(e.target.result, function(buffer) {
+            await (masterSR !== (wav.sampleRate || masterSR)
+                ? new AudioContext(
+                    {
+                        sampleRate: wav.sampleRate,
+                        latencyHint: 'interactive'
+                    })
+                : audioCtx).decodeAudioData(e.target.result, buffer => {
                 parseWav(buffer, fb, {
                     lastModified: new Date().getTime(),
                     name: fileData.file.name,
                     embedSliceData: embedSliceData,
+                    sampleRate: wav.sampleRate || masterSR,
+                    channels: buffer.numberOfChannels,
                     // name: _files.length === 1 ?
                     //     `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('',
                     //         _files[0], true)}_${fileReader.fileCount +
                     //     1}--[${_files.length}].wav` :
                     //     `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount +
                     //     1}--[${_files.length}].wav`,
-                    size: (((masterBitDepth === 8 ? 8 : 32) * masterSR *
-                        (buffer.length / masterSR)) /
+                    size: (((masterBitDepth === 8 ? 8 : 32) * (wav.sampleRate || masterSR) *
+                        (buffer.length / (wav.sampleRate || masterSR))) /
                       8) * buffer.numberOfChannels / 1024,
                     type: 'audio/wav'
                 }, '', true, false);
@@ -1866,13 +1879,13 @@ async function joinAll(
         };
 
     } else {
-        const renderAsAif = lastUsedAudioConfig.includes('a');
+        const renderAsAif = targetContainer === 'a';
         if (zip) {
-            const blob = setWavLink(fileData, joinedEl, renderAsAif);
-            fileData.file.name = lastUsedAudioConfig.includes('a') ?
+            const wav = setWavLink(fileData, joinedEl, renderAsAif);
+            fileData.file.name = targetContainer === 'a' ?
               fileData.file.name.replace('.wav', '.aif') :
               fileData.file.name;
-            zip.file(fileData.file.name, blob, {binary: true});
+            zip.file(fileData.file.name, wav.blob, {binary: true});
             let otFile = createAndSetOtFileLink(
               fileData.meta.slices ?? [], fileData.buffer.length,
               fileData.file.name);
@@ -2874,7 +2887,7 @@ const setCountValues = () => {
             let progress = {duration: 0, processed: [], skipped: [], count};
             let _items = items.filter(f => +f.meta.duration < secondsPerFile);
             let maxChainLength = (
-              lastUsedAudioConfig.includes('a') ? 24 : (sliceGrid === 0
+              targetContainer === 'a' ? 24 : (sliceGrid === 0
                 ? 64
                 : sliceGrid));
             while (_items.length > 0) {
@@ -2981,7 +2994,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
       'D' ? 'selected' : ''} channel-option-D">D</a>
           </div>` +
 
-      (lastUsedAudioConfig.includes('a') ?
+      (targetContainer === 'a' ?
         `<div class="channel-options channel-options-stereo channel-options-stereo-opf ${f.meta.opPanAb
           ? 'op-pan-ab-true'
           : ''}" title="${f.buffer.numberOfChannels === 1
@@ -3630,6 +3643,7 @@ const parseWav = (
         unsorted.push(uuid);
         return uuid;
     } catch (err) {
+        console.log(err);
         return {uuid, failed: true};
     }
 };
@@ -4298,7 +4312,7 @@ function loadState(skipConfirm = false) {
                 }
             }
 
-            files = requestFiles.result.map(bufferRateResampler);
+            files = requestFiles.result.map(f => bufferRateResampler(f));
             renderList(true);
         } else {
             document.body.classList.remove('loading');

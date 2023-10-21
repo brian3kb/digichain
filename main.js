@@ -569,7 +569,7 @@ const showEditPanel = (event, id, view = 'sample') => {
 
 function checkShouldExportOtFile() {
     return exportWithOtFile && masterSR === 44100 &&
-      !targetContainer === 'a';
+      targetContainer !== 'a';
 }
 
 async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {

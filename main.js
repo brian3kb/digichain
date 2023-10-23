@@ -60,6 +60,8 @@ let deClick = JSON.parse(
   localStorage.getItem('deClick')) ?? 0.4;
 let treatDualMonoStereoAsMono = JSON.parse(
   localStorage.getItem('treatDualMonoStereoAsMono')) ?? true;
+let shiftClickForFileDownload = JSON.parse(
+  localStorage.getItem('shiftClickForFileDownload')) ?? false;
 let secondsPerFile = 0;
 let audioCtx;
 let files = [];
@@ -684,7 +686,7 @@ async function downloadAll(event) {
 
     for (const file of _files) {
         const link = await downloadFile(file.meta.id);
-        links.push(link);
+        link.forEach(l => links.push(l));
     }
 
     const intervalId = setInterval(() => {
@@ -698,19 +700,19 @@ async function downloadAll(event) {
 
 }
 
-async function downloadFile(id, fireLink = false) {
+async function downloadFile(id, fireLink = false, event = {}) {
     const el = getRowElementById(id).querySelector('.wav-link-hidden');
     const metaEl = getRowElementById(id).querySelector('.meta-link-hidden');
     const file = getFileById(id);
     const renderAsAif = targetContainer === 'a';
     await setWavLink(file, el, renderAsAif);
-    if (fireLink) {
-        el.click();
-    }
     let otFile = createAndSetOtFileLink(
-      file.meta.slices ?? [], file.buffer.length, file.file.name, metaEl);
-    if (otFile) {metaEl.click(); }
-    return el;
+        file.meta.slices ?? [], file.buffer.length, file.file.name, metaEl);
+    if (fireLink && (!shiftClickForFileDownload || (shiftClickForFileDownload && event.shiftKey))) {
+        el.click();
+        if (otFile) {metaEl.click(); }
+    }
+    return [el, metaEl];
 }
 
 function toggleSelectedActionsList() {
@@ -1068,6 +1070,12 @@ function toggleSetting(param, value) {
           treatDualMonoStereoAsMono);
         showExportSettingsPanel();
     }
+    if (param === 'shiftClickForFileDownload') {
+        shiftClickForFileDownload = !shiftClickForFileDownload;
+        localStorage.setItem('shiftClickForFileDownload',
+          shiftClickForFileDownload);
+        showExportSettingsPanel();
+    }
     if (param === 'embedSliceData') {
         embedSliceData = !embedSliceData;
         localStorage.setItem('embedSliceData', embedSliceData);
@@ -1355,6 +1363,13 @@ function showExportSettingsPanel(page = 'settings') {
 <td><button onclick="digichain.toggleSetting('showTouchModifierKeys')" class="check ${showTouchModifierKeys
           ? 'button'
           : 'button-outline'}">${showTouchModifierKeys ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<tr>
+<td><span>Shift+Click to download single files from the list?&nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('shiftClickForFileDownload')" class="check ${shiftClickForFileDownload
+          ? 'button'
+          : 'button-outline'}">${shiftClickForFileDownload ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Use Dark theme as the default? (No = Light theme)&nbsp;&nbsp;&nbsp;</span></td>
@@ -2968,7 +2983,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
         '<div>'
       }
           <span class="file-path">${f.file.path}</span>
-          <a title="Download processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true)">${getNiceFileName(
+          <a title="${shiftClickForFileDownload ? 'Shift+Click to d' : 'D'}ownload processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true, event)">${getNiceFileName(
         f.file.name)}</a>
           ${f.meta.dupeOf ? ' d' : ''}
           ${f.meta.editOf ? ' e' : ''}
@@ -4277,7 +4292,7 @@ function storeState() {
                 file: f.file,
                 meta: f.meta,
                 buffer: {
-                    duraton: f.buffer.duration,
+                    duration: f.buffer.duration,
                     length: f.buffer.length,
                     numberOfChannels: f.buffer.numberOfChannels,
                     sampleRate: f.buffer.sampleRate,
@@ -4331,7 +4346,7 @@ function saveSession() {
         file: f.file,
         meta: f.meta,
         buffer: {
-            duraton: f.buffer.duration,
+            duration: f.buffer.duration,
             length: f.buffer.length,
             numberOfChannels: f.buffer.numberOfChannels,
             sampleRate: f.buffer.sampleRate,

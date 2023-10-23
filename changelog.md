@@ -10,6 +10,7 @@ latest
  - Audio context options are now an audio config panel, allowing arbitrary sample rates, and choice of bit depth and channel combinations.
  - 'Retain session data between browser refreshes?' setting on settings panel.
  - Gain adjustment on the edit panel (Thanks to eljeff).
+ - Option in settings panel to only download single files when Shift+Clicked to prevent accidental downloads being triggered.
 
 2023.10.15 1.4.8
  - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.

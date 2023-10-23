@@ -665,23 +665,17 @@ function adjustGain(event, gain, item, renderEditPanel = true) {
     }
     item = item || editing;
 
+    let maxSample = 0;
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-        let data = item.buffer.getChannelData(channel);
         for (let i = selection.start; i < selection.end; i++) {
             if (item.buffer.getChannelData(channel)[i]) {
                 item.buffer.getChannelData(
                   channel)[i] = item.buffer.getChannelData(channel)[i] * gain;
             }
+            maxSample = Math.max(Math.abs(channel[i]), maxSample);
         }
     }
 
-    let maxSample = 0;
-    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-        let data = item.buffer.getChannelData(channel);
-        for (let i = selection.start; i < selection.end; i++) {
-            maxSample = Math.max(Math.abs(data[i]), maxSample);
-        }
-    }
     maxSample = !maxSample ? 1 : maxSample;
     item.meta.peak = maxSample;
     if (renderEditPanel) {
@@ -710,7 +704,6 @@ function normalize(event, item, renderEditPanel = true, findPeakOnly = false) {
         return maxSample;
     }
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-        let data = item.buffer.getChannelData(channel);
         for (let i = selection.start; i < selection.end; i++) {
             if (item.buffer.getChannelData(channel)[i] &&
               item.buffer.getChannelData(channel)[i] / maxSample !== 0) {

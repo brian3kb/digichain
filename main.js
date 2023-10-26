@@ -43,7 +43,8 @@ const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
 const opSliceOptions = [4, 8, 12, 16, 20, 24];
 const otSliceOptions = [4, 8, 16, 32, 48, 64];
 const importFileLimitValue = 750;
-let masterSR = 44100;
+let masterSR = 44100; /*The working sample rate*/
+let targetSR = 44100; /*The target sample rate, what rendered files will output at.*/
 let masterBitDepth = 16;
 let masterChannels = 1;
 let targetContainer = 'w';
@@ -262,6 +263,8 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
         f: document.getElementById('targetContainerGroup').dataset.container
     };
 
+    let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value || localStorage.getItem('workingSampleRate') || 44100);
+
     if (audioValuesFromCommonSelectEl) {
         audioValuesFromCommonSelectEl.value = 'none';
     }
@@ -276,10 +279,15 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
           `ERROR: The sample rate ${configData.sr}Hz is not supported by your browser.\n\nPlease select a sample rate between ${supportedSampleRates[0]}Hz and ${supportedSampleRates[1]}Hz`);
         return false;
     }
+    if (workingSR < supportedSampleRates[0] || workingSR > supportedSampleRates[1]) {
+        alert(
+          `ERROR: The sample rate ${workingSR}Hz is not supported by your browser.\n\nPlease select a sample rate between ${supportedSampleRates[0]}Hz and ${supportedSampleRates[1]}Hz`);
+        return false;
+    }
 
-    if (files.length > 0 && configData.sr !== masterSR) {
+    if (files.length > 0 && workingSR !== masterSR) {
         let conf = confirm(
-          `Frequently changing audio export sample rate can degrade the audio quality, particularly in the transients and higher frequencies.\n\n Do you want to continue?`);
+          `Frequently changing audio working sample rate can degrade the audio quality, particularly in the transients and higher frequencies.\n\n Do you want to continue?`);
         if (!conf) {
             return false;
         }
@@ -291,12 +299,14 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     const selection = `${configData.sr}${configData.c}${configData.bd}${configData.f}`;
     lastUsedAudioConfig = selection;
     localStorage.setItem('lastUsedAudioConfig', selection);
+    localStorage.setItem('workingSampleRate', `${workingSR}`);
 
     let resampleState = false;
-    if (configData.sr !== masterSR && !onloadRestore) {
+    if (workingSR !== masterSR && !onloadRestore) {
         resampleState = true;
     }
-    masterSR = configData.sr;
+    masterSR = workingSR;
+    targetSR = configData.sr;
     masterBitDepth = configData.bd;
     masterChannels = configData.c === 'm' ? 1 : 2;
     targetContainer = configData.f;
@@ -624,7 +634,7 @@ function checkShouldExportOtFile() {
       targetContainer !== 'a';
 }
 
-async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
+async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverride) {
     let fileName = getNiceFileName('', file, false, true);
     let wav, wavSR, blob;
 
@@ -635,7 +645,7 @@ async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
     file.meta.slices = file.meta.slices || metaFiles.getByFileInDcFormat(file);
 
     wav = audioBufferToWav(
-      file.buffer, file.meta, masterSR, (bitDepthOverride || masterBitDepth),
+      file.buffer, {...file.meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
       masterChannels, deClick,
       (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData,
       embedCuePoints
@@ -658,7 +668,7 @@ async function setWavLink(file, linkEl, renderAsAif, bitDepthOverride) {
               slice.l / pitchModifier)
         }));
         wav = audioBufferToWav(
-          pitchedBuffer, meta, masterSR, (bitDepthOverride || masterBitDepth),
+          pitchedBuffer, {...meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
           masterChannels, deClick,
           renderAsAif, 1, embedSliceData, embedCuePoints
         );
@@ -692,7 +702,7 @@ async function downloadAll(event) {
     if (zipDownloads && _files.length > 1) {
         const zip = new JSZip();
         for (const file of _files) {
-            const wav = await setWavLink(file, el, renderAsAif);
+            const wav = await setWavLink(file, el, renderAsAif, true);
             let fileName = '';
             fileName = targetContainer === 'a' ?
               fileName.replace('.wav', '.aif') :
@@ -755,7 +765,7 @@ async function downloadFile(id, fireLink = false, event = {}) {
     const metaEl = getRowElementById(id).querySelector('.meta-link-hidden');
     const file = getFileById(id);
     const renderAsAif = targetContainer === 'a';
-    await setWavLink(file, el, renderAsAif);
+    await setWavLink(file, el, renderAsAif, true);
     let otFile = createAndSetOtFileLink(
         file.meta.slices ?? [], file.buffer.length, file.file.name, metaEl);
     if (fireLink && (!shiftClickForFileDownload || (shiftClickForFileDownload && event.shiftKey))) {
@@ -775,7 +785,6 @@ function toggleSelectedActionsList() {
 
 function removeSelected() {
     metaFiles.removeSelected();
-    //files.forEach(f => stopPlayFile(false, f.meta.id));
     files.filter(f => f.meta.checked).forEach(f => remove(f.meta.id));
     files = files.filter(f => !f.meta.checked);
     unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
@@ -1450,15 +1459,34 @@ function showExportSettingsPanel(page = 'settings') {
 </tr>
 </thead>
   <tbody>
+    <tr>
+      <td style="border: none;"><span>Working Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
+      <td style="border: none;">
+          <div class="input-set" id="settingsWorkingSampleRateGroup">
+              <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz" 
+              onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
+              onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
+              id="settingsWorkingSampleRate" value="${masterSR}" data-sample-rate="${masterSR}" list="commonSR" 
+              data-placeholder="Sample Rate between ${supportedSampleRates.toString()}"
+              min="${supportedSampleRates[0]}" max="${supportedSampleRates[1]}">
+              <datalist id="commonSR">
+                ${[12000, 24000, 32000, 44100, 48000].map(
+          v => '<option value="' + v + '">').join('')}
+              </datalist>
+              <button title="Restore currently active working sample rate" class="button-clear" onclick="(() => {const i = document.getElementById('settingsWorkingSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
+          </div>
+      </td>
+  </tr>
+    <tr><td colspan="2"><span><small>Caution: Changing the working sample rate will resample any files currently in the list to the specified sample rate.</small></span><br><br></td></tr>
   <tr>
-      <td style="border: none;"><span>Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
+      <td style="border: none;"><span>Target Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
           <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup">
               <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz" 
               ${targetContainer === 'a' ? 'disabled="disabled"' : ''}
               onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
               onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
-              id="settingsSampleRate" value="${masterSR}" data-sample-rate="${masterSR}" list="commonSR" 
+              id="settingsSampleRate" value="${targetSR}" data-sample-rate="${targetSR}" list="commonSR" 
               data-placeholder="Sample Rate between ${supportedSampleRates.toString()}"
               min="${supportedSampleRates[0]}" max="${supportedSampleRates[1]}">
               <datalist id="commonSR">
@@ -1469,7 +1497,7 @@ function showExportSettingsPanel(page = 'settings') {
           </div>
       </td>
   </tr>
-  <tr><td colspan="3"><span><small>Caution: Changing the sample rate will resample any files currently in the list to the specified sample rate.</small></span><br><br></td></tr>
+  <tr><td colspan="2"></td></tr>
   
   <tr>
   <td><span>Bit Depth&nbsp;&nbsp;&nbsp;</span></td>
@@ -1923,7 +1951,7 @@ async function joinAll(
     };
     if (toInternal) {
 
-        const wav = await setWavLink(fileData, joinedEl, false,
+        const wav = await setWavLink(fileData, joinedEl, false, false,
           (masterBitDepth === 8 ? 8 : 32));
         const fileReader = new FileReader();
         fileReader.readAsArrayBuffer(wav.blob);
@@ -1961,7 +1989,7 @@ async function joinAll(
     } else {
         const renderAsAif = targetContainer === 'a';
         if (zip) {
-            const wav = setWavLink(fileData, joinedEl, renderAsAif);
+            const wav = setWavLink(fileData, joinedEl, renderAsAif, true);
             fileData.file.name = targetContainer === 'a' ?
               fileData.file.name.replace('.wav', '.aif') :
               fileData.file.name;
@@ -1973,7 +2001,7 @@ async function joinAll(
                 zip.file(otFile.name, otFile.blob, {binary: true});
             }
         } else {
-            await setWavLink(fileData, joinedEl, renderAsAif);
+            await setWavLink(fileData, joinedEl, renderAsAif, true);
             joinedEl.click();
             let otFile = createAndSetOtFileLink(
               fileData.meta.slices ?? [], fileData.buffer.length,
@@ -3703,6 +3731,8 @@ const parseWav = (
             },
             buffer: (resampledArrayBuffer || audioArrayBuffer),
             meta: {
+                sourceBitDepth: file.bitDepth,
+                sourceSampleRate: file.sampleRate,
                 length: (resampledArrayBuffer || audioArrayBuffer).length,
                 duration: Number(
                   (resampledArrayBuffer || audioArrayBuffer).length / masterSR).
@@ -3952,6 +3982,7 @@ const consumeFileInput = (event, inputFiles) => {
                             if (code === 'fmt ') {
                                 file.channels = dv.getUint16(i + 10, true);
                                 file.sampleRate = dv.getUint32(i + 12, true);
+                                file.bitDepth = dv.getUint16(i + 22, true);
                                 break;
                             }
                         }

@@ -243,8 +243,8 @@ function deClick(audioArray, threshold) {
     return audioArray;
 }
 
-function getResampleIfNeeded(meta, buffer) {
-    const targetSR = 44100;
+function getResampleIfNeeded(meta, buffer, sampleRate) {
+    const targetSR = meta.renderAt || sampleRate;
     const targetAudioCtx = new AudioContext(
       {sampleRate: targetSR, latencyHint: 'interactive'});
     return bufferRateResampler({
@@ -261,16 +261,15 @@ export function audioBufferToWav(
     const treatDualMonoStereoAsMono = (JSON.parse(
         localStorage.getItem('treatDualMonoStereoAsMono')) ?? true) &&
       !meta.editing && !meta.bypassStereoAsDualMono;
-
-/*
+    
     let resample;
-    if (!meta.editing) {
-        resample = getResampleIfNeeded(meta, buffer);
+    if (!meta.editing && meta.renderAt) {
+        resample = getResampleIfNeeded(meta, buffer, sampleRate);
         sampleRate = resample.buffer.sampleRate;
         meta = resample.meta;
         buffer = resample.buffer;
     }
-*/
+
     let numChannels = buffer.numberOfChannels;
     let format = (meta?.float32 || bitDepth === 32) ? 3 : 1;
     sampleRate = sampleRate * pitchModifier;

@@ -1989,7 +1989,7 @@ async function joinAll(
     } else {
         const renderAsAif = targetContainer === 'a';
         if (zip) {
-            const wav = setWavLink(fileData, joinedEl, renderAsAif, true);
+            const wav = await setWavLink(fileData, joinedEl, renderAsAif, true);
             fileData.file.name = targetContainer === 'a' ?
               fileData.file.name.replace('.wav', '.aif') :
               fileData.file.name;

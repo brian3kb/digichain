@@ -261,7 +261,7 @@ export function audioBufferToWav(
     const treatDualMonoStereoAsMono = (JSON.parse(
         localStorage.getItem('treatDualMonoStereoAsMono')) ?? true) &&
       !meta.editing && !meta.bypassStereoAsDualMono;
-    
+
     let resample;
     if (!meta.editing && meta.renderAt) {
         resample = getResampleIfNeeded(meta, buffer, sampleRate);

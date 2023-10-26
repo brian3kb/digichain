@@ -586,7 +586,7 @@ function reSamplePitch(
     }
 
     const pitchedWav = audioBufferToWav((audioArrayBuffer || item.buffer),
-      item.meta, newSR, (bitDepthOverride || 32), item.buffer.numberOfChannels,
+      {...item.meta, bypassStereoAsDualMono: true}, newSR, (bitDepthOverride || 32), item.buffer.numberOfChannels,
       0.4).buffer;
     const pitchedBlob = new window.Blob([new DataView(pitchedWav)], {
         type: 'audio/wav'

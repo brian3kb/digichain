@@ -95,7 +95,6 @@ body {
 input, .btn-audio-config { color: #a8a8a8; }
 .input-set input, .btn-audio-config {
     width: 65%;
-    float: left;
     padding: 0 0.5rem;
     border: 1px solid #8a5d2e;
     padding-left: 7.5rem;

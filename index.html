@@ -132,9 +132,9 @@
     </div>
 </dialog>
 
-<dialog id="editPanel" class="dialog-pop-up" data-id="">
+<dialog id="editPanel" class="dialog-pop-up" data-id="" onclose="digichain.closeEditPanel();">
     <a class="float-right"
-       onclick="document.getElementById('editPanel').close(); digichain.renderList();digichain.stopPlayFile(false, digichain.editor.getLastItem());"><i
+       onclick="digichain.closeEditPanel();"><i
             class="gg-close"></i></a>
     <fieldset id="editableItems"></fieldset>
     <div id="editorPanelContent"></div>

@@ -1,3 +1,22 @@
+/*!
+DigiChain v.1.4.9 [ https://digichain.brianbar.net/ ]
+<https://github.com/brian3kb/digichain>
+
+(c) 2023 Brian Barnett <me [at] brianbar.net>
+[ @brian3kb / @sfxBrian ]
+Licenced under GPLv3 <https://github.com/brian3kb/digichain/blob/main/LICENSE>
+
+DigiChain bundled resources:
+[MIT license] JSZip  : <https://github.com/Stuk/jszip/blob/main/LICENSE.markdown>
+[MIT license] Pako : <https://github.com/nodeca/pako/blob/main/LICENSE>
+[MIT license] Modified version of Audiobuffer-to-wav : <https://github.com/Experience-Monks/audiobuffer-to-wav/blob/master/LICENSE.md>
+[MIT license] Modified version of Audiobuffer-to-aiff : <https://github.com/hunjunior/audiobuffer-to-aiff/blob/master/LICENSE>
+
+Brian referenced the following during development:
+[BSD-3] MIDI-SDS, for how the Machine Drum stores audio data in syx files : <https://github.com/eh2k/uwedit/blob/master/core/MidiSDS.cpp> / <https://github.com/eh2k/uwedit/blob/master/LICENSE.txt>
+[Unlicense] OctaChainer, how to read/write .ot binary files correctly : <https://github.com/KaiDrange/OctaChainer/blob/master/otwriter.cpp> / <https://github.com/KaiDrange/OctaChainer/blob/master/License.txt>
+Tips and Tricks on drawing array buffers to the canvas element: <https://css-tricks.com/making-an-audio-waveform-visualizer-with-vanilla-javascript/>
+*/
 import {
     Resampler,
     audioBufferToWav,
@@ -31,7 +50,7 @@ let targetContainer = 'w';
 let supportedSampleRates = JSON.parse(localStorage.getItem('supportedSampleRates')) ??
   getSupportedSampleRates();
 let lastUsedAudioConfig = localStorage.getItem('lastUsedAudioConfig') ??
-  'm4800016';
+  '48000m16w';
 let restoreLastUsedAudioConfig = JSON.parse(
   localStorage.getItem('restoreLastUsedAudioConfig')) ?? true;
 let retainSessionState = JSON.parse(
@@ -211,9 +230,23 @@ function checkAndSetAudioContext() {
     }
 }
 
+function setAudioOptionsFromCommonConfig(event) {
+    const configString = event.target.value;
+    if (configString === 'none') {
+        return ;
+    }
+    const defaults = [48000, 'm', 16, 'w'];
+    let configValues = configString ? configString.match(/^\d+|[ms]|\d+|[wa]/g) : defaults;
+    document.getElementById(`acoContainer${configValues[3]}`).click();
+    document.getElementById('settingsSampleRate').value = +configValues[0];
+    document.getElementById(`acoChannel${configValues[1]}`).click();
+    document.getElementById(`acoBitDepth${configValues[2]}`).click();
+}
+
 async function changeAudioConfig(configString = '', onloadRestore = false) {
     const settingsPanelEl = document.getElementById('exportSettingsPanel');
     const configOptionsEl = document.getElementById('audioConfigOptions');
+    const audioValuesFromCommonSelectEl = document.getElementById('audioValuesFromCommonSelect');
     const defaults = [48000, 'm', 16, 'w'];
     let configValues = configString ? configString.match(/^\d+|[ms]|\d+|[wa]/g) : defaults;
     configValues = configValues.length === 4 ? configValues : defaults;
@@ -228,6 +261,10 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
         bd: +document.getElementById('bitDepthGroup').dataset.bitDepth,
         f: document.getElementById('targetContainerGroup').dataset.container
     };
+
+    if (audioValuesFromCommonSelectEl) {
+        audioValuesFromCommonSelectEl.value = 'none';
+    }
 
     if (configData.f === 'a') {
         configData.sr = 44100;
@@ -336,7 +373,10 @@ export function bufferRateResampler(f, workingSR, audioCtxOverride)  {
             slices = f.meta.slices.map(slice => ({
                 ...slice,
                 s: Math.round((slice.s / f.buffer.sampleRate) * workingSR),
-                e: Math.round((slice.e / f.buffer.sampleRate) * workingSR),
+                /*If the slice end  is the end of the buffer, set it to the end of the resample buffer.*/
+                e: slice.e === f.buffer.length ?
+                  Math.round(resample.outputBuffer.length) :
+                  Math.round((slice.e / f.buffer.sampleRate) * workingSR),
                 l: Math.round(((slice.l || -1) / f.buffer.sampleRate) * workingSR)
             }));
         }
@@ -569,6 +609,16 @@ const showEditPanel = (event, id, view = 'sample') => {
     );
 };
 
+const closeEditPanel = () => {
+    const editPanelEl = document.getElementById('editPanel');
+    if (editPanelEl.open) {
+        editPanelEl.close();
+    };
+    files.forEach(f => delete f.meta.editing);
+    digichain.stopPlayFile(false, digichain.editor.getLastItem());
+    digichain.renderList();
+};
+
 function checkShouldExportOtFile() {
     return exportWithOtFile && masterSR === 44100 &&
       targetContainer !== 'a';
@@ -736,7 +786,7 @@ function removeSelected() {
         unsorted = [];
     }
     storeState();
-    //renderList();
+    renderList();
 }
 
 function normalizeSelected(event) {
@@ -1428,10 +1478,10 @@ function showExportSettingsPanel(page = 'settings') {
       el.dataset.bitDepth = event.target.dataset.bitDepth || el.dataset.bitDepth;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.bitDepth === el.dataset.bitDepth ? 'check button' : 'check button-outline')
   })(event, this);">
-      <button data-bit-depth="8" class="check button${masterBitDepth !== 8 ? '-outline' : ''}">8 Bit</button>
-      <button id="bitDepth16" data-bit-depth="16" class="check button${masterBitDepth !== 16 ? '-outline' : ''}">16 Bit</button>
-      <button data-bit-depth="24" class="check button${masterBitDepth !== 24 ? '-outline' : ''}">24 Bit</button>
-     <button data-bit-depth="32" class="check button${masterBitDepth !== 32 ? '-outline' : ''}">32 Bit</button>
+      <button id="acoBitDepth8" data-bit-depth="8" class="check button${masterBitDepth !== 8 ? '-outline' : ''}">8 Bit</button>
+      <button id="acoBitDepth16" data-bit-depth="16" class="check button${masterBitDepth !== 16 ? '-outline' : ''}">16 Bit</button>
+      <button id="acoBitDepth24" data-bit-depth="24" class="check button${masterBitDepth !== 24 ? '-outline' : ''}">24 Bit</button>
+     <button id="acoBitDepth32" data-bit-depth="32" class="check button${masterBitDepth !== 32 ? '-outline' : ''}">32 Bit</button>
  </div>
   </td>
   </tr>
@@ -1442,8 +1492,8 @@ function showExportSettingsPanel(page = 'settings') {
       el.dataset.channels = event.target.dataset.channels || el.dataset.channels;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.channels === el.dataset.channels ? 'check button' : 'check button-outline')
   })(event, this);">
-        <button data-channels="1" class="check button${masterChannels !== 1 ? '-outline' : ''}">MONO</button>
-          <button data-channels="2" class="check button${masterChannels !== 2 ? '-outline' : ''}">STEREO</button>
+        <button id="acoChannelm" data-channels="1" class="check button${masterChannels !== 1 ? '-outline' : ''}">MONO</button>
+          <button id="acoChannels" data-channels="2" class="check button${masterChannels !== 2 ? '-outline' : ''}">STEREO</button>
           </div>
       </td>
   </tr>
@@ -1455,7 +1505,7 @@ function showExportSettingsPanel(page = 'settings') {
       el.dataset.container = event.target.dataset.container || el.dataset.container;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.container === el.dataset.container ? 'check button' : 'check button-outline');
   if (el.dataset.container === 'a') {
-      document.getElementById('bitDepth16').click();
+      document.getElementById('acoBitDepth16').click();
       document.getElementById('bitDepthGroup').classList.add('disabled');
       document.getElementById('settingsSampleRate').value = 44100;
       document.getElementById('settingsSampleRate').disabled = true;
@@ -1466,16 +1516,30 @@ function showExportSettingsPanel(page = 'settings') {
         document.getElementById('settingsSampleRateGroup').classList.remove('disabled');
   }
   })(event, this);">
-        <button data-container="w" class="check button${targetContainer !== 'w' ? '-outline' : ''}">WAV</button>
-          <button data-container="a" class="check button${targetContainer !== 'a' ? '-outline' : ''}">AIF</button>
+        <button id="acoContainerw" data-container="w" class="check button${targetContainer !== 'w' ? '-outline' : ''}">WAV</button>
+          <button id="acoContainera" data-container="a" class="check button${targetContainer !== 'a' ? '-outline' : ''}">AIF</button>
           </div>
       </td>
   </tr>
     <tr><td colspan="3"><span><small>Note: Choosing AIF will set the sample rate to 44100 and the bit depth to 16 bit.</small></span><br><br></td></tr>
   
   <tr>
-  <td colspan="2"  style="border-bottom: none;">
-    <a class="button" style="margin: 2.5rem 2rem;" onclick="digichain.changeAudioConfig()">Apply Audio Settings</a></td>
+  <td style="border-bottom: none;">
+    <a class="button" style="margin: 2.5rem 2rem;" onclick="digichain.changeAudioConfig()">Apply Audio Settings</a>
+  </td>
+  <td style="border-bottom: none;">
+    <select id="audioValuesFromCommonSelect" class="btn-audio-config" style="margin: 0 2rem; max-width: 25rem; float: right;" onchange="digichain.setAudioOptionsFromCommonConfig(event)">
+        <option value="none" disabled selected>Common Configurations</option>
+        <option value="48000m16w">Digitakt</option>
+        <option value="44100s16w">Dirtywave M8</option>
+        <option value="44100s16w">Octatrack (16bit)</option>
+        <option value="44100s24w">Octatrack (24bit)</option>
+        <option value="44100s16a">OP-1 Field</option>
+        <option value="44100m16a">OP-1 / OP-Z</option>
+        <option value="44100m16w">Polyend Tracker</option>
+        <option value="44100s16w">Polyend Tracker Mini</option>
+    </select>
+  </td>
   </tr>
   <tr><td colspan="2"  style="border: none;">&nbsp;</td></tr>
 </tbody>
@@ -1740,7 +1804,8 @@ async function joinAll(
     if (files.length === 0) { return; }
     if (toInternal ||
       (event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
-    if (zipDownloads && !toInternal) { zip = zip || new JSZip(); }
+    if (zipDownloads && !toInternal && files.filter(
+      f => f.meta.checked).length > 1) { zip = zip || new JSZip(); }
 
     let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(
       f => f.meta.checked);
@@ -2632,6 +2697,7 @@ const remove = (id) => {
     }
     rowEl.classList.add('hide');
     rowEl.remove();
+    storeState();
 };
 
 const move = (event, id, direction) => {
@@ -4441,6 +4507,7 @@ window.digichain = {
     toggleOptionsPanel,
     showExportSettingsPanel,
     showEditPanel,
+    closeEditPanel,
     closeSplitOptions,
     pitchExports,
     toggleSetting,
@@ -4452,5 +4519,6 @@ window.digichain = {
     generateChainNames,
     removeMetaFile,
     getSlicesFromMetaFile,
+    setAudioOptionsFromCommonConfig,
     editor
 };

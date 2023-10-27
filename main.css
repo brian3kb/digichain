@@ -437,9 +437,6 @@ td button { margin: 0.5rem; }
     display: none;
 }
 
-#exportSettingsPanel {
-    transform: scale(.97);
-}
 #exportSettingsPanel .disabled {
     pointer-events: none;
     user-focus: none;
@@ -495,6 +492,24 @@ td button { margin: 0.5rem; }
     background-color: #d79c4e;
     color: #fff;
 }
+#exportSettingsPanel #sliceGridGroup {
+    display: flex;
+    align-content: flex-end;
+    justify-content: space-around;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+#exportSettingsPanel #sliceGridGroup input {
+    max-width: 5rem;
+    margin-right: 1rem;
+    min-width: 4rem;
+    padding: 0 1rem;
+    border: 0.1rem solid #d1d1d12b;
+}
+#exportSettingsPanel #sliceGridGroup input::-webkit-outer-spin-button,
+#exportSettingsPanel #sliceGridGroup input::-webkit-inner-spin-button {
+    display: none;
+}
 #settingAudioConfig button.check {
     width: 7rem;
 }
@@ -530,7 +545,8 @@ td button { margin: 0.5rem; }
 dialog {
     color: #606c76;
     font-family: 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
-    width: 512px;
+    /*width: 512px;*/
+    max-width: 75vw;
     background-color: #202124;
     border: 1px solid orange;
     padding: 2rem;
@@ -538,6 +554,7 @@ dialog {
     box-shadow: 0 0 4px #cf8600;
     box-sizing: content-box;
     transition: opacity .33s ease-in;
+    max-height: 89vh;
 }
 
 .op-export-panel-options { top: 1vh;}

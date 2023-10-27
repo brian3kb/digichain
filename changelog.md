@@ -7,10 +7,13 @@ latest
  - Show the number of slices if the file has any on the slice-grid icon instead of OT/DC/OP text.
  - Improved the speed of conversion between spaced/none-spaced chains from the slice panel.
  - Allow users to change audio context when files are loaded without emptying list; An advisory message to confirm the action is shown, as the sample rates of all files in the list are internally resampled to the new context.
+ - Decoupled the working audio sample rate from the export audio sample rate. This allows users to work at 44.1kHz, but export to 48kHz for example without destructively resampling the list source buffers.
  - Audio context options are now an audio config panel, allowing arbitrary sample rates, and choice of bit depth and channel combinations.
+ - A list of common configurations by hardware name are available in the audio config panel.
+ - Audio config panel has slice grid options inputs so last used values are remembered. These values are also updated as part of the common configs list options.
  - 'Retain session data between browser refreshes?' setting on settings panel.
  - Gain adjustment on the edit panel (Thanks to eljeff).
- - Option in settings panel to only download single files when Shift+Clicked to prevent accidental downloads being triggered.
+ - Option in settings panel to download single files when Shift+Clicked to prevent accidental downloads being triggered.
 
 2023.10.15 1.4.8
  - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.

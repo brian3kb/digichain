@@ -39,9 +39,7 @@ import {
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
 const infoEl = document.getElementById('infoIndicator');
-const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 120];
-const opSliceOptions = [4, 8, 12, 16, 20, 24];
-const otSliceOptions = [4, 8, 16, 32, 48, 64];
+const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 128];
 const importFileLimitValue = 750;
 let masterSR = 44100; /*The working sample rate*/
 let targetSR = 44100; /*The target sample rate, what rendered files will output at.*/
@@ -236,31 +234,34 @@ function setAudioOptionsFromCommonConfig(event) {
     if (configString === 'none') {
         return ;
     }
-    const defaults = [48000, 'm', 16, 'w'];
+    const defaults = [48000, 'm', 16, 'w', ...DefaultSliceOptions];
     let configValues = configString ? configString.match(/^\d+|[ms]|\d+|[wa]/g) : defaults;
     document.getElementById(`acoContainer${configValues[3]}`).click();
     document.getElementById('settingsSampleRate').value = +configValues[0];
     document.getElementById(`acoChannel${configValues[1]}`).click();
     document.getElementById(`acoBitDepth${configValues[2]}`).click();
+    configValues.slice(4).forEach((g, i) => i > 0 ?document.getElementById(`gridSize${+i}`).value = +g : '');
 }
 
 async function changeAudioConfig(configString = '', onloadRestore = false) {
     const settingsPanelEl = document.getElementById('exportSettingsPanel');
     const configOptionsEl = document.getElementById('audioConfigOptions');
     const audioValuesFromCommonSelectEl = document.getElementById('audioValuesFromCommonSelect');
-    const defaults = [48000, 'm', 16, 'w'];
+    const defaults = [48000, 'm', 16, 'w', ...DefaultSliceOptions];
     let configValues = configString ? configString.match(/^\d+|[ms]|\d+|[wa]/g) : defaults;
-    configValues = configValues.length === 4 ? configValues : defaults;
-    let configData = configString && configValues.length === 4? {
+    configValues = configValues.length === 11 ? configValues : defaults;
+    let configData = configString && configValues.length === 11? {
         sr: +configValues[0],
         c: configValues[1],
         bd: +configValues[2],
-        f: configValues[3]
+        f: configValues[3],
+        go: configValues.slice(4)
     } : {
         sr: +document.getElementById('settingsSampleRate').value,
         c: +document.getElementById('channelsGroup').dataset.channels === 1 ? 'm' : 's',
         bd: +document.getElementById('bitDepthGroup').dataset.bitDepth,
-        f: document.getElementById('targetContainerGroup').dataset.container
+        f: document.getElementById('targetContainerGroup').dataset.container,
+        go: [0, ...[...document.querySelectorAll('.acoSliceGridOption')].map(go => +go.value)]
     };
 
     let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value || localStorage.getItem('workingSampleRate') || 44100);
@@ -296,7 +297,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     const selectionString = `${configData.f === 'a' ? 'AIF ' : ''}${configData.sr/1000}kHz/${configData.bd}BIT ${configData.c === 'm' ? 'MONO' : 'STEREO'}`;
     configOptionsEl.value = selectionString;
 
-    const selection = `${configData.sr}${configData.c}${configData.bd}${configData.f}`;
+    const selection = `${configData.sr}${configData.c}${configData.bd}${configData.f}${configData.go.join('-')}`;
     lastUsedAudioConfig = selection;
     localStorage.setItem('lastUsedAudioConfig', selection);
     localStorage.setItem('workingSampleRate', `${workingSR}`);
@@ -310,6 +311,12 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     masterBitDepth = configData.bd;
     masterChannels = configData.c === 'm' ? 1 : 2;
     targetContainer = configData.f;
+    sliceOptions = configData.go.map(g => +g);
+
+    sliceOptions.forEach((option, index) => changeSliceOption(
+      document.querySelector(`.master-slices .sel-${index}`), option,
+      true
+    ));
 
     if (!onloadRestore) {
         checkAndSetAudioContext();
@@ -630,8 +637,8 @@ const closeEditPanel = () => {
 };
 
 function checkShouldExportOtFile() {
-    return exportWithOtFile && masterSR === 44100 &&
-      targetContainer !== 'a';
+    return exportWithOtFile && targetSR === 44100 &&
+      targetContainer === 'w';
 }
 
 async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverride) {
@@ -1462,7 +1469,7 @@ function showExportSettingsPanel(page = 'settings') {
     <tr>
       <td style="border: none;"><span>Working Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
-          <div class="input-set" id="settingsWorkingSampleRateGroup">
+          <div class="input-set" id="settingsWorkingSampleRateGroup" style="display: flex; align-items: flex-start;">
               <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz" 
               onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
               onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
@@ -1481,7 +1488,7 @@ function showExportSettingsPanel(page = 'settings') {
   <tr>
       <td style="border: none;"><span>Target Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
-          <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup">
+          <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup" style="display: flex; align-items: flex-start;">
               <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz" 
               ${targetContainer === 'a' ? 'disabled="disabled"' : ''}
               onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
@@ -1544,28 +1551,44 @@ function showExportSettingsPanel(page = 'settings') {
         document.getElementById('settingsSampleRateGroup').classList.remove('disabled');
   }
   })(event, this);">
-        <button id="acoContainerw" data-container="w" class="check button${targetContainer !== 'w' ? '-outline' : ''}">WAV</button>
-          <button id="acoContainera" data-container="a" class="check button${targetContainer !== 'a' ? '-outline' : ''}">AIF</button>
+        <button id="acoContainerw" data-container="w" class="check button${targetContainer === 'w' ? '' : '-outline'}">WAV</button>
+          <button id="acoContainera" data-container="a" class="check button${targetContainer === 'a' ? '' : '-outline'}">AIF</button>
           </div>
       </td>
   </tr>
     <tr><td colspan="3"><span><small>Note: Choosing AIF will set the sample rate to 44100 and the bit depth to 16 bit.</small></span><br><br></td></tr>
   
   <tr>
+  
+  <tr>
+    <td><span>Slice Grid Options&nbsp;&nbsp;&nbsp;</span></td>
+    <td>
+        <div id="sliceGridGroup">
+           ${[1,2,3,4,5,6].map((g, i) => '<input id="gridSize' + g + '" placeholder="" type="number" class="acoSliceGridOption" onfocus="(() => {this.placeholder = this.value; this.value = \'\';})()" onblur="(() => { this.value = this.value || this.placeholder;})()" list="commonGridSizes" value="' + sliceOptions[i + 1] + '">').join('')}
+           <datalist id="commonGridSizes">
+                ${[2,4,8,10,12,15,16,24,30,32,48,60,64,128].map(
+          v => '<option value="' + v + '">').join('')}
+           </datalist>
+        </div>
+    </td>
+  </tr>
+  
   <td style="border-bottom: none;">
     <a class="button" style="margin: 2.5rem 2rem;" onclick="digichain.changeAudioConfig()">Apply Audio Settings</a>
   </td>
   <td style="border-bottom: none;">
     <select id="audioValuesFromCommonSelect" class="btn-audio-config" style="margin: 0 2rem; max-width: 25rem; float: right;" onchange="digichain.setAudioOptionsFromCommonConfig(event)">
         <option value="none" disabled selected>Common Configurations</option>
-        <option value="48000m16w">Digitakt</option>
-        <option value="44100s16w">Dirtywave M8</option>
-        <option value="44100s16w">Octatrack (16bit)</option>
-        <option value="44100s24w">Octatrack (24bit)</option>
-        <option value="44100s16a">OP-1 Field</option>
-        <option value="44100m16a">OP-1 / OP-Z</option>
-        <option value="44100m16w">Polyend Tracker</option>
-        <option value="44100s16w">Polyend Tracker Mini</option>
+        <option value="48000m16w0-4-8-16-32-64-128">Digitakt</option>
+        <option value="44100s16w0-4-8-16-32-64-128">Dirtywave M8</option>
+        <option value="48000m16w0-8-10-12-15-30-60">Model:Samples</option>
+        <option value="44100s16w0-4-8-16-32-48-64">Octatrack (16bit)</option>
+        <option value="44100s24w0-4-8-16-32-48-64">Octatrack (24bit)</option>
+        <option value="44100s16a0-4-8-12-16-20-24">OP-1 Field</option>
+        <option value="44100m16a0-4-8-12-16-20-24">OP-1 / OP-Z</option>
+        <option value="44100m16w0-4-8-16-24-32-48">Polyend Tracker</option>
+        <option value="44100s16w0-4-8-16-24-32-48">Polyend Tracker Mini</option>
+        <option value="48000m16w0-8-10-12-15-30-60">Rytm</option>
     </select>
   </td>
   </tr>
@@ -2331,7 +2354,7 @@ const invertFileSelection = () => {
 const changeSliceOption = (targetEl, size, silent = false) => {
     let newValue = size;
     if (!silent) {
-        newValue = prompt(`Change slice value "${size}" to what new value?`,
+        newValue = prompt(`Temporarily change slice value "${size}" to what new value?`,
           size);
     }
     if (newValue && !isNaN(newValue)) {

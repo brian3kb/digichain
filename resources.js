@@ -228,7 +228,7 @@ export function encodeOt(slices, bufferLength, tempo = 120) {
     return dv;
 }
 
-function deClick(audioArray, threshold) {
+export function deClick(audioArray, threshold) {
     const bufferLength = audioArray.length;
     if (!threshold || threshold === 0) {
         return audioArray;

@@ -1,6 +1,6 @@
 import {
     audioBufferToWav, bufferToFloat32Array,
-    buildOpData,
+    buildOpData, deClick,
     encodeAif,
     Resampler
 } from './resources.js';
@@ -883,6 +883,142 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
     item.waveform = false;
 }
 
+function paulStretchNot(event, item, renderEditPanel = true, stretchFactor = 2) {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = item.buffer.length;
+    }
+    item = item || editing;
+
+    const newLength = Math.round(item.buffer.length * stretchFactor);
+    const audioArrayBuffer = conf.audioCtx.createBuffer(
+      item.buffer.numberOfChannels,
+      newLength,
+      conf.masterSR
+    );
+
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        const inputData = item.buffer.getChannelData(channel);
+        const outputData = audioArrayBuffer.getChannelData(channel);
+
+        for (let i = 0; i < newLength; i++) {
+            const index = i / stretchFactor;
+            const leftIndex = Math.floor(index);
+            const rightIndex = Math.ceil(index);
+            const fraction = index - leftIndex;
+
+            outputData[i] = (1 - fraction) * inputData[leftIndex] + fraction * inputData[rightIndex];
+        }
+    }
+
+    item.buffer = audioArrayBuffer;
+
+    item.meta = {
+        ...item.meta,
+        length: audioArrayBuffer.length,
+        duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
+        startFrame: 0, endFrame: audioArrayBuffer.length
+    };
+    if (item.meta.slices && item.meta.slices.length > 0) {
+        item.meta.slices[item.meta.slices.length - 1].e = item.buffer.length;
+    }
+    if (renderEditPanel) {
+        showEditor(editing, conf, 'sample', folders);
+    }
+    item.waveform = false;
+}
+
+function roughStretch(event, item, renderEditPanel = true, stretchFactor = 2, addNStretch = false) {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = item.buffer.length;
+    }
+    item = item || editing;
+
+    let windowSize = 4 * conf.masterSR;
+    windowSize = windowSize > item.buffer.length / 16 ?
+        Math.floor(item.buffer.length / 16) : windowSize;
+
+    let stepSize = Math.floor(windowSize / 4);
+
+    let windowCount = Math.ceil(item.buffer.length / stepSize);
+
+    let windows = [];
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        windows.push([]);
+    }
+
+    for (let win = 0; win < windowCount; win++) {
+        for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+            const data = item.buffer.getChannelData(channel).slice(win * stepSize, (win * stepSize) + windowSize);
+            let winData = new Float32Array(data.length);
+            for (let w = 0; w < data.length; w++) {
+                winData[w] = data[w];
+                winData[w] = winData[w] > 1 ? 1: winData[w];
+                winData[w] = winData[w] < -1 ? -1 : winData[w];
+            }
+            windows[channel].push(winData);
+        }
+    }
+
+    const newLength = Math.round(item.buffer.length * stretchFactor);
+    const audioArrayBuffer = conf.audioCtx.createBuffer(
+      item.buffer.numberOfChannels,
+      newLength,
+      conf.masterSR
+    );
+
+    for (let winIdx = 0; winIdx < windowCount; winIdx++) {
+        let startPos = winIdx * (windowSize/2);
+        for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+            for (let i = 0; i < windows[channel][winIdx].length; i++) {
+                if (!audioArrayBuffer.getChannelData(channel)[startPos + i]) {
+                    audioArrayBuffer.getChannelData(channel)[startPos + i] = windows[channel][winIdx][i];
+                } else {
+                    audioArrayBuffer.getChannelData(channel)[startPos + i] = [startPos+i-2, startPos+i-1, startPos+i, startPos+i+1, startPos+i+2].reduce((acc, v) => acc + (audioArrayBuffer.getChannelData(channel)[v]??0 + windows[channel][winIdx][v]??0) , 0) / 5;
+                }
+
+            }
+        }
+    }
+
+    if (addNStretch) {
+        let regularStretchedBuffer = stretch(event, item, renderEditPanel, audioArrayBuffer.length, true);
+
+        for (let channel = 0; channel < audioArrayBuffer.numberOfChannels; channel++) {
+            for (let i = 0; i < audioArrayBuffer.length; i++) {
+                audioArrayBuffer.getChannelData(channel)[i] = (audioArrayBuffer.getChannelData(channel)[i] + regularStretchedBuffer.getChannelData(channel)[i]) / 2;
+            }
+
+            const deClickedBuffer = deClick(audioArrayBuffer.getChannelData(channel), 0.4);
+            audioArrayBuffer.copyToChannel(deClickedBuffer, channel);
+        }
+    } else {
+        for (let channel = 0; channel < audioArrayBuffer.numberOfChannels; channel++) {
+            const deClickedBuffer = deClick(audioArrayBuffer.getChannelData(channel), .4);
+            audioArrayBuffer.copyToChannel(deClickedBuffer, channel);
+        }
+    }
+
+    item.buffer = audioArrayBuffer;
+
+    item.meta = {
+        ...item.meta,
+        length: audioArrayBuffer.length,
+        duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
+        startFrame: 0, endFrame: audioArrayBuffer.length
+    };
+    if (item.meta.slices && item.meta.slices.length > 0) {
+        item.meta.slices[item.meta.slices.length - 1].e = item.buffer.length;
+    }
+    if (renderEditPanel) {
+        showEditor(editing, conf, 'sample', folders);
+    }
+    item.waveform = false;
+
+    //normalize(event, item, renderEditPanel);
+}
+
 function perSamplePitch(
   event, pitchValue, pitchSteps, item, renderEditPanel = true, volumeAdjust = 1,
   bitDepthOverride) {
@@ -896,7 +1032,7 @@ function perSamplePitch(
     }
 }
 
-function stretch(event, item, renderEditPanel = true, targetLength) {
+function stretch(event, item, renderEditPanel = true, targetLength, returnBufferOnly = false) {
     if (!renderEditPanel && item) {
         selection.start = 0;
         selection.end = item.buffer.length;
@@ -929,6 +1065,10 @@ function stretch(event, item, renderEditPanel = true, targetLength) {
                   item.buffer.getChannelData(channel)[upperIndex];
             }
         }
+    }
+
+    if (returnBufferOnly) {
+        return audioArrayBuffer;
     }
 
     item.buffer = audioArrayBuffer;
@@ -1142,6 +1282,7 @@ export const editor = {
     perSamplePitch,
     double,
     stretch,
+    roughStretch,
     buildOpKit,
     sliceUpdate,
     sliceCreate,

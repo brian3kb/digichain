@@ -837,6 +837,22 @@ function trimRightSelected(event) {
     }, 250);
 }
 
+function roughStretchSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    document.getElementById('loadingText').textContent = 'Processing';
+    document.body.classList.add('loading');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach((f, idx) => {
+            editor.roughStretch(event, f, false);
+            if (idx === selected.length - 1) {
+                document.body.classList.remove('loading');
+            }
+        });
+        renderList();
+    }, 250);
+}
+
 function shortenNameSelected(event, restore = false) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     document.getElementById('loadingText').textContent = 'Processing';
@@ -4516,6 +4532,7 @@ window.digichain = {
     removeSelected,
     toggleSelectedActionsList,
     trimRightSelected,
+    roughStretchSelected,
     truncateSelected,
     normalizeSelected,
     reverseSelected,

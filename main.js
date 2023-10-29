@@ -3678,7 +3678,24 @@ const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
             }
         }
 
-        const parsedFile = {
+        let dv = new DataView(buffer);
+        const sliceCount = dv.getUint8(376);
+        let slices = [];
+        for (let i = 280; i < 280 + (sliceCount * 2); i += 2) {
+            slices.push(dv.getUint16(i, true));
+        }
+        slices = slices.map(
+          slice => (slice / 65535) * (resampleBuffer || audioArrayBuffer).length
+        );
+        slices = slices.map((slice, sliceIdx) => ({
+            s: slice,
+            e: sliceIdx !== sliceCount - 1 ? slices[sliceIdx +
+            1] : (resampleBuffer || audioArrayBuffer).length,
+            l: -1,
+            n: `Slice ${sliceIdx + 1}`
+        }));
+
+        const parsedFile= {
             file: {
                 lastModified: file.lastModified,
                 name: getUniqueName(files, file.name),
@@ -3693,7 +3710,7 @@ const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
                 startFrame: 0, endFrame: (resampleBuffer ||audioArrayBuffer).length,
                 channel: (resampleBuffer ||audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
                 checked: true, id: uuid,
-                slices: false,
+                slices: slices.length > 1 ? slices : false,
                 note: noteFromFileName(file.name)
             }
         };

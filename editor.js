@@ -383,7 +383,7 @@ export function getNiceFileName(name, file, excludeExtension, includePath) {
         '')}${file.meta?.dupeOf ? '-d' : ''}${file.meta?.sliceNumber ? '-s' +
         file.meta.sliceNumber : ''}.wav` :
       name.replace(
-        /\.syx$|\.wav$|\.aif$|\.flac$|\.webm$|\.m4a$/, '');
+        /\.syx$|\.wav$|\.aif$|\.flac$|\.webm$|\.m4a$|\.pti$/, '');
     fname = (includePath && file.file.path) ? `${file.file.path.replace(/\//gi,
       '-')}` + fname : fname;
     return excludeExtension ? fname.replace(/\.[^.]*$/, '') : fname;

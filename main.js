@@ -3643,6 +3643,69 @@ const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
     }
 };
 
+const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
+    const uuid = file.uuid || crypto.randomUUID();
+    try {
+        const audioArrayBuffer = (masterSR !== 44100
+          ? new AudioContext(
+            {
+                sampleRate: 44100,
+                latencyHint: 'interactive'
+            })
+          : audioCtx).createBuffer(1, audioDataBuffer.length - 4, 44100);
+
+        for (let i = 0; i < audioDataBuffer.length - 4; i++) {
+            const v = audioDataBuffer[i] / 32768;
+            audioArrayBuffer.getChannelData(0)[i] = v < 0 ? Math.max(-1, v) : Math.min(v, 1);
+        }
+
+        let resampleBuffer;
+        if (masterSR !== 44100) {
+            let resample;
+            resample = new Resampler(44100, masterSR, 1,
+              audioArrayBuffer.getChannelData(0));
+            resample.resampler(resample.inputBuffer.length);
+
+            const resampleBuffer = audioCtx.createBuffer(
+              1,
+              resample.outputBuffer.length,
+              masterSR
+            );
+
+            for (let i = 0; i < resample.outputBuffer.length; i++) {
+                resampleBuffer.getChannelData(
+                  0)[i] = resample.outputBuffer[i];
+            }
+        }
+
+        const parsedFile = {
+            file: {
+                lastModified: file.lastModified,
+                name: getUniqueName(files, file.name),
+                filename: file.name,
+                path: fullPath.replace(file.name, ''),
+                size: file.size,
+                type: file.type
+            },
+            buffer: (resampleBuffer ||audioArrayBuffer), meta: {
+                length: (resampleBuffer ||audioArrayBuffer).length,
+                duration: Number((resampleBuffer ||audioArrayBuffer).length / masterSR).toFixed(3),
+                startFrame: 0, endFrame: (resampleBuffer ||audioArrayBuffer).length,
+                channel: (resampleBuffer ||audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
+                checked: true, id: uuid,
+                slices: false,
+                note: noteFromFileName(file.name)
+            }
+        };
+
+        files.push(parsedFile);
+        unsorted.push(uuid);
+        return uuid;
+    } catch (err) {
+        return {uuid, failed: true};
+    }
+};
+
 const parseWav = (
   audioArrayBuffer, arrayBuffer, file, fullPath = '', pushToTop = false,
   checked = true) => {
@@ -3866,7 +3929,7 @@ const addBlankFile = () => {
 };
 
 const consumeFileInput = (event, inputFiles) => {
-    const supportedAudioTypes = ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a'];
+    const supportedAudioTypes = ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a', 'pti'];
     const loadingEl = document.getElementById('loadingText');
     loadingEl.textContent = 'Loading samples';
     document.body.classList.add('loading');
@@ -3979,17 +4042,28 @@ const consumeFileInput = (event, inputFiles) => {
                 file.uuid = crypto.randomUUID();
                 file.fullPath = file.fullPath || '';
                 const buffer = e.target.result;
+
                 if (file.name.toLowerCase().endsWith('.syx') ||
-                  file.name.toLowerCase().endsWith('.aif')) {
+                  file.name.toLowerCase().endsWith('.aif') ||
+                  file.name.toLowerCase().endsWith('.pti')
+                ) {
                     // binary data
                     const bufferByteLength = buffer.byteLength;
                     const bufferUint8Array = new Uint8Array(buffer, 0,
                       bufferByteLength);
                     count.push(file.uuid);
-                    let result = file.name.toLowerCase().endsWith('.aif') ?
-                      await parseAif(buffer, bufferUint8Array, file,
-                        file.fullPath) :
-                      parseSds(bufferUint8Array, file, file.fullPath);
+                    let result;
+                    if(file.name.toLowerCase().endsWith('.aif')){
+                        result = await parseAif(buffer, bufferUint8Array, file,
+                          file.fullPath)
+                    }
+                    if (file.name.toLowerCase().endsWith('.syx')) {
+                        result = parseSds(bufferUint8Array, file, file.fullPath);
+                    }
+                    if (file.name.toLowerCase().endsWith('.pti')) {
+                        result = await parsePti(buffer, new Int16Array(buffer, 392), file,
+                          file.fullPath)
+                    }
                     if (result.failed) {
                         count.splice(count.findIndex(c => c === result.uuid),
                           1);

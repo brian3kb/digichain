@@ -965,6 +965,25 @@ body.grid-view .path-exceeds-127 {
     opacity: 1;
 }
 
+.op-key::after {
+    position: absolute;
+    line-height: 5rem;
+    padding-left: 1rem;
+    opacity: .35;
+}
+.op-key.key-0::after { content: 'kick'; }
+.op-key.key-1::after { content: 'kick alt'; }
+.op-key.key-2::after { content: 'snare'; }
+.op-key.key-3::after { content: 'snare'; }
+.op-key.key-4::after { content: 'rim'; }
+.op-key.key-5::after { content: 'clap'; }
+.op-key.key-6::after { content: 'tamb'; }
+.op-key.key-8::after { content: 'closed hat'; }
+.op-key.key-9::after { content: 'kick'; }
+.op-key.key-10::after { content: 'open hat'; }
+.op-key.key-13::after { content: 'ride'; }
+.op-key.key-15::after { content: 'crash'; }
+
 .sample-list {
     width: 40%;
     border: 1px solid;

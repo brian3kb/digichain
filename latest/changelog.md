@@ -1,3 +1,26 @@
+2023.11.04 1.4.9
+ - Store list in indexedDb for optional restoring of the last session on next load.
+ - Map the Ctrl key to the Cmd key for macOS keyboard shortcuts.
+ - Automatically ignore empty or nonsense cue markers (e.g. zero length or start/end greater than file length, end greater than start).
+ - Improve handling of joining chains with other chains/files and slice types.
+ - Normalize the slice-type to the common format when processing internally.
+ - Show the number of slices if the file has any on the slice-grid icon instead of OT/DC/OP text.
+ - Improved the speed of conversion between spaced/none-spaced chains from the slice panel.
+ - Allow users to change audio context when files are loaded without emptying list; An advisory message to confirm the action is shown, as the sample rates of all files in the list are internally resampled to the new context.
+ - Decoupled the working audio sample rate from the export audio sample rate. This allows users to work at 44.1kHz, but export to 48kHz for example without destructively resampling the list source buffers.
+ - Audio context options are now an audio config panel, allowing arbitrary sample rates, and choice of bit depth and channel combinations.
+ - A list of common configurations by hardware name are available in the audio config panel.
+ - Audio config panel has slice grid options inputs so last used values are remembered. These values are also updated as part of the common configs list options.
+ - 'Retain session data between browser refreshes?' setting on settings panel.
+ - Gain adjustment on the edit panel (Thanks to eljeff).
+ - Option in settings panel to download single files when Shift+Clicked to prevent accidental downloads being triggered.
+ - Added rough stretch to selected actions list, this attempts to retain pitch while doubling the duration of the sample.
+ - Importing of Polyend Tracker (OG) .pti instrument files (mono only).
+ - Toggle slice looping from the slice panel (useful for .ot exports).
+ - Toggle file looping point from the slice panel (useful for .ot exports).
+ - Correctly calculate the tempo and bar values on .ot exports.
+ - Create .ot button on slice panel to create a .ot metadata file independently of downloading of the audio file.
+
 2023.10.15 1.4.8
  - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.
  - Dual mono exports setting error.
@@ -7,7 +30,7 @@
  - Merge/Blend panel mono/pan controls not consistently updating UI when clicked.
  - Fixed rendering bugs with Firefox 118.x when page zoom higher than 100%.
  - Removed arcs in svg for better representation of the waveform graphics.
- - Ctrl + Click on the 'add samples' icon will add a blank sample (1 sample in length) to the list to use for padding chains.
+ - Ctrl + Click on the 'add samples' icon will add a blank sample (8 samples in length) to the list to use for padding chains.
 
 2023-08-31 1.4.7
  - Load samples from within zip files and Digitakt project files. (if max file limit setting is off, all files in the zip will be decompressed to memory, so be careful with zip sizes if setting that to off! If the zipped supported file count + file count already loaded is larger than the limit, the whole zip gets skipped).

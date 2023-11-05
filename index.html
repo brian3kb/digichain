@@ -1,330 +1,444 @@
 <!DOCTYPE html>
 <html lang="en-US">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name = "viewport" content = "width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
-  <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]">
-  <meta name="version" content="1.4.8">
-  <meta
-          name="description"
-          content="DigiChain makes the creation of sample chains as easy as possible; Edit, trim, reverse, crush, join, slice, convert; Drag-and-drop uncompressed wav, aif (OP-1 Field/OP-Z), flac, or syx (MachineDrum) audio files and converts them to wav files for transfer via the Elektron Transfer app, or to aif files for use on Teenage Engineering OP-1 Field / OP-Z, or record from direct playback with pop markers. Include slice data as cue markers for use on Dirtywave M8, or export with a .ot file for direct use on Octatrack. Converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. All processing is done in the browser, on *your* computer, no data is sent to a server, and there is no, and never will be any user tracking. The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
-  >
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-  <link rel="manifest" href="site.webmanifest">
-  <link rel="mask-icon" href="safari-pinned-tab.svg" color="#202124">
-  <meta name="apple-mobile-web-app-title" content="DigiChain">
-  <meta name="application-name" content="DigiChain">
-  <meta name="msapplication-TileColor" content="#202124">
-  <meta name="theme-color" content="#202124">
-  <meta name="google-site-verification" content="W97nmMeI8CcybxJA7gLG-CFeJmztv03Jh9_bTExYJLY">
-  <title>DigiChain</title>
-  <link rel="stylesheet" href="main.css">
-  <script type="module" src="./main.js"></script>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
+    <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]">
+    <meta name="version" content="1.4.9">
+    <meta
+            name="description"
+            content="DigiChain makes the creation of sample chains as easy as possible; Edit, trim, reverse, crush, join, slice, convert; Drag-and-drop uncompressed wav, aif (OP-1 Field/OP-Z), flac, or syx (MachineDrum) audio files and converts them to wav files for transfer via the Elektron Transfer app, or to aif files for use on Teenage Engineering OP-1 Field / OP-Z, or record from direct playback with pop markers. Include slice data as cue markers for use on Dirtywave M8, or export with a .ot file for direct use on Octatrack. Converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. All processing is done in the browser, on *your* computer, no data is sent to a server, and there is no, and never will be any user tracking. The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
+    >
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="manifest" href="site.webmanifest">
+    <link rel="mask-icon" href="safari-pinned-tab.svg" color="#202124">
+    <meta name="apple-mobile-web-app-title" content="DigiChain">
+    <meta name="application-name" content="DigiChain">
+    <meta name="msapplication-TileColor" content="#202124">
+    <meta name="theme-color" content="#202124">
+    <meta name="google-site-verification" content="W97nmMeI8CcybxJA7gLG-CFeJmztv03Jh9_bTExYJLY">
+    <title>DigiChain</title>
+    <link rel="stylesheet" href="main.css">
+    <script type="module" src="./main.js"></script>
 </head>
 
 <body ontouchstart="">
 
 <div id="alertNotServed" class="not-served-md pop-up">
-  <div class="content" style="text-align: center;">
-    <h2>DigiChain needs to be served from a web-server to function.</h2>
-  </div>
+    <div class="content" style="text-align: center;">
+        <h2>DigiChain needs to be served from a web-server to function.</h2>
+    </div>
 </div>
 
 <dialog id="infoPanelMd" class="dialog-pop-up">
-  <a class="float-right" onclick="document.getElementById('infoPanelMd').close();"><i class="gg-close"></i></a>
-  <div class="content"></div>
+    <a class="float-right" onclick="document.getElementById('infoPanelMd').close();"><i class="gg-close"></i></a>
+    <div class="content"></div>
 </dialog>
 
 <dialog id="exportSettingsPanel" class="dialog-pop-up">
-  <a class="float-right" onclick="document.getElementById('exportSettingsPanel').close();"><i class="gg-close"></i></a>
-  <div class="content"></div>
+    <a class="float-right" onclick="document.getElementById('exportSettingsPanel').close();"><i
+            class="gg-close"></i></a>
+    <div class="content"></div>
 </dialog>
 
 <dialog id="chainFileNameListPanel" class="dialog-pop-up">
-  <a class="float-right" onclick="document.getElementById('chainFileNameListPanel').close();"><i class="gg-close"></i></a>
-  <div class="content"></div>
+    <a class="float-right" onclick="document.getElementById('chainFileNameListPanel').close();"><i class="gg-close"></i></a>
+    <div class="content"></div>
 </dialog>
 
 <dialog id="splitOptions" class="dialog-pop-up">
-  <a class="float-right" onclick="digichain.closeSplitOptions(event)"><i class="gg-close"></i></a>
-  <p>
-    Choose how many slices to make from<br>'<span id="splitFileName"></span>'
-  </p>
-  <div class="waveform-container" data-waveform-width="1024">
-    <div><canvas id="splitPanelWaveform"></canvas>
-      <div id="sliceLines"></div>
+    <a class="float-right" onclick="digichain.closeSplitOptions(event)"><i class="gg-close"></i></a>
+    <p>
+        Choose how many slices to make from<br>'<span id="splitFileName"></span>'
+    </p>
+    <div class="waveform-container" data-waveform-width="1024">
+        <div>
+            <canvas id="splitPanelWaveform"></canvas>
+            <div id="sliceLines"></div>
+        </div>
     </div>
-  </div>
-  <div class="slice-group" data-slice-count="0">
-    <button title="Slice evenly into 2." onclick="digichain.splitSizeAction(event, 2)" class="button-outline check sel-0" data-sel="2">2</button>
-    <button title="Slice evenly into 4." onclick="digichain.splitSizeAction(event, 4)" class="button-outline check sel-1" data-sel="4">4</button>
-    <button title="Slice evenly into 8." onclick="digichain.splitSizeAction(event, 8)" class="button-outline check sel-2" data-sel="8">8</button>
-    <button title="Slice evenly into 16." onclick="digichain.splitSizeAction(event, 16)" class="button-outline check sel-3" data-sel="16">16</button>
-    <button title="Slice evenly into 32." onclick="digichain.splitSizeAction(event, 32)" class="button-outline check sel-4" data-sel="32">32</button>
-    <button title="Slice evenly into 64." onclick="digichain.splitSizeAction(event, 64)" class="button-outline check sel-5" data-sel="64">64</button>
-    <button title="Slice evenly into 128." onclick="digichain.splitSizeAction(event, 128)" class="button-outline check sel-6" data-sel="128">128</button>
-    <button title="Slice based on the contents of an Octatrack .ot file / OP-x aiff data / DigiChain DC wav data." id="sliceByOtButton" onclick="digichain.splitSizeAction(event, 'ot')" class="button-outline check sel-7 sel-ot is-ot-file" data-sel="ot">OT</button>
-    <button title="Slice by transient detection." id="sliceByTransientButton" onclick="digichain.splitSizeAction(event, 'transient', document.getElementById('transientThreshold').value)" class="button-outline check sel-transient" data-sel="transient">T</button>
-    <input title="Transient detection percentage threshold." type="number" id="transientThreshold" name="transientThreshold"
-           min="1" max="100" value="80">
-  </div>
-  <div class="float-left" style="max-width: 44%;">
-    <div class="float-left">
-      <label title="Load slices from a tape.json file." style="margin-top: 1rem; padding: 0 1rem;" class="button button-outline" for="uploadSliceFile">Slices from file...</label>
-      <input id="uploadSliceFile" onchange="digichain.splitFromFile(event)" type="file" />
+    <div class="slice-group" data-slice-count="0">
+        <button title="Slice evenly into 2." onclick="digichain.splitSizeAction(event, 2)"
+                class="button-outline check sel-0" data-sel="2">2
+        </button>
+        <button title="Slice evenly into 4." onclick="digichain.splitSizeAction(event, 4)"
+                class="button-outline check sel-1" data-sel="4">4
+        </button>
+        <button title="Slice evenly into 8." onclick="digichain.splitSizeAction(event, 8)"
+                class="button-outline check sel-2" data-sel="8">8
+        </button>
+        <button title="Slice evenly into 16." onclick="digichain.splitSizeAction(event, 16)"
+                class="button-outline check sel-3" data-sel="16">16
+        </button>
+        <button title="Slice evenly into 32." onclick="digichain.splitSizeAction(event, 32)"
+                class="button-outline check sel-4" data-sel="32">32
+        </button>
+        <button title="Slice evenly into 64." onclick="digichain.splitSizeAction(event, 64)"
+                class="button-outline check sel-5" data-sel="64">64
+        </button>
+        <button title="Slice evenly into 128." onclick="digichain.splitSizeAction(event, 128)"
+                class="button-outline check sel-6" data-sel="128">128
+        </button>
+        <button title="Slice based on the contents of an Octatrack .ot file / OP-x aiff data / DigiChain DC wav data."
+                id="sliceByOtButton" onclick="digichain.splitSizeAction(event, 'ot')"
+                class="button-outline check sel-7 sel-ot is-ot-file file-has-slice-data" data-sel="ot">OT
+        </button>
+        <button title="Slice by transient detection." id="sliceByTransientButton"
+                onclick="digichain.splitSizeAction(event, 'transient', document.getElementById('transientThreshold').value)"
+                class="button-outline check sel-transient" data-sel="transient">T
+        </button>
+        <input title="Transient detection percentage threshold." type="number" id="transientThreshold"
+               name="transientThreshold"
+               min="1" max="100" value="80">
     </div>
-    <div class="float-left slice-from-file-buttons hidden" style="margin-top: 1rem;
+    <div class="float-left" style="max-width: 44%;">
+        <div class="float-left">
+            <label title="Load slices from a tape.json file." style="margin-top: 1rem; padding: 0 1rem;"
+                   class="button button-outline" for="uploadSliceFile">Slices from file...</label>
+            <input id="uploadSliceFile" onchange="digichain.splitFromFile(event)" type="file"/>
+        </div>
+        <div class="float-left slice-from-file-buttons hidden" style="margin-top: 1rem;
     margin-left: 1rem;">
-      <button class="button-outline check sff-button sff-t1" onclick="digichain.splitFromTrack(event, 1)">T1</button>
-      <button class="button-outline check sff-button sff-t2" onclick="digichain.splitFromTrack(event, 2)">T2</button>
-      <button class="button-outline check sff-button sff-t3" onclick="digichain.splitFromTrack(event, 3)">T3</button>
-      <button class="button-outline check sff-button sff-t4" onclick="digichain.splitFromTrack(event, 4)">T4</button>
+            <button class="button-outline check sff-button sff-t1" onclick="digichain.splitFromTrack(event, 1)">T1
+            </button>
+            <button class="button-outline check sff-button sff-t2" onclick="digichain.splitFromTrack(event, 2)">T2
+            </button>
+            <button class="button-outline check sff-button sff-t3" onclick="digichain.splitFromTrack(event, 3)">T3
+            </button>
+            <button class="button-outline check sff-button sff-t4" onclick="digichain.splitFromTrack(event, 4)">T4
+            </button>
+        </div>
     </div>
-  </div>
-  <div class="split-right-action-buttons">
-    <button onclick="digichain.splitAction(event, false, true)" class="float-right button has-shift-mod" style="margin-top: 1rem;" title="Split the selected slices out to their own samples in the list.">Slice to samples</button>
-    <button onclick="digichain.splitAction(event, false, true, true)" class="float-right button button-outline" style="margin-top: 1rem; margin-right: .5rem;" title="Save the changes to the slices, if no slices are shown, slice markers will be cleared.">Save slices</button>
-    <div id="convertChainButton" class="clear" style="display: none;">
-      <button onclick="digichain.convertChain(event)" class="float-right button button-outline" title="Creates a new chain comprising of the slice markers displayed.">New Chain</button>
-      <button onclick="digichain.convertChain(event, true)" class="float-right button button-outline" title="Creates a new chain that is evenly spaced comprising of the slice markers displayed. (If the grid-size is set to a value, the new chain will be padded with the last slice)">New Spaced Chain</button>
+    <div class="split-right-action-buttons">
+        <button onclick="digichain.splitAction(event, false, true)" class="float-right button has-shift-mod"
+                style="margin-top: 1rem;" title="Split the selected slices out to their own samples in the list.">Slice
+            to samples
+        </button>
+        <button onclick="digichain.splitAction(event, false, true, true)" class="float-right button button-outline"
+                style="margin-top: 1rem; margin-right: .5rem;"
+                title="Save the changes to the slices, if no slices are shown, slice markers will be cleared.">Save slices
+        </button>
+        <div id="convertChainButton" class="clear" style="display: none;">
+            <button onclick="digichain.convertChain(event)" class="float-right button button-outline"
+                    title="Creates a new chain comprising of the slice markers displayed.">New Chain
+            </button>
+            <button onclick="digichain.convertChain(event, true)" class="float-right button button-outline"
+                    title="Creates a new chain that is evenly spaced comprising of the slice markers displayed. (If the grid-size is set to a value, the new chain will be padded with the last slice)">
+                New Spaced Chain
+            </button>
+            <button onclick="digichain.createOtMetaFile()" class="float-right button button-outline"
+                    title="Creates a new .ot file comprising of the slice markers displayed.
+            ">Create .ot</button>
+        </div>
     </div>
-  </div>
 </dialog>
 
-<dialog id="editPanel" class="dialog-pop-up" data-id="">
-  <a class="float-right" onclick="document.getElementById('editPanel').close(); digichain.renderList();digichain.stopPlayFile(false, digichain.editor.getLastItem());"><i class="gg-close"></i></a>
-  <fieldset id="editableItems"></fieldset>
-  <div id="editorPanelContent"></div>
+<dialog id="editPanel" class="dialog-pop-up" data-id="" onclose="digichain.closeEditPanel();">
+    <a class="float-right"
+       onclick="digichain.closeEditPanel();"><i
+            class="gg-close"></i></a>
+    <fieldset id="editableItems"></fieldset>
+    <div id="editorPanelContent"></div>
 </dialog>
 
 <div id="opExportPanel" class="op-export-side-panel-options" data-id="">
-  <a class="float-right" onclick="document.getElementById('opExportPanel').classList.remove('show');document.querySelector('.right-buttons').classList.remove('fade');"><i class="gg-close"></i></a>
-  <div id="opExportPanelContent"></div>
-  <a class="aif-link-hidden hidden" target="_blank"></a>
+    <a class="float-right"
+       onclick="document.getElementById('opExportPanel').classList.remove('show');document.querySelector('.right-buttons').classList.remove('fade');"><i
+            class="gg-close"></i></a>
+    <div id="opExportPanelContent"></div>
+    <a class="aif-link-hidden hidden" target="_blank"></a>
 </div>
 
 <dialog id="mergePanel" class="dialog-pop-up">
-  <a class="float-right" onclick="document.getElementById('mergePanel').close(); digichain.renderList();"><i class="gg-close"></i></a>
-  <div id="mergePanelContent"></div>
+    <a class="float-right" onclick="document.getElementById('mergePanel').close(); digichain.renderList();"><i
+            class="gg-close"></i></a>
+    <div id="mergePanelContent"></div>
 </dialog>
 
 <div class="pop-up-blind"></div>
 
 <div class="header-menu">
-  <div class="file-num">
-    <div for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</div>
-    <output class="float-left" id="fileNum">0/0</output>
-  </div>
-  <div id="toggleOptionsButton" class="collapsed" onclick="digichain.toggleOptionsPanel()"><i class="gg-select-r" title="Hide/show the top options panel."></i></div>
-  <div id="infoIndicator"></div>
+    <div class="file-num">
+        <div for="fileNum" class="float-left" style="padding-left: 1rem;">Loaded/Selected</div>
+        <output class="float-left" id="fileNum">0/0</output>
+    </div>
+    <div id="toggleOptionsButton" class="collapsed" onclick="digichain.toggleOptionsPanel()"><i class="gg-select-r"
+                                                                                                title="Hide/show the top options panel."></i>
+    </div>
+    <div id="infoIndicator"></div>
 </div>
 
 <div class="loading-message">
-  <div><i class="gg-spinner"></i><span id="loadingText" class="gradient-text">Loading samples</span></div>
+    <div><i class="gg-spinner"></i><span id="loadingText" class="gradient-text">Loading samples</span></div>
 </div>
 <div class="container">
-  <div id="allOptionsPanel" class="row all-options hidden">
-    <div class="column left-buttons">
+    <div id="allOptionsPanel" class="row all-options hidden">
+        <div class="column left-buttons">
 
-      <div class="row">
-        <label class="button button-clear load-file-label" for="uploadInput" aria="Load files..." title="Load files..."><i class="gg-file-add has-ctrl-mod-i"></i></label>
-        <input id="uploadInput" type="file" multiple/>
-          <select title="Change audio file export settings." onchange="digichain.changeAudioConfig(event)" data-selection="m4800016" class="btn-audio-config gg-calibrate" name="audioConfigOptions" id="audioConfigOptions">
-            <option value="m441008">44.1K/8BIT MONO</option>
-            <option value="s441008">44.1K/8BIT STEREO</option>
-            <option value="m4410016">44.1K/16BIT MONO</option>
-            <option value="s4410016">44.1K/16BIT STEREO</option>
-            <option value="m4410024">44.1K/24BIT MONO</option>
-            <option value="s4410024">44.1K/24BIT STEREO</option>
-            <option value="m4410032">44.1K/32BIT MONO</option>
-            <option value="s4410032">44.1K/32BIT STEREO</option>
-            <option value="m480008">48K/8BIT MONO</option>
-            <option value="s480008">48K/8BIT STEREO</option>
-            <option value="m4800016" selected>48K/16BIT MONO</option>
-            <option value="s4800016">48K/16BIT STEREO</option>
-            <option value="m4800024">48K/24BIT MONO</option>
-            <option value="s4800024">48K/24BIT STEREO</option>
-            <option value="m4800032">48K/32BIT MONO</option>
-            <option value="s4800032">48K/32BIT STEREO</option>
-            <option value="m4410016a">AIF 44.1K/16 MONO</option>
-            <option value="s4410016a">AIF 44.1K/16 STEREO</option>
-          </select>
-      </div>
-      <div class="row">
-        <button class="button" onclick="digichain.removeSelected()">Remove Selected</button>
-<!--      </div>-->
-<!--      <div class="row">-->
-        <button title="Reset list to the order in which files were added to the pool. Shift+click to randomize list." class="button button-outline has-shift-mod" onclick="digichain.sort(event, 'id')">Reset Sort/Order</button>
-      </div>
-      <div class="row">
-        <button title="Show actions that will affect all the currently selected samples." onclick="digichain.toggleSelectedActionsList(event)" class="button">Selected Actions</button>
-        <div class="selected-actions-button-list" style="display: none;">
+            <div class="row">
+                <label class="button button-clear load-file-label" for="uploadInput" aria="Load files..."
+                       title="Load files..."><i class="gg-file-add has-ctrl-mod-i"></i></label>
+                <input id="uploadInput" type="file" multiple/>
+                <input title="Change audio file export settings." onclick="digichain.showExportSettingsPanel('audio');"
+                        class="btn-audio-config gg-calibrate" name="audioConfigOptions"
+                        id="audioConfigOptions" readonly/>
+            </div>
+            <div class="row">
+                <button class="button" onclick="digichain.removeSelected()">Remove Selected</button>
+                <!--      </div>-->
+                <!--      <div class="row">-->
+                <button title="Reset list to the order in which files were added to the pool. Shift+click to randomize list."
+                        class="button button-outline has-shift-mod" onclick="digichain.sort(event, 'id')">Reset
+                    Sort/Order
+                </button>
+            </div>
+            <div class="row">
+                <button title="Show actions that will affect all the currently selected samples."
+                        onclick="digichain.toggleSelectedActionsList(event)" class="button">Selected Actions
+                </button>
+                <div class="selected-actions-button-list" style="display: none;">
 
-          <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)" class="button-outline">
-            Trim Right
-          </button>
-          <button title="Truncate all selected. 3 seconds is the default, shift+click to set custom length." onclick="digichain.truncateSelected(event)" class="button-outline has-shift-mod">
-            Truncate
-          </button>
-          <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)" class="button-outline">
-            Normalize
-          </button>
-          <br>
+                    <button title="Trim right all selected" onclick="digichain.trimRightSelected(event)"
+                            class="button-outline">
+                        Trim Right
+                    </button>
+                    <button title="Truncate all selected. 3 seconds is the default, shift+click to set custom length."
+                            onclick="digichain.truncateSelected(event)" class="button-outline has-shift-mod">
+                        Truncate
+                    </button>
+                    <button title="Normalize all selected" onclick="digichain.normalizeSelected(event)"
+                            class="button-outline">
+                        Normalize
+                    </button>
+                    <br>
 
-          <button title="Reverse all selected" onclick="digichain.reverseSelected(event)" class="button-outline">
-            Reverse
-          </button>
-          <button title="Pitch all selected up by 1 octave." onclick="digichain.pitchUpSelected(event)"
-                  class="button-outline">Pitch Up an Octave
-          </button>
-          <button title="Add a reversed version of the sample to the end of itself." onclick="digichain.pingPongSelected(event)"
-                  class="button-outline">Ping-Pong
-          </button>
-          <br>
+                    <button title="Reverse all selected" onclick="digichain.reverseSelected(event)"
+                            class="button-outline">
+                        Reverse
+                    </button>
+                    <button title="Pitch all selected up by 1 octave." onclick="digichain.pitchUpSelected(event)"
+                            class="button-outline">Pitch Up an Octave
+                    </button>
+                    <button title="Add a reversed version of the sample to the end of itself."
+                            onclick="digichain.pingPongSelected(event)"
+                            class="button-outline">Ping-Pong
+                    </button>
+                    <br>
 
-          <button title="Create small fade-in on all selected samples." onclick="digichain.fadeSelected(event, 'in')"
-                  class="button-outline">Fade In
-          </button>
-          <button title="Create small fade-out on all selected samples." onclick="digichain.fadeSelected(event, 'out')"
-                  class="button-outline">Fade Out
-          </button>
-          <button title="Introduces noise into the sample." onclick="digichain.fuzzSelected(event)"
-                  class="button-outline">Fuzz
-          </button>
-          <br>
+                    <button title="Create small fade-in on all selected samples."
+                            onclick="digichain.fadeSelected(event, 'in')"
+                            class="button-outline">Fade In
+                    </button>
+                    <button title="Create small fade-out on all selected samples."
+                            onclick="digichain.fadeSelected(event, 'out')"
+                            class="button-outline">Fade Out
+                    </button>
+                    <button title="Introduces noise into the sample." onclick="digichain.fuzzSelected(event)"
+                            class="button-outline">Fuzz
+                    </button>
+                    <br>
 
-          <button title="Crushes the sample, shift+click to set custom amount between 1 and 128 (default is 25)." onclick="digichain.crushSelected(event)"
-                  class="button-outline has-shift-mod">Crush
-          </button>
-          <button title="Stretch all selected samples to the same length as the shortest sample in the selection. Hold shift to set a custom length in seconds." onclick="digichain.stretchSelected(event, true)"
-                  class="button-outline has-shift-mod">Stretch Shortest
-          </button>
-          <button title="Stretch all selected samples to the same length as the longest sample in the selection. Hold shift to set a custom length in seconds."  onclick="digichain.stretchSelected(event)"
-                  class="button-outline has-shift-mod">Stretch Longest
-          </button>
-          <br>
+                    <button title="Crushes the sample, shift+click to set custom amount between 1 and 128 (default is 25)."
+                            onclick="digichain.crushSelected(event)"
+                            class="button-outline has-shift-mod">Crush
+                    </button>
+                    <button title="Stretch all selected samples to the same length as the shortest sample in the selection. Hold shift to set a custom length in seconds."
+                            onclick="digichain.stretchSelected(event, true)"
+                            class="button-outline has-shift-mod">Stretch Shortest
+                    </button>
+                    <button title="Stretch all selected samples to the same length as the longest sample in the selection. Hold shift to set a custom length in seconds."
+                            onclick="digichain.stretchSelected(event)"
+                            class="button-outline has-shift-mod">Stretch Longest
+                    </button>
+                    <br>
 
-          <button title="Serialize stereo samples to mono, left and right channels." onclick="digichain.serializeSelected(event, 'LR')"
-                  class="button-outline">Serialize L/R
-          </button>
-          <button title="Serialize stereo samples to mono, side and mid." onclick="digichain.serializeSelected(event, 'SD')"
-                  class="button-outline">Serialize S/M
-          </button>
-          <button title="Serialize stereo samples to mono, left and right channels, side and mid." onclick="digichain.serializeSelected(event, 'LRSD')"
-                  class="button-outline">Serialize L/R/S/M
-          </button>
-          <br>
-          <button title="Shorten the file path and name of selected." onclick="digichain.shortenNameSelected(event)"
-                  class="button-outline">Shorten Names
-          </button>
-          <button title="Restore the original file path and name of selected." onclick="digichain.shortenNameSelected(event, true)"
-                  class="button-outline">Restore Names
-          </button>
+                    <button title="Serialize stereo samples to mono, left and right channels."
+                            onclick="digichain.serializeSelected(event, 'LR')"
+                            class="button-outline">Serialize L/R
+                    </button>
+                    <button title="Serialize stereo samples to mono, side and mid."
+                            onclick="digichain.serializeSelected(event, 'SD')"
+                            class="button-outline">Serialize S/M
+                    </button>
+                    <button title="Serialize stereo samples to mono, left and right channels, side and mid."
+                            onclick="digichain.serializeSelected(event, 'LRSD')"
+                            class="button-outline">Serialize L/R/S/M
+                    </button>
+                    <br>
+                    <button title="Shorten the file path and name of selected."
+                            onclick="digichain.shortenNameSelected(event)"
+                            class="button-outline">Shorten Names
+                    </button>
+                    <button title="Restore the original file path and name of selected."
+                            onclick="digichain.shortenNameSelected(event, true)"
+                            class="button-outline">Restore Names
+                    </button>
+                    <button title="Roughly stretch all selected x2" onclick="digichain.roughStretchSelected(event)"
+                            class="button-outline">
+                        Rough Stretch
+                    </button>
+                </div>
+                <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)"
+                        class="button button-outline" style="width: 23%;">Merge
+                </button>
+                <button title="Blend all selected to new sample" onclick="digichain.showBlendPanel(event)"
+                        class="button button-outline" style="width: 23%;">Blend
+                </button>
+            </div>
         </div>
-        <button title="Merge/mix-down all selected" onclick="digichain.showMergePanel(event)"
-                class="button button-outline" style="width: 23%;">Merge
-        </button>
-        <button title="Blend all selected to new sample" onclick="digichain.showBlendPanel(event)"
-                class="button button-outline" style="width: 23%;">Blend
-        </button>
-      </div>
-    </div>
-    <div class="column">
-    </div>
-    <div class="column-33 right-buttons">
-      <div class="download-buttons">
-        <button title="Download all the selected samples converted to the current audio context as a zip file (with folder structure retained). Shift+click to get the files in a zip with their folders flattened into the file names." class="btn-download btn-download-all has-shift-mod" onclick="digichain.downloadAll(event)"><i class="gg-software-download"></i><span class="selection-count"> - </span></button>
-        <button title="Export settings" onclick="digichain.showExportSettingsPanel(event)" class="button-clear toggle-export-settings"><i class="gg-options"></i></button>
-        <button title="Help info enabled" onclick="digichain.toggleHelp()" class="button-clear toggle-help-panel fade">?</button>
+        <div class="column">
+        </div>
+        <div class="column-33 right-buttons">
+            <div class="download-buttons">
+                <button title="Download all the selected samples converted to the current audio context as a zip file (with folder structure retained). Shift+click to get the files in a zip with their folders flattened into the file names."
+                        class="btn-download btn-download-all has-shift-mod" onclick="digichain.downloadAll(event)"><i
+                        class="gg-software-download"></i><span class="selection-count"> - </span></button>
+                <button title="Export settings" onclick="digichain.showExportSettingsPanel()"
+                        class="button-clear toggle-export-settings"><i class="gg-options"></i></button>
+                <button title="Help info enabled" onclick="digichain.toggleHelp()"
+                        class="button-clear toggle-help-panel fade">?
+                </button>
 
-<!--<button title="OP-x Export" onclick="digichain.showEditPanel(event, false, 'opExport')" class="button-clear toggle-export-settings hidden" style="line-height: 5rem;">OP</button>-->
+                <!--<button title="OP-x Export" onclick="digichain.showEditPanel(event, false, 'opExport')" class="button-clear toggle-export-settings hidden" style="line-height: 5rem;">OP</button>-->
 
-        <button title="Seconds per file. Enabling will disable the slice grid options. Samples longer than seconds per file will not be included in the output chains." onclick="digichain.toggleSecondsPerFile(event)" class="button-clear toggle-seconds-per-file"><i class="gg-alarm"></i><span>off</span></button>
+                <button title="Seconds per file. Enabling will disable the slice grid options. Samples longer than seconds per file will not be included in the output chains."
+                        onclick="digichain.toggleSecondsPerFile(event)" class="button-clear toggle-seconds-per-file"><i
+                        class="gg-alarm"></i><span>off</span></button>
 
-      </div>
-      <div class="slice-group master-slices" title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
-        <button style="margin-left: -0.4rem;" title="Turn off slice grid. Shift+click turns off the grid without changing the number of selected samples. Ctrl+click restores default grid size values." onclick="digichain.selectSliceAmount(event, 0)" class="button check has-shift-mod has-ctrl-mod sel-0 slice-grid-off" data-sel="0">Off</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[1])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-1" data-sel="1" title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">4</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[2])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-2" data-sel="2"  title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">8</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[3])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-3" data-sel="3"  title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">16</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[4])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-4" data-sel="4"  title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">32</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[5])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-5" data-sel="5"  title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">64</button>
-        <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[6])" class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-6" data-sel="6"  title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">120</button><br>
-        <button title="Download the selected samples joined, spaced evenly. Shift+click will resample back to the list." class="dl-spaced has-shift-mod" onclick="digichain.joinAll(event, true)"><i class="gg-software-download"></i><span class="join-count"> -  Spaced Chains</span></button>
-        <button title="Download the selected samples joined. Shift+click will resample back to the list." class="btn-download has-shift-mod" onclick="digichain.joinAll(event)"><i class="gg-software-download"></i><span class="join-count join-count-chain"> - Chains</span></button>
-        <a id="getJoined">_</a>
-      </div>
+            </div>
+            <div class="slice-group master-slices"
+                 title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
+                <button style="margin-left: -0.4rem;"
+                        title="Turn off slice grid. Shift+click turns off the grid without changing the number of selected samples. Ctrl+click restores default grid size values."
+                        onclick="digichain.selectSliceAmount(event, 0)"
+                        class="button check has-shift-mod has-ctrl-mod sel-0 slice-grid-off" data-sel="0">Off
+                </button>
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[1])"
+                        class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-1" data-sel="1"
+                        title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
+                    4
+                </button>
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[2])"
+                        class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-2" data-sel="2"
+                        title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
+                    8
+                </button>
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[3])"
+                        class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-3" data-sel="3"
+                        title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
+                    16
+                </button>
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[4])"
+                        class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-4" data-sel="4"
+                        title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
+                    32
+                </button>
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[5])"
+                        class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-5" data-sel="5"
+                        title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
+                    64
+                </button>
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[6])"
+                        class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-6" data-sel="6"
+                        title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
+                    120
+                </button>
+                <br>
+                <button title="Download the selected samples joined, spaced evenly. Shift+click will resample back to the list."
+                        class="dl-spaced has-shift-mod" onclick="digichain.joinAll(event, true)"><i
+                        class="gg-software-download"></i><span class="join-count"> -  Spaced Chains</span></button>
+                <button title="Download the selected samples joined. Shift+click will resample back to the list."
+                        class="btn-download has-shift-mod" onclick="digichain.joinAll(event)"><i
+                        class="gg-software-download"></i><span class="join-count join-count-chain"> - Chains</span>
+                </button>
+                <a id="getJoined">_</a>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="row">
-    <div class="column">
-      <table id="masterList">
-        <thead>
-        <tr>
-          <th class="w-0"></th>
-          <th class="w-0"><a title="Click to sort. Shift+Click will keep the selected items grouped to the top of the list." onclick="digichain.selectedHeaderClick(event, 'checked')" class="sort-by-selected has-ctrl-mod-i">Selected</a></th>
-          <th class="w-0"></th>
-          <th></th>
-          <th style="width: 180px;"></th>
-          <th>
-            <a title="Click to sort. Shift+Click will keep the selected items grouped to the top of the list." onclick="digichain.sort(event, 'name', 'file')" class="has-shift-mod-i">Filename / Download</a>
-            <a title="Click to sort." onclick="digichain.sort(event, 'sliceNumber')" class="has-shift-mod-i"> - slice # </a>
-            <a title="Click to sort." onclick="digichain.sort(event, 'note')" class="has-shift-mod-i"> - note - </a>
-          </th>
-          <th><a title="Click to sort." id="lengthHeaderLink" onclick="digichain.sort(event, 'length')" class="has-shift-mod-i">Length (s)</a></th>
-          <th class="w-0"></th>
-          <th class="w-0"></th>
-          <th class="w-0"></th>
-          <th class="w-0"></th>
-          <th class="w-0">
-            <button title="Chain Name List" onclick="digichain.toggleChainNamePanel(event)" class="button-clear chain-name-toggle is-chain-count fade">
-              <i class="gg-stack has-ctrl-mod-i"></i>
-            </button>
-          </th>
-        </tr>
-        </thead>
-        <tbody id="fileList"></tbody>
-      </table>
+    <div class="row">
+        <div class="column">
+            <table id="masterList">
+                <thead>
+                <tr>
+                    <th class="w-0"></th>
+                    <th class="w-0"><a
+                            title="Click to sort. Shift+Click will keep the selected items grouped to the top of the list."
+                            onclick="digichain.selectedHeaderClick(event, 'checked')"
+                            class="sort-by-selected has-ctrl-mod-i">Selected</a></th>
+                    <th class="w-0"></th>
+                    <th></th>
+                    <th style="width: 180px;"></th>
+                    <th>
+                        <a title="Click to sort. Shift+Click will keep the selected items grouped to the top of the list."
+                           onclick="digichain.sort(event, 'name', 'file')" class="has-shift-mod-i">Filename /
+                            Download</a>
+                        <a title="Click to sort." onclick="digichain.sort(event, 'sliceNumber')"
+                           class="has-shift-mod-i"> - slice # </a>
+                        <a title="Click to sort." onclick="digichain.sort(event, 'note')" class="has-shift-mod-i"> -
+                            note - </a>
+                    </th>
+                    <th><a title="Click to sort." id="lengthHeaderLink" onclick="digichain.sort(event, 'length')"
+                           class="has-shift-mod-i">Length (s)</a></th>
+                    <th class="w-0"></th>
+                    <th class="w-0"></th>
+                    <th class="w-0"></th>
+                    <th class="w-0"></th>
+                    <th class="w-0">
+                        <button title="Chain Name List" onclick="digichain.toggleChainNamePanel(event)"
+                                class="button-clear chain-name-toggle is-chain-count fade">
+                            <i class="gg-stack has-ctrl-mod-i"></i>
+                        </button>
+                    </th>
+                </tr>
+                </thead>
+                <tbody id="fileList"></tbody>
+            </table>
+        </div>
     </div>
-  </div>
-  <div class="row info-panel">
-    <div class="column column-35 column-offset-75 logo">
-      <h3 class="float-right" style="margin-top: -4rem;" data-version="development">DigiChain <i class="gg-info float-right" style="cursor: pointer;" onclick="digichain.showInfo()"></i> </h3>
+    <div class="row info-panel">
+        <div class="column column-35 column-offset-75 logo">
+            <h3 class="float-right" style="margin-top: -4rem;" data-version="development">DigiChain <i
+                    class="gg-info float-right" style="cursor: pointer;" onclick="digichain.showInfo()"></i></h3>
+        </div>
     </div>
-  </div>
 </div>
 
 <div class="touch-buttons hidden">
-  <button id="modifierKeyshiftKey" title="Locks the shift key (useful for touch users with no keyboard access)." onclick="digichain.toggleModifier('shiftKey')" class="button-outline">SHIFT</button>
-  <button id="modifierKeyctrlKey" title="Locks the ctrl key (useful for touch users with no keyboard access)." onclick="digichain.toggleModifier('ctrlKey')" class="button-outline">CTRL</button>
+    <button id="modifierKeyshiftKey" title="Locks the shift key (useful for touch users with no keyboard access)."
+            onclick="digichain.toggleModifier('shiftKey')" class="button-outline">SHIFT
+    </button>
+    <button id="modifierKeyctrlKey" title="Locks the ctrl key (useful for touch users with no keyboard access)."
+            onclick="digichain.toggleModifier('ctrlKey')" class="button-outline">CTRL
+    </button>
 </div>
 
 <div class="help-text fade hidden"></div>
 
 <script>
-  if (location.origin.startsWith('file:')) {
-    document.getElementById('alertNotServed').classList.add('show');
-  }
+    if (location.origin.startsWith('file:')) {
+        document.getElementById('alertNotServed').classList.add('show');
+    }
 
-  if ( window.location !== window.parent.location ) {
-    document.documentElement.classList.add('scaled');
-  }
+    if (window.location !== window.parent.location) {
+        document.documentElement.classList.add('scaled');
+    }
 
-  if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.pathname.includes('latest') && window.location === window.parent.location) {
-    window.addEventListener('load', async () => {
-      try {
-        let reg;
-          reg = await navigator.serviceWorker.register('sw.js', {
-            type: 'module',
-          });
-      } catch (err) {
-        console.log('Service worker registration failed: ', err);
-      }
-    });
-  }
+    if ('serviceWorker' in navigator && !location.origin.includes('localhost') &&
+      !location.pathname.includes('latest') && window.location === window.parent.location) {
+        window.addEventListener('load', async () => {
+            try {
+                let reg;
+                reg = await navigator.serviceWorker.register('sw.js', {
+                    type: 'module'
+                });
+            } catch (err) {
+                console.log('Service worker registration failed: ', err);
+            }
+        });
+    }
 </script>
-
+<div style="position: fixed; bottom: 0; left: 0; opacity: .33;"><img src="https://github.com/brian3kb/digichain/raw/main/digichain.gif" alt="DigiChain"></div>
 </body>
 </html>

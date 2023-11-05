@@ -1,0 +1,23 @@
+Do some testing around sending a file buffer via sysex directly to the Digitakt?
+
+Ogg Vorbis import/export
+
+Input recorder
+
+Move Delete and Duplicate icons into a drop-down menu on the sample list.
+Add Download to the drop-down menu.
+Add Transfer to the drop-down menu.
+Resample.
+
+Move Selected Actions drop-down into a modal window.
+For those actions that have secondary parameters, expose via the modal panel
+
+Investigate having pitch changes on edit panel as value, then have the playFile do the pitch shift on playback, and only apply the pitch change to the file when the panel closes or the users clicks apply pitch-change - would help reduce audio degradation when fine-tuning pitch on sample editor.
+
+
+Investigate alternative ways to pitch sample, as resampling via SR reduction errors if going lower or higher than the browsers/machines supported samplerate ranges.
+
+[done] Change the Audio Config dropdown into a tab on the settings panel.
+[done] Dropdown with devices list to set the target settings {Digitakt, Tracker, OP-1F, etc}; Master Sample Rate : [number input box max 48000, min 8]; For inputboxes, have drop down options like on the folder select on edit panel with the common options.
+[done] Change codebase to use targetSR on the audioencode method in resources, all other audio manipulation should be done at the masterSR.
+[fixed] Live changing audio sample rate is screwing up the slices and pitching the audio oddly - might need to disable/remove.

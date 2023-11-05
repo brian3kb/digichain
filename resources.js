@@ -1,5 +1,3 @@
-import {bufferRateResampler} from './main.js';
-
 export function buildOpData(slices = [], numChannels, returnTemplate = false) {
     const template = slices?.length ? {
         attack: new Array(24).fill(0),
@@ -247,7 +245,7 @@ function getResampleIfNeeded(meta, buffer, sampleRate) {
     const targetSR = meta.renderAt || sampleRate;
     const targetAudioCtx = new AudioContext(
       {sampleRate: targetSR, latencyHint: 'interactive'});
-    return bufferRateResampler({
+    return digichain.bufferRateResampler({
         file: {sampleRate: targetSR},
         meta,
         buffer

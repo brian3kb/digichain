@@ -4751,5 +4751,6 @@ window.digichain = {
     removeMetaFile,
     getSlicesFromMetaFile,
     setAudioOptionsFromCommonConfig,
+    bufferRateResampler,
     editor
 };

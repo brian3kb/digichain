@@ -362,7 +362,7 @@ function checkAudioContextState() {
     return false;
 }
 
-export function bufferRateResampler(f, workingSR, audioCtxOverride)  {
+function bufferRateResampler(f, workingSR, audioCtxOverride)  {
     let audioBuffer, slices;
     let channel0 = (f.buffer.channel0 || f.buffer.getChannelData(0));
     let channel1 = f.buffer.numberOfChannels === 2 ? (f.buffer.channel1 || f.buffer.getChannelData(1)) : false;

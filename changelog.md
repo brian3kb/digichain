@@ -1,4 +1,4 @@
-latest
+2023.11.04 1.4.9
  - Store list in indexedDb for optional restoring of the last session on next load.
  - Map the Ctrl key to the Cmd key for macOS keyboard shortcuts.
  - Automatically ignore empty or nonsense cue markers (e.g. zero length or start/end greater than file length, end greater than start).

@@ -19,6 +19,7 @@ latest
  - Toggle slice looping from the slice panel (useful for .ot exports).
  - Toggle file looping point from the slice panel (useful for .ot exports).
  - Correctly calculate the tempo and bar values on .ot exports.
+ - Create .ot button on slice panel to create a .ot metadata file independently of downloading of the audio file.
 
 2023.10.15 1.4.8
  - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.

@@ -16,6 +16,9 @@ latest
  - Option in settings panel to download single files when Shift+Clicked to prevent accidental downloads being triggered.
  - Added rough stretch to selected actions list, this attempts to retain pitch while doubling the duration of the sample.
  - Importing of Polyend Tracker (OG) .pti instrument files (mono only).
+ - Toggle slice looping from the slice panel (useful for .ot exports).
+ - Toggle file looping point from the slice panel (useful for .ot exports).
+ - Correctly calculate the tempo and bar values on .ot exports.
 
 2023.10.15 1.4.8
  - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.

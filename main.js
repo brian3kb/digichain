@@ -16,6 +16,7 @@ Brian referenced the following during development:
 [BSD-3] MIDI-SDS, for how the Machine Drum stores audio data in syx files : <https://github.com/eh2k/uwedit/blob/master/core/MidiSDS.cpp> / <https://github.com/eh2k/uwedit/blob/master/LICENSE.txt>
 [Unlicense] OctaChainer, how to read/write .ot binary files correctly : <https://github.com/KaiDrange/OctaChainer/blob/master/otwriter.cpp> / <https://github.com/KaiDrange/OctaChainer/blob/master/License.txt>
 Tips and Tricks on drawing array buffers to the canvas element: <https://css-tricks.com/making-an-audio-waveform-visualizer-with-vanilla-javascript/>
+[MIT License] Basic beat detection : https://github.com/JMPerez/beats-audio-api/blob/gh-pages/script.js / http://joesul.li/van/beat-detection-using-web-audio/
 */
 import {
     Resampler,
@@ -25,7 +26,7 @@ import {
     joinToMono,
     joinToStereo,
     bufferToFloat32Array,
-    getSupportedSampleRates
+    getSupportedSampleRates, detectTempo
 } from './resources.js';
 import {
     editor,
@@ -155,12 +156,14 @@ metaFiles.getByFile = function(file) {
             name: file.file.name,
             path: file.file.path,
             cssClass: 'is-dc-file',
+            otLoop: file.meta.otLoop??0,
+            otLoopStart: file.meta.otLoopStart??0,
             sliceCount: file.meta.slices.length,
             slices: file.meta.slices.map(
               slice => ({
                   startPoint: slice.s,
                   endPoint: slice.e,
-                  loopPoint: slice.l || -1,
+                  loopPoint: slice.l ?? -1,
                   name: slice.n || slice.name || '',
                   p: slice.p ?? 16384,
                   pab: slice.pab ?? false,
@@ -636,8 +639,8 @@ const closeEditPanel = () => {
     digichain.renderList();
 };
 
-function checkShouldExportOtFile() {
-    return exportWithOtFile && targetSR === 44100 &&
+function checkShouldExportOtFile(skipExportWithCheck = false) {
+    return (exportWithOtFile || skipExportWithCheck) && targetSR === 44100 &&
       targetContainer === 'w';
 }
 
@@ -722,8 +725,8 @@ async function downloadAll(event) {
                   fileName.replace('.wav', '.aif') :
                   fileName;
                 zip.file(fileName, wav.blob, {binary: true});
-                let otFile = createAndSetOtFileLink(
-                  file.meta.slices ?? [], file.buffer.length, fileName);
+                let otFile = await createAndSetOtFileLink(
+                  file.meta.slices ?? [], file, fileName);
                 if (otFile) {
                     zip.file(otFile.name, otFile.blob, {binary: true});
                 }
@@ -733,8 +736,8 @@ async function downloadAll(event) {
                   fileName.replace('.wav', '.aif') :
                   fileName;
                 zip.file(file.file.path + fileName, wav.blob, {binary: true});
-                let otFile = createAndSetOtFileLink(
-                  file.meta.slices ?? [], file.buffer.length, fileName);
+                let otFile = await createAndSetOtFileLink(
+                  file.meta.slices ?? [], file, fileName);
                 if (otFile) {
                     zip.file(file.file.path + otFile.name, otFile.blob,
                       {binary: true});
@@ -773,8 +776,8 @@ async function downloadFile(id, fireLink = false, event = {}) {
     const file = getFileById(id);
     const renderAsAif = targetContainer === 'a';
     await setWavLink(file, el, renderAsAif, true);
-    let otFile = createAndSetOtFileLink(
-        file.meta.slices ?? [], file.buffer.length, file.file.name, metaEl);
+    let otFile = await createAndSetOtFileLink(
+        file.meta.slices ?? [], file, file.file.name, metaEl);
     if (fireLink && (!shiftClickForFileDownload || (shiftClickForFileDownload && event.shiftKey))) {
         el.click();
         if (otFile) {metaEl.click(); }
@@ -2033,8 +2036,8 @@ async function joinAll(
               fileData.file.name.replace('.wav', '.aif') :
               fileData.file.name;
             zip.file(fileData.file.name, wav.blob, {binary: true});
-            let otFile = createAndSetOtFileLink(
-              fileData.meta.slices ?? [], fileData.buffer.length,
+            let otFile = await createAndSetOtFileLink(
+              fileData.meta.slices ?? [], fileData,
               fileData.file.name);
             if (otFile) {
                 zip.file(otFile.name, otFile.blob, {binary: true});
@@ -2042,8 +2045,8 @@ async function joinAll(
         } else {
             await setWavLink(fileData, joinedEl, renderAsAif, true);
             joinedEl.click();
-            let otFile = createAndSetOtFileLink(
-              fileData.meta.slices ?? [], fileData.buffer.length,
+            let otFile = await createAndSetOtFileLink(
+              fileData.meta.slices ?? [], fileData,
               fileData.file.name, joinedEl);
             if (otFile) {joinedEl.click(); }
         }
@@ -2264,6 +2267,42 @@ const playSlice = (event, id, startPoint, endPoint, loop) => {
         playFile(event, id, loop, start, end);
     }
 };
+
+function sliceAction(event, id, params) {
+    const file = getFileById(id);
+    const lineEl = event.target.closest('.line');
+    if (
+      (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) &&
+      (event.shiftKey || modifierKeys.shiftKey)
+    ) {
+        document.getElementById('splitOptions').querySelectorAll(`div.line`).forEach(line => {
+            line.classList.remove('file-loop-on');
+            line.classList.remove('file-loop-pp');
+        });
+        const sliceLinesEl = document.getElementById('sliceLines');
+        file.meta.otLoop = parseInt(file.meta?.otLoop) < 2 ? file.meta.otLoop+1 : 0;
+        if (file.meta.otLoop === 0) {
+            file.meta.otLoopStart = 0;
+        } else {
+            [...document.getElementById('splitOptions').querySelectorAll(`div.line`)].slice(+lineEl.dataset.idx).forEach(
+              (line, idx) => line.classList.add(file.meta.otLoop === 1 ? 'file-loop-on' : 'file-loop-pp')
+            );
+            file.meta.otLoopStart = +params.startPoint;
+        }
+        return;
+    }
+
+    if ((event.ctrlKey || event.metaKey || modifierKeys.ctrlKey)) {
+        playSlice(event, id, +params.startPoint, +params.endPoint, params.loop);
+    }
+    if ((event.shiftKey || modifierKeys.shiftKey)) {
+        const slice = file.meta.slices[+lineEl.dataset.idx];
+        if (slice) {
+            lineEl.classList.toggle('slice-loop');
+            slice.l = slice.l === -1 ? slice.s : -1;
+        }
+    }
+}
 
 const toggleCheck = (event, id, silent = false) => {
     try {
@@ -2891,7 +2930,7 @@ const drawSliceLines = (slices, file, otMeta) => {
     if (file && otMeta) {
         let scaleSize = file.buffer.length / waveformWidth;
         lines = otMeta.slices.map((slice, idx) => `
-      <div class="line" data-idx="${idx}" onclick="digichain.playSlice(event, '${file.meta.id}', '${slice.startPoint}', '${slice.endPoint}')" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')" 
+      <div class="line ${slice.loopPoint !== -1 ? 'slice-loop' : ''} ${(file.meta?.otLoop === 1 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-on' : ''} ${(file.meta?.otLoop === 2 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-pp' : ''}" data-idx="${idx}" onclick="digichain.sliceAction(event, '${file.meta.id}', {startPoint: '${slice.startPoint}', endPoint: '${slice.endPoint}'})" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')" 
       title="${slice.name || ('Slice ' + (idx + 1))}"
       style="margin-left:${(slice.startPoint /
           scaleSize)}px; width:${(slice.endPoint / scaleSize) -
@@ -3288,11 +3327,29 @@ function noteFromFileName(name) {
       (match[3] || '')).replace(/_|-|\./g, '').trim() : '';
 }
 
-function createAndSetOtFileLink(slices, bufferLength, fileName, linkEl) {
-    if (checkShouldExportOtFile() && slices && slices.length > 0) {
+async function createOtMetaFile() {
+    const el = document.getElementById('splitOptions');
+    const metaEl = getRowElementById(lastSelectedRow.dataset.id).querySelector('.meta-link-hidden');
+    const file = getFileById(lastSelectedRow.dataset.id);
+    const excludeSlices = [...el.querySelectorAll(`div.line.fade`)].map(
+      s => +s.dataset.idx);
+    const slices = metaFiles.getByFileInDcFormat(file).filter(
+      (x, idx) => !excludeSlices.includes(idx));
+
+    const otFile = await createAndSetOtFileLink(slices, file, file.file.name, metaEl, true);
+    if (otFile) { metaEl.click(); }
+}
+
+async function createAndSetOtFileLink(slices, file, fileName, linkEl, skipExportWithCheck) {
+    if (checkShouldExportOtFile(skipExportWithCheck) && slices && slices.length > 0) {
+        let bufferLength = file.buffer.length;
+        const tempo = await detectTempo(file.buffer, fileName);
         let _slices = slices.length > 64 ? slices.slice(0, 64) : slices;
-        let data = encodeOt(_slices, bufferLength);
-        let fName = fileName.replace('.wav', '.ot');
+        let data = encodeOt(_slices, bufferLength, tempo?.match??120, {
+            loop: file.meta.otLoop??0,
+            loopStart: file.meta.otLoopStart??0
+        });
+        let fName = fileName.replace(/\.[^.]*$/, '.ot')
         if (!data) { return false; }
         let blob = new window.Blob([data], {
             type: 'application/octet-stream'
@@ -3322,6 +3379,8 @@ const parseOt = (fd, file, fullPath) => {
         ) {
             return {uuid, failed: true};
         }
+        let loop = getInt32([fd[39], fd[40], fd[41], fd[42]]);
+        let loopStart = getInt32([fd[54], fd[55], fd[56], fd[57]]);
         let slices = [];
         let sliceCount = getInt32([fd[826], fd[827], fd[828], fd[829]]);
         let t = 58;
@@ -3357,6 +3416,8 @@ const parseOt = (fd, file, fullPath) => {
             name: file.name,
             path: fullPath,
             cssClass: 'is-ot-file',
+            otLoop: loop,
+            otLoopStart: loopStart,
             sliceCount,
             slices
         });
@@ -3826,6 +3887,8 @@ const parseWav = (
         }
         /*Prefer .ot file slices when available.*/
         const metaFile = metaFiles.getByFileName(file.name);
+        let otLoop = 0;
+        let otLoopStart = 0;
         if (metaFile && metaFile.slices && metaFile.slices.length > 0) {
             slices = metaFile.slices.map((slice, idx) => ({
                     s: slice.startPoint,
@@ -3833,6 +3896,8 @@ const parseWav = (
                     l: slice.loopPoint,
                     n: slice.name || `OT slice ${idx + 1}`
                 }));
+            otLoop = metaFile.otLoop;
+            otLoopStart = metaFile.otLoopStart;
             metaFiles.removeByName(file.name);
         }
         if (Array.isArray(slices)) {
@@ -3864,6 +3929,8 @@ const parseWav = (
                   audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
                 dualMono: false,
                 slices: slices.length > 0 ? slices : false,
+                otLoop,
+                otLoopStart,
                 opPan: 16384,
                 opPanAb: false,
                 opPitch: 0,
@@ -4650,6 +4717,7 @@ window.digichain = {
     move,
     playFile,
     playSlice,
+    sliceAction,
     stopPlayFile,
     downloadFile,
     downloadAll,
@@ -4671,6 +4739,7 @@ window.digichain = {
     showEditPanel,
     closeEditPanel,
     closeSplitOptions,
+    createOtMetaFile,
     pitchExports,
     toggleSetting,
     toggleSecondsPerFile,

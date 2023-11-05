@@ -163,7 +163,7 @@ export function getSupportedSampleRates() {
     return supportedSampleRates;
 }
 
-export function encodeOt(slices, bufferLength, tempo = 120) {
+export function encodeOt(slices, bufferLength, tempo = 120, optional = {}) {
     const dv = new DataView(new ArrayBuffer(0x340));
     const header = [
           0x46,
@@ -192,27 +192,27 @@ export function encodeOt(slices, bufferLength, tempo = 120) {
     ];
     const bpm = tempo * 6 * 4;
     const samplesLength = bufferLength;
-    // const samplesLength = items.reduce((total, item) => total += item.buffer.length, 0);
 
-    const bars = Math.round(((124 * samplesLength) / (44100 * 60) + 0.5) * 25);
+    const bars = +((samplesLength / 44100) / ((60 / tempo) * 4)).toFixed(2);
+    const loopBars = +(((samplesLength - (optional.loopStart??0)) / 44100) / ((60 / tempo) * 4)).toFixed(2);
 
     header.forEach((x, i) => dv.setUint8(i, x));
     dv.setUint32(0x17, bpm);
-    dv.setUint32(0x1B, bars); // trim length
-    dv.setUint32(0x1F, bars); // loop length
-    dv.setUint32(0x23, 0); // time stretch
-    dv.setUint32(0x27, 0); // loop?
+    dv.setUint32(0x1B, bars * 100); // trim length
+    dv.setUint32(0x1F, loopBars * 100); // loop length
+    dv.setUint32(0x23, optional.stretch??0); // time stretch off/on/beat 0/2/3
+    dv.setUint32(0x27, optional.loop??0); // loop off/on/ping-pong 0/1/2
     dv.setUint16(0x2B, 48); // gain
     dv.setUint16(0x2D, 255); // quantize
     dv.setUint32(0x2E, 0); // trim start
     dv.setUint32(0x32, samplesLength); // trim end
-    dv.setUint32(0x36, 0); // loop start
+    dv.setUint32(0x36, optional.loopStart??0); // loop start
 
     let offset = 0x3A;
     for (let i = 0; i < 64; i++) {
         dv.setUint32(offset, slices[i]?.s ?? 0);
         dv.setUint32(offset + 4, slices[i]?.e ?? 0);
-        dv.setUint32(offset + 8, slices[i]?.s ?? 0);
+        dv.setUint32(offset + 8, slices[i]?.l ?? -1);
         offset += 12;
     }
 
@@ -824,6 +824,112 @@ Resampler.prototype.initializeBuffers = function() {
         this.lastOutput = [];
     }
 };
+
+export function detectTempo(audioBuffer, fileName = '') {
+    return new Promise((resolve, reject) => {
+        function getPeaks(data) {
+            let partSize = 22050,
+                parts = data[0].length / partSize,
+                peaks = [];
+
+            for (let i = 0; i < parts; i++) {
+                let max = 0;
+                for (let j = i * partSize; j < (i + 1) * partSize; j++) {
+                    let volume = Math.max(Math.abs(data[0][j]), Math.abs(data[1][j]));
+                    if (!max || (volume > max.volume)) {
+                        max = {
+                            position: j,
+                            volume: volume
+                        };
+                    }
+                }
+                peaks.push(max);
+            }
+
+            peaks.sort((a, b) => b.volume - a.volume);
+            peaks = peaks.splice(0, peaks.length * 0.5);
+            peaks.sort((a, b) => a.position - b.position);
+
+            return peaks;
+        }
+
+        function getIntervals(peaks) {
+            const groups = [];
+            peaks.forEach((peak, index) => {
+                for (let i = 1; (index + i) < peaks.length && i < 10; i++) {
+                    const group = {
+                        tempo: (60 * 44100) / (peaks[index + i].position - peak.position),
+                        count: 1
+                    };
+                    while (group.tempo < 90) {
+                        group.tempo *= 2;
+                    }
+                    while (group.tempo > 180) {
+                        group.tempo /= 2;
+                    }
+                    group.tempo = Math.round(group.tempo);
+
+                    if (
+                        !(groups.some(
+                            interval => (interval.tempo === group.tempo ? interval.count++ : 0)
+                        ))) {
+                        groups.push(group);
+                    }
+                }
+            });
+            return groups;
+        }
+
+        const offlineContext = new window.OfflineAudioContext(2, 30 * 44100, 44100);
+
+        function findTempo(buffer) {
+            // Try to find from file name first
+            const fileNameMatch = fileName.match(/(?:^|[\s-_])(\d+)(?![0-9])/g);
+            if (fileNameMatch && fileNameMatch[0]) {
+                const bpm = parseInt(fileNameMatch[0].replace(/[^0-9]/g, ''));
+                if (bpm && bpm > 0) {
+                    resolve({
+                        match: bpm,
+                        alternatives: []
+                    });
+                    return;
+                }
+            }
+            // If not found, try to find from audio data
+            const source = offlineContext.createBufferSource();
+            source.buffer = buffer;
+            const lowpass = offlineContext.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.value = 150;
+            lowpass.Q.value = 1;
+            source.connect(lowpass);
+            const highpass = offlineContext.createBiquadFilter();
+            highpass.type = 'highpass';
+            highpass.frequency.value = 100;
+            highpass.Q.value = 1;
+            lowpass.connect(highpass);
+            highpass.connect(offlineContext.destination);
+            source.start(0);
+            offlineContext.startRendering();
+        }
+
+        offlineContext.oncomplete = function(e) {
+            const buffer = e.renderedBuffer;
+            const peaks = getPeaks([buffer.getChannelData(0), buffer.getChannelData(1)]);
+            const top = getIntervals(peaks).sort(function(intA, intB) {
+                return intB.count - intA.count;
+            }).splice(0, 5);
+
+            resolve({
+                match: Math.round(top[1].tempo > top[0].tempo ? top[1].tempo : top[0].tempo),
+                alternatives: top
+            });
+        };
+
+        findTempo(audioBuffer);
+    });
+
+}
 
 CanvasRenderingContext2D.prototype.clear =
   CanvasRenderingContext2D.prototype.clear || function(preserveTransform) {

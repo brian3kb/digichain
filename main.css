@@ -121,6 +121,17 @@ input, .btn-audio-config { color: #a8a8a8; }
 #getJoined, .wav-link-hidden, .meta-link-hidden, .hidden { visibility: hidden; }
 .hide { display: none !important; }
 .fade { opacity: .15 !important; }
+.slice-loop {
+    background-color: #511eb963 !important;
+}
+.file-loop-on:before, .file-loop-pp:before {
+    content: '';
+    border-top: 2px dotted #00cbff;
+    display: block;
+}
+.file-loop-pp:before {
+    border-top: 2px dashed #fff700;
+}
 #getJoined, #uploadInput, #uploadSliceFile { display: none; }
 #fileNum { padding-left: 1rem; }
 table#masterList { padding-bottom: 12rem; padding-top: 1rem; }

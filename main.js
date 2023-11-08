@@ -2930,7 +2930,7 @@ const drawSliceLines = (slices, file, otMeta) => {
     if (file && otMeta) {
         let scaleSize = file.buffer.length / waveformWidth;
         lines = otMeta.slices.map((slice, idx) => `
-      <div class="line ${slice.loopPoint !== -1 ? 'slice-loop' : ''} ${(file.meta?.otLoop === 1 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-on' : ''} ${(file.meta?.otLoop === 2 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-pp' : ''}" data-idx="${idx}" onclick="digichain.sliceAction(event, '${file.meta.id}', {startPoint: '${slice.startPoint}', endPoint: '${slice.endPoint}'})" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')" 
+      <div class="line ${(slice.loopPoint??-1) !== -1 ? 'slice-loop' : ''} ${(file.meta?.otLoop === 1 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-on' : ''} ${(file.meta?.otLoop === 2 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-pp' : ''}" data-idx="${idx}" onclick="digichain.sliceAction(event, '${file.meta.id}', {startPoint: '${slice.startPoint}', endPoint: '${slice.endPoint}'})" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')" 
       title="${slice.name || ('Slice ' + (idx + 1))}"
       style="margin-left:${(slice.startPoint /
           scaleSize)}px; width:${(slice.endPoint / scaleSize) -
@@ -4024,7 +4024,7 @@ const consumeFileInput = (event, inputFiles) => {
     inputFiles = [...inputFiles];
 
     let _zips = [...inputFiles].filter(
-      f => ['zip', 'dtprj'].includes(
+      f => ['zip', 'dtprj', 'xrns'].includes(
         f?.name?.split('.')?.reverse()[0].toLowerCase())
     );
 

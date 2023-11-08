@@ -1,3 +1,7 @@
+latest
+  - Allow .xrns file contents to be parsed (useful for getting the samples out of a Renoise project file).
+  - When slicing from OP-1 Field tape.json, prevent the ot slice loop point CSS class being applied.
+
 2023.11.04 1.4.9
  - Store list in indexedDb for optional restoring of the last session on next load.
  - Map the Ctrl key to the Cmd key for macOS keyboard shortcuts.

@@ -691,6 +691,7 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
 
     linkEl.href = URL.createObjectURL(blob);
     linkEl.setAttribute('download', fileName);
+
     return {blob, sampleRate: wavSR};
 }
 
@@ -783,6 +784,17 @@ async function downloadFile(id, fireLink = false, event = {}) {
         if (otFile) {metaEl.click(); }
     }
     return [el, metaEl];
+}
+
+async function attachDragDownloadBlob(event, id) {
+    const renderAsAif = targetContainer === 'a';
+    let file = getFileById(id);
+    let blobLink = {
+        href: '',
+        setAttribute: function(a, fname) { this.fileName = fname; }
+    };
+    let blobData = await setWavLink(file, blobLink, renderAsAif, true);
+    event.dataTransfer.setData('DownloadURL', `audio/x-wav:${blobLink.fileName}:${blobLink.href}`);
 }
 
 function toggleSelectedActionsList() {
@@ -2912,6 +2924,7 @@ const handleRowClick = (event, id) => {
 const rowDragStart = (event) => {
     if (event.target?.classList?.contains('file-row')) {
         lastSelectedRow = event.target;
+        attachDragDownloadBlob(event, event.target.dataset.id);
     }
 };
 

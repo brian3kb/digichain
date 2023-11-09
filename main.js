@@ -3392,11 +3392,11 @@ const parseXml = (xml, fullPath) => {
             const sampleSlices = samples.map(sample => ({
                 uuid: crypto.randomUUID(),
                 name: sample.getElementsByTagName('Name')[0].textContent,
-                loopEnd: +sample.getElementsByTagName('LoopEnd')[0].textContent,
+                loopEnd: +sample.getElementsByTagName('DisplayLength')[0].textContent,
                 slices: [...sample.getElementsByTagName('SliceMarker')].map(
                   slice => +slice.getElementsByTagName('SamplePosition')[0].textContent
                 )
-            })).filter(sample => sample.slices.length > 0);
+            })).filter(sample => sample.slices.length > 0)
 
             sampleSlices.forEach(sample => {
                 uuid = sample.uuid;
@@ -3405,6 +3405,7 @@ const parseXml = (xml, fullPath) => {
                     name: sample.name,
                     path: path,
                     sliceCount: sample.slices.length,
+                    loopEnd: sample.loopEnd,
                     slices: sample.slices.map((slice, idx, slices) => ({
                         startPoint: slice,
                         endPoint: slices[idx + 1] ?? sample.loopEnd,
@@ -3947,7 +3948,13 @@ const parseWav = (
         let otLoop = 0;
         let otLoopStart = 0;
         if (metaFile && metaFile.slices && metaFile.slices.length > 0) {
-            slices = metaFile.slices.map((slice, idx) => ({
+            slices = file.name.endsWith('.flac') ?
+              metaFile.slices.map((slice, idx) => ({
+                  s: (slice.startPoint / metaFile.loopEnd) * (resampledArrayBuffer || audioArrayBuffer).length,
+                  e: (slice.endPoint / metaFile.loopEnd) * (resampledArrayBuffer || audioArrayBuffer).length,
+                  l: slice.loopPoint
+              }))
+              : metaFile.slices.map((slice, idx) => ({
                     s: slice.startPoint,
                     e: slice.endPoint,
                     l: slice.loopPoint,

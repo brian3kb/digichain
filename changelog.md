@@ -1,5 +1,6 @@
 latest
  - Allow .xrns file contents to be parsed (useful for getting the samples out of a Renoise project file).
+ - Parse the Renoise song data from within project files and extract slice markers.
  - When slicing from OP-1 Field tape.json, prevent the ot slice loop point CSS class being applied.
  - Drag-out single file from list (Chrome).
 

@@ -106,6 +106,9 @@ let modifierKeys = {
 metaFiles.getByFileName = function(filename) {
     let found = this.find(m => m.name.replace(/\.[^.]*$/, '') ===
       filename.replace(/\.[^.]*$/, ''));
+    if (!found && filename.endsWith('.flac')) {
+        found = this.find(m => filename.includes(`(${m.name})`));
+    }
     if (filename === '---sliceToTransientCached---' && !found) {
         found = {
             uuid: crypto.randomUUID(),
@@ -3376,6 +3379,47 @@ async function createAndSetOtFileLink(slices, file, fileName, linkEl, skipExport
     return false;
 }
 
+const parseXml = (xml, fullPath) => {
+    let uuid = crypto.randomUUID();
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xml, 'application/xml');
+        const docType = doc.childNodes[0].tagName;
+
+        if (docType === 'RenoiseSong') {
+            const path = fullPath.replace('Song.xml', '');
+            const samples = [...doc.getElementsByTagName('Sample')];
+            const sampleSlices = samples.map(sample => ({
+                uuid: crypto.randomUUID(),
+                name: sample.getElementsByTagName('Name')[0].textContent,
+                loopEnd: +sample.getElementsByTagName('LoopEnd')[0].textContent,
+                slices: [...sample.getElementsByTagName('SliceMarker')].map(
+                  slice => +slice.getElementsByTagName('SamplePosition')[0].textContent
+                )
+            })).filter(sample => sample.slices.length > 0);
+
+            sampleSlices.forEach(sample => {
+                uuid = sample.uuid;
+                metaFiles.push({
+                    uuid,
+                    name: sample.name,
+                    path: path,
+                    sliceCount: sample.slices.length,
+                    slices: sample.slices.map((slice, idx, slices) => ({
+                        startPoint: slice,
+                        endPoint: slices[idx + 1] ?? sample.loopEnd,
+                        loopPoint: -1
+                    }))
+                });
+                unsorted.push(uuid);
+            });
+        }
+        return uuid;
+    } catch (err) {
+        return {uuid, failed: true};
+    }
+};
+
 const parseOt = (fd, file, fullPath) => {
     const uuid = file.uuid || crypto.randomUUID();
     const getInt32 = values => {
@@ -4083,7 +4127,7 @@ const consumeFileInput = (event, inputFiles) => {
         f?.name?.split('.')?.reverse()[0].toLowerCase())
     );
     let _mFiles = [...inputFiles].filter(
-      f => ['ot'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
+      f => ['ot', 'xml'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
     );
 
     if (event.shiftKey || modifierKeys.shiftKey) {
@@ -4108,8 +4152,16 @@ const consumeFileInput = (event, inputFiles) => {
                   bufferByteLength);
                 let result = parseOt(bufferUint8Array, file, file.fullPath);
             }
+            if (file.name.toLowerCase().endsWith('.xml')) {
+                const xmlString = e.target.result;
+                parseXml(xmlString, file.fullPath);
+            }
         };
-        reader.readAsArrayBuffer(file);
+        if (file.name.toLowerCase().endsWith('.ot')) {
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.readAsText(file);
+        }
     });
     if (_files.length === 0) {
         return renderList();

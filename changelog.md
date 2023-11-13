@@ -3,6 +3,7 @@ latest
  - Parse the Renoise song data from within project files and extract slice markers.
  - When slicing from OP-1 Field tape.json, prevent the ot slice loop point CSS class being applied.
  - Drag-out single file from list (Chrome).
+ - Option in settings to reverse all even samples in an exported chain (back-to-back mode).
 
 2023.11.04 1.4.9
  - Store list in indexedDb for optional restoring of the last session on next load.

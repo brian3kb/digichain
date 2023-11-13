@@ -56,6 +56,8 @@ let restoreLastUsedAudioConfig = JSON.parse(
 let retainSessionState = JSON.parse(
     localStorage.getItem('retainSessionState')) ?? true;
 let pitchModifier = JSON.parse(localStorage.getItem('pitchModifier')) ?? 1;
+let reverseEvenSamplesInChains = JSON.parse(
+  localStorage.getItem('reverseEvenSamplesInChains')) ?? false;
 let playWithPopMarker = JSON.parse(
   localStorage.getItem('playWithPopMarker')) ?? 0;
 let zipDownloads = JSON.parse(localStorage.getItem('zipDownloads')) ?? true;
@@ -1196,6 +1198,11 @@ function toggleSetting(param, value) {
         localStorage.setItem('importFileLimit', importFileLimit);
         showExportSettingsPanel();
     }
+    if (param === 'reverseEvenSamplesInChains') {
+        reverseEvenSamplesInChains = !reverseEvenSamplesInChains;
+        localStorage.setItem('reverseEvenSamplesInChains', reverseEvenSamplesInChains);
+        showExportSettingsPanel();
+    }
     if (param === 'attemptToFindCrossingPoint') {
         attemptToFindCrossingPoint = !attemptToFindCrossingPoint;
         localStorage.setItem('attemptToFindCrossingPoint',
@@ -1371,6 +1378,14 @@ function showExportSettingsPanel(page = 'settings') {
         4 ? 'button' : 'button-outline'}">2</button>
   <button onclick="digichain.pitchExports(8)" class="check ${pitchModifier ===
         8 ? 'button' : 'button-outline'}">3</button><br></td>
+</tr>
+<tr>
+<td><span>Reverse all even samples in a chain? &nbsp;&nbsp;&nbsp;</span></td>
+<td><button onclick="digichain.toggleSetting('reverseEvenSamplesInChains')"
+ title="When enabled, all even samples in chains will be reversed (back-to-back mode)."
+ class="check ${reverseEvenSamplesInChains
+          ? 'button'
+          : 'button-outline'}">${reverseEvenSamplesInChains ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Restore the last used Sample Rate/Bit Depth/Channel? &nbsp;&nbsp;&nbsp;</span></td>
@@ -1987,10 +2002,10 @@ async function joinAll(
     }
 
     if (masterChannels === 1) {
-        joinToMono(audioArrayBuffer, _files, largest, pad);
+        joinToMono(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains);
     }
     if (masterChannels === 2) {
-        joinToStereo(audioArrayBuffer, _files, largest, pad);
+        joinToStereo(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains);
     }
 
     const joinedEl = document.getElementById('getJoined');

@@ -104,7 +104,7 @@ export function bufferToFloat32Array(
     return result;
 }
 
-export function joinToMono(audioArrayBuffer, _files, largest, pad) {
+export function joinToMono(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains) {
     let totalWrite = 0;
     _files.forEach((file, idx) => {
         const bufferLength = pad ? largest : file.buffer.length;
@@ -112,14 +112,21 @@ export function joinToMono(audioArrayBuffer, _files, largest, pad) {
         let result = bufferToFloat32Array(file.buffer,
           file?.meta?.channel);
 
-        for (let i = 0; i < bufferLength; i++) {
-            audioArrayBuffer.getChannelData(0)[totalWrite] = result[i] || 0;
-            totalWrite++;
+        if (reverseEvenSamplesInChains && (idx + 1) % 2 === 0) {
+            for (let i = 0; i < bufferLength; i++) {
+                audioArrayBuffer.getChannelData(0)[totalWrite] = result[bufferLength - i] || 0;
+                totalWrite++;
+            }
+        } else {
+            for (let i = 0; i < bufferLength; i++) {
+                audioArrayBuffer.getChannelData(0)[totalWrite] = result[i] || 0;
+                totalWrite++;
+            }
         }
     });
 }
 
-export function joinToStereo(audioArrayBuffer, _files, largest, pad) {
+export function joinToStereo(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains) {
     let totalWrite = 0;
     _files.forEach((file, idx) => {
         const bufferLength = pad ? largest : file.buffer.length;
@@ -133,10 +140,18 @@ export function joinToStereo(audioArrayBuffer, _files, largest, pad) {
               file.buffer.numberOfChannels === 2 ? 1 : 0)[i];
         }
 
-        for (let i = 0; i < bufferLength; i++) {
-            audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i] || 0;
-            audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i] || 0;
-            totalWrite++;
+        if (reverseEvenSamplesInChains && (idx + 1) % 2 === 0) {
+            for (let i = 0; i < bufferLength; i++) {
+                audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][bufferLength - i] || 0;
+                audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][bufferLength - i] || 0;
+                totalWrite++;
+            }
+        } else {
+            for (let i = 0; i < bufferLength; i++) {
+                audioArrayBuffer.getChannelData(0)[totalWrite] = result[0][i] || 0;
+                audioArrayBuffer.getChannelData(1)[totalWrite] = result[1][i] || 0;
+                totalWrite++;
+            }
         }
     });
 }

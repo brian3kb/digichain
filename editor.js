@@ -25,6 +25,7 @@ let selection = {
     selStart: true
 };
 let showStereoWaveform = false;
+let shouldSnapToZeroCrossing = false;
 
 let samples = [];
 let folders = [];
@@ -126,6 +127,12 @@ function buildOpKit() {
     linkEl.click();
 }
 
+function toggleSnapToZero(event) {
+    const btnEl = event.target;
+    shouldSnapToZeroCrossing = !shouldSnapToZeroCrossing;
+    btnEl.classList[shouldSnapToZeroCrossing ? 'remove' : 'add']('button-outline');
+}
+
 function sliceSelect(event) {
     const sliceSelectEl = document.querySelector('#sliceSelection');
     const selectionEl = document.querySelector('#editLines .edit-line');
@@ -202,6 +209,7 @@ export function renderEditor(item) {
   <button title="Update the slice marker start/end points." onclick="digichain.editor.sliceUpdate(event);" class="button-outline">Update Slice</button>
   <button title="Remove the current slice marker." onclick="digichain.editor.sliceRemove(event);" class="button-outline">Remove Slice</button>
   <button title="Add the current range as a new slice marker." onclick="digichain.editor.sliceCreate(event);" class="button-outline">New Slice</button>
+  <button title="Snap selections to zero crossings?" onclick="digichain.editor.toggleSnapToZero(event);" class="button button-outline">Snap to Zero</button>
 </div>
 <div class="above-waveform-buttons">
   <div class="sample-selection-buttons text-align-left float-left">
@@ -478,6 +486,14 @@ function updateSelectionEl() {
       multiplier) : getSelectionEndPoint();
     selectionEl.style.marginLeft = `${getSelectionStartPoint()}px`;
     selectionEl.style.width = `${width}px`;
+    selectionEl.classList[editing.buffer.getChannelData(0)[selection.start] === 0 ? 'add' : 'remove']('start-is-zero-crossing');
+    selectionEl.classList[editing.buffer.getChannelData(0)[selection.end] === 0 ? 'add' : 'remove']('end-is-zero-crossing');
+    if (!selection.start || selection.start === 0) {
+        selectionEl.classList.remove('start-is-zero-crossing');
+    }
+    if (!selection.end || selection.end === editing.buffer.length) {
+        selectionEl.classList.remove('end-is-zero-crossing');
+    }
 
 }
 
@@ -507,9 +523,30 @@ function setSelStart(value) {
     endBtnEl.classList[value ? 'add' : 'remove']('button-outline');
 }
 
+function snapToZeroCrossing(snapEnd = false) {
+    if (!shouldSnapToZeroCrossing) {
+        return;
+    }
+    if (snapEnd) {
+        for (let i = (selection.end ?? editing.buffer.length); editing.buffer.length > i; i--) {
+            if (editing.buffer.getChannelData(0)[i] === 0) {
+                selection.end = i;
+                break;
+            }
+        }
+    } else {
+        for (let i = (selection.start ?? 0); i < editing.buffer.length; i++) {
+            if (editing.buffer.getChannelData(0)[i] === 0) {
+                selection.start = i;
+                break;
+            }
+        }
+    }
+}
+
 function changeSelectionPoint(event, shiftKey = false) {
     event.preventDefault();
-    const lastSelection = {...selection};
+    const lastSelection = JSON.parse(JSON.stringify(selection));
     const max = (1024 * multiplier);
     if ((event.shiftKey || shiftKey) || !selection.selStart) { //set end point if shift key is down
         let end = 0;
@@ -525,6 +562,7 @@ function changeSelectionPoint(event, shiftKey = false) {
         selection.start = selection.start >= selection.end
           ? selection.end - 1
           : selection.start;
+        snapToZeroCrossing(true);
     } else {
         let start = 0;
         if (event.offsetX <= max && event.offsetX > -1) {
@@ -539,6 +577,7 @@ function changeSelectionPoint(event, shiftKey = false) {
         selection.end = selection.end <= selection.start
           ? selection.start + 1
           : selection.end;
+        snapToZeroCrossing();
     }
     selection.end = selection.end >= editing.buffer.length
       ? editing.buffer.length
@@ -1288,6 +1327,7 @@ export const editor = {
     sliceCreate,
     sliceRemove,
     sliceSelect,
+    toggleSnapToZero,
     changeChannel,
     getLastItem: () => editing?.meta?.id,
     reverse,

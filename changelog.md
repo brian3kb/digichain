@@ -4,6 +4,8 @@ latest
  - When slicing from OP-1 Field tape.json, prevent the ot slice loop point CSS class being applied.
  - Drag-out single file from list (Chrome).
  - Option in settings to reverse all even samples in an exported chain (back-to-back mode).
+ - Snap to zero-crossing toggle option on selections on edit panel.
+ - Visual zero-crossing indicator on edit panel selection start and end points.
 
 2023.11.04 1.4.9
  - Store list in indexedDb for optional restoring of the last session on next load.

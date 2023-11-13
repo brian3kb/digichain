@@ -268,6 +268,28 @@ td.waveform-td span.play-head.play {
 .waveform-container .edit-line {
     pointer-events: none;
 }
+.waveform-container .edit-line:before,
+.waveform-container .edit-line:after {
+    content: '';
+    width: 4px;
+    height: 4px;
+    display: block;
+    border: 1px solid;
+    visibility: hidden;
+}
+.waveform-container .edit-line:before {
+    margin-left: -1px;
+}
+.waveform-container .edit-line:after {
+    transform: translateX(1px);
+    float: right;
+    margin-top: -6px;
+}
+.waveform-container .edit-line.start-is-zero-crossing:before,
+.waveform-container .edit-line.end-is-zero-crossing:after {
+    visibility: visible;
+}
+
 td { padding: 0; }
 td .gg-more-vertical { opacity: .25; }
 td button { margin: 0.5rem; }

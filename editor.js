@@ -1,6 +1,6 @@
 import {
     audioBufferToWav, bufferToFloat32Array,
-    buildOpData, deClick,
+    buildOpData, deClick, detectTempo,
     encodeAif,
     Resampler
 } from './resources.js';
@@ -133,6 +133,16 @@ function toggleSnapToZero(event) {
     btnEl.classList[shouldSnapToZeroCrossing ? 'remove' : 'add']('button-outline');
 }
 
+async function detectBpm(event) {
+    const btnEl = event.target;
+    const detectBufferArray = editing.buffer.getChannelData(0).slice(selection.start, selection.end);
+    const detectBuffer = conf.audioCtx.createBuffer(1, detectBufferArray.length, conf.masterSR);
+    detectBuffer.getChannelData(0).set(detectBufferArray);
+    const bpm = await detectTempo(detectBuffer);
+    editing.tempo = bpm?.match || false;
+    btnEl.textContent = `${editing.tempo||''} BPM`;
+}
+
 function sliceSelect(event) {
     const sliceSelectEl = document.querySelector('#sliceSelection');
     const selectionEl = document.querySelector('#editLines .edit-line');
@@ -210,6 +220,7 @@ export function renderEditor(item) {
   <button title="Remove the current slice marker." onclick="digichain.editor.sliceRemove(event);" class="button-outline">Remove Slice</button>
   <button title="Add the current range as a new slice marker." onclick="digichain.editor.sliceCreate(event);" class="button-outline">New Slice</button>
   <button title="Snap selections to zero crossings?" onclick="digichain.editor.toggleSnapToZero(event);" class="button button-outline">Snap to Zero</button>
+    <button title="Detect BPM from selection." onclick="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
 </div>
 <div class="above-waveform-buttons">
   <div class="sample-selection-buttons text-align-left float-left">
@@ -1328,6 +1339,7 @@ export const editor = {
     sliceRemove,
     sliceSelect,
     toggleSnapToZero,
+    detectBpm,
     changeChannel,
     getLastItem: () => editing?.meta?.id,
     reverse,

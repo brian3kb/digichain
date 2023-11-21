@@ -1318,9 +1318,6 @@ body.grid-view .path-exceeds-127 {
         max-height: 89vh;
     }
 
-    .input-set button {
-        padding: 0 0 0 1.5rem;
-    }
     .input-set input {
         width: 58%;
     }

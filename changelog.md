@@ -6,6 +6,7 @@ latest
  - Option in settings to reverse all even samples in an exported chain (back-to-back mode).
  - Snap to zero-crossing toggle option on selections on edit panel.
  - Visual zero-crossing indicator on edit panel selection start and end points.
+ - Surface tempo detection method to the edit panel to detect from the currently selected section of the waveform.
 
 2023.11.04 1.4.9
  - Store list in indexedDb for optional restoring of the last session on next load.

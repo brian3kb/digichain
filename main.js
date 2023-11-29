@@ -4392,7 +4392,7 @@ const dropHandler = (event) => {
             // Block row re-ordering while op export side panel is open.
             return;
         }
-        while (!target.classList.contains('file-row')) {
+        while (target && !target.classList.contains('file-row')) {
             target = target.parentElement || document.body;
             target = target.nodeName === 'THEAD' ? document.querySelector(
               'tr.file-row') : target;

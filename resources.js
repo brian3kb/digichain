@@ -215,8 +215,8 @@ export function encodeOt(slices, bufferLength, tempo = 120, optional = {}) {
     dv.setUint32(0x1F, loopBars * 100); // loop length
     dv.setUint32(0x23, optional.stretch??0); // time stretch off/on/beat 0/2/3
     dv.setUint32(0x27, optional.loop??0); // loop off/on/ping-pong 0/1/2
-    dv.setUint16(0x2B, 48); // gain
-    dv.setUint16(0x2D, 255); // quantize
+    dv.setUint16(0x2B, 0x30); // gain
+    dv.setUint8(0x2D, 0xFF); // quantize
     dv.setUint32(0x2E, 0); // trim start
     dv.setUint32(0x32, samplesLength); // trim end
     dv.setUint32(0x36, optional.loopStart??0); // loop start
@@ -230,7 +230,6 @@ export function encodeOt(slices, bufferLength, tempo = 120, optional = {}) {
     }
 
     dv.setUint32(0x33A, slices.length); // slice count
-
     let checksum = 0;
     for (let i = 0x10; i < dv.byteLength; i++) {
         checksum += dv.getUint8(i);

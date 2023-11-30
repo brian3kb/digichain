@@ -42,6 +42,7 @@ const listEl = document.getElementById('fileList');
 const infoEl = document.getElementById('infoIndicator');
 const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 128];
 const importFileLimitValue = 750;
+let db, dbReq;
 let masterSR = 44100; /*The working sample rate*/
 let targetSR = 44100; /*The target sample rate, what rendered files will output at.*/
 let masterBitDepth = 16;
@@ -4410,238 +4411,249 @@ const dropHandler = (event) => {
     }
 };
 
-uploadInput.addEventListener(
-  'change',
-  () => consumeFileInput({shiftKey: modifierKeys.shiftKey}, uploadInput.files),
-  false
-);
-uploadInput.addEventListener(
-  'click',
-  (event) => {
-      if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
+function init() {
+    uploadInput.addEventListener(
+      'change',
+      () => consumeFileInput({shiftKey: modifierKeys.shiftKey},
+        uploadInput.files),
+      false
+    );
+    uploadInput.addEventListener(
+      'click',
+      (event) => {
+          if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
+              event.preventDefault();
+              event.stopPropagation();
+              addBlankFile();
+          }
+      },
+      false
+    );
+
+    document.body.addEventListener(
+      'dragover',
+      (event) => {
           event.preventDefault();
-          event.stopPropagation();
-          addBlankFile();
-      }
-  },
-  false
-);
+      },
+      false
+    );
 
-document.body.addEventListener(
-  'dragover',
-  (event) => {
-      event.preventDefault();
-  },
-  false
-);
+    document.body.addEventListener(
+      'drop',
+      dropHandler,
+      false
+    );
 
-document.body.addEventListener(
-  'drop',
-  dropHandler,
-  false
-);
+    document.body.addEventListener('keyup', (event) => {
+        clearModifiers();
+    });
 
-document.body.addEventListener('keyup', (event) => {
-    clearModifiers();
-});
-
-document.body.addEventListener('keydown', (event) => {
-    const numberKeys = [
-        'Digit1',
-        'Digit2',
-        'Digit3',
-        'Digit4',
-        'Digit5',
-        'Digit6',
-        'Digit7',
-        'Digit8',
-        'Digit9',
-        'Digit0'];
-    const eventCodes = [
-        'ArrowDown',
-        'ArrowUp',
-        'Escape',
-        'Enter',
-        'KeyD',
-        'KeyE',
-        'KeyG',
-        'KeyH',
-        'KeyI',
-        'KeyL',
-        'KeyP',
-        'KeyR',
-        'KeyS',
-        'KeyX',
-        ...numberKeys
-    ];
-    if (keyboardShortcutsDisabled) { return; }
-    if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
-    if (event.ctrlKey || event.metaKey) { document.body.classList.add('ctrlKey-down'); }
-    if (event.code === 'Escape') {
-        if (files.length && !(event.shiftKey || modifierKeys.shiftKey)) {
-            files.filter(f => f.meta.playing && f.meta.id).
-              forEach(f => stopPlayFile(false, f.meta.id));
+    document.body.addEventListener('keydown', (event) => {
+        const numberKeys = [
+            'Digit1',
+            'Digit2',
+            'Digit3',
+            'Digit4',
+            'Digit5',
+            'Digit6',
+            'Digit7',
+            'Digit8',
+            'Digit9',
+            'Digit0'];
+        const eventCodes = [
+            'ArrowDown',
+            'ArrowUp',
+            'Escape',
+            'Enter',
+            'KeyD',
+            'KeyE',
+            'KeyG',
+            'KeyH',
+            'KeyI',
+            'KeyL',
+            'KeyP',
+            'KeyR',
+            'KeyS',
+            'KeyX',
+            ...numberKeys
+        ];
+        if (keyboardShortcutsDisabled) { return; }
+        if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
+        if (event.ctrlKey || event.metaKey) {
+            document.body.classList.add('ctrlKey-down');
         }
-        return closePopUps();
-    }
+        if (event.code === 'Escape') {
+            if (files.length && !(event.shiftKey || modifierKeys.shiftKey)) {
+                files.filter(f => f.meta.playing && f.meta.id).
+                  forEach(f => stopPlayFile(false, f.meta.id));
+            }
+            return closePopUps();
+        }
 
-    if (
-      document.activeElement.nodeName === 'INPUT' &&
-      document.activeElement.disabled === false
-    ) {
-        return;
-    }
+        if (
+          document.activeElement.nodeName === 'INPUT' &&
+          document.activeElement.disabled === false
+        ) {
+            return;
+        }
 
-    if (arePopUpsOpen()) {
-        // Don't listen for keyboard commands when popups are open.
-        // If editor panel is open, use these shortcuts.
-        if (document.getElementById('editPanel').open) {
-            if (event.code === 'KeyP') {
+        if (arePopUpsOpen()) {
+            // Don't listen for keyboard commands when popups are open.
+            // If editor panel is open, use these shortcuts.
+            if (document.getElementById('editPanel').open) {
+                if (event.code === 'KeyP') {
+                    event.altKey
+                      ? digichain.editor.editorPlayFile(event, false, true)
+                      : digichain.editor.editorPlayFile(event);
+                } else if (masterChannels === 1 &&
+                  (event.code === 'KeyL' || event.code === 'KeyR' ||
+                    event.code ===
+                    'KeyS' || event.code === 'KeyD')) {
+                    digichain.editor.changeChannel(event,
+                      event.code.replace('Key', ''));
+                } else if (event.code === 'KeyN') {
+                    digichain.editor.sliceCreate(event);
+                } else if (event.code === 'KeyU') {
+                    digichain.editor.sliceUpdate(event);
+                } else if (event.code === 'KeyX') {
+                    digichain.editor.sliceRemove(event);
+                }
+            }
+            return;
+        }
+
+        if (numberKeys.includes(event.code)) {
+            let id = +event.code.charAt(event.code.length - 1);
+            const selected = files.filter(f => f.meta.checked);
+            id = id === 0 ? 9 : (id - 1);
+            if (selected[id]) {
+                event.altKey ?
+                  stopPlayFile(false, selected[id].meta.id) :
+                  playFile(false, selected[id].meta.id,
+                    (event.shiftKey || modifierKeys.shiftKey));
+            }
+        }
+
+        if (event.code === 'ArrowDown' &&
+          (!lastSelectedRow || !lastSelectedRow.isConnected)) {
+            lastSelectedRow = document.querySelector('#fileList tr');
+            return;
+        }
+        if (files.length && (event.code === 'KeyI')) {
+            return invertFileSelection();
+        }
+        if (files.length && (event.code === 'KeyE')) {
+            const editPanelEl = document.getElementById('editPanel');
+            if ((event.shiftKey || modifierKeys.shiftKey)) {
+                setTimeout(() => {
+                    if (editPanelEl.open) {
+                        const editFileNameEl = document.getElementById(
+                          'editFileName');
+                        const editFilePathEl = document.getElementById(
+                          'editFilePath');
+                        editFileNameEl.removeAttribute('readonly');
+                        editFilePathEl.removeAttribute('readonly');
+                        editFileNameEl.focus();
+                    }
+                }, 100);
+            }
+            return lastSelectedRow
+              ? showEditPanel(lastSelectedRow.dataset.id)
+              : false;
+        }
+        if (event.code === 'KeyH' &&
+          (event.shiftKey || modifierKeys.shiftKey)) {
+            toggleOptionsPanel();
+        }
+        if (event.code === 'KeyG' &&
+          (event.shiftKey || modifierKeys.shiftKey)) {
+            document.body.classList.contains('grid-view')
+              ? document.body.classList.remove('grid-view')
+              : document.body.classList.add('grid-view');
+        }
+        if (eventCodes.includes(event.code) && lastSelectedRow &&
+          lastSelectedRow?.isConnected) {
+            if (event.code === 'ArrowDown' &&
+              lastSelectedRow.nextElementSibling) {
+                if (!(event.shiftKey || modifierKeys.shiftKey)) {
+                    return handleRowClick(event,
+                      lastSelectedRow.nextElementSibling.dataset.id);
+                }
+                let idx = getFileIndexById(lastSelectedRow.dataset.id);
+                let item = files.splice(idx, 1)[0];
+                files.splice(idx + 1, 0, item);
+                lastSelectedRow.nextElementSibling.after(lastSelectedRow);
+                lastSelectedRow.scrollIntoViewIfNeeded(true);
+                setCountValues();
+            } else if (event.code === 'ArrowUp' &&
+              lastSelectedRow.previousElementSibling) {
+                if (!(event.shiftKey || modifierKeys.shiftKey)) {
+                    return handleRowClick(event,
+                      lastSelectedRow.previousElementSibling.dataset.id);
+                }
+                let idx = getFileIndexById(lastSelectedRow.dataset.id);
+                let item = files.splice(idx, 1)[0];
+                files.splice(idx - 1, 0, item);
+                lastSelectedRow.previousElementSibling.before(lastSelectedRow);
+                lastSelectedRow.scrollIntoViewIfNeeded(true);
+                setCountValues();
+            } else if (event.code === 'Enter') {
+                toggleCheck(event, lastSelectedRow.dataset.id);
+            } else if (event.code === 'KeyP') {
                 event.altKey
-                  ? digichain.editor.editorPlayFile(event, false, true)
-                  : digichain.editor.editorPlayFile(event);
+                  ? stopPlayFile(false, lastSelectedRow.dataset.id)
+                  : playFile(event, lastSelectedRow.dataset.id);
             } else if (masterChannels === 1 &&
               (event.code === 'KeyL' || event.code === 'KeyR' || event.code ===
                 'KeyS' || event.code === 'KeyD')) {
-                digichain.editor.changeChannel(event,
-                  event.code.replace('Key', ''));
-            } else if (event.code === 'KeyN') {
-                digichain.editor.sliceCreate(event);
-            } else if (event.code === 'KeyU') {
-                digichain.editor.sliceUpdate(event);
-            } else if (event.code === 'KeyX') {
-                digichain.editor.sliceRemove(event);
-            }
-        }
-        return;
-    }
-
-    if (numberKeys.includes(event.code)) {
-        let id = +event.code.charAt(event.code.length - 1);
-        const selected = files.filter(f => f.meta.checked);
-        id = id === 0 ? 9 : (id - 1);
-        if (selected[id]) {
-            event.altKey ?
-              stopPlayFile(false, selected[id].meta.id) :
-              playFile(false, selected[id].meta.id,
-                (event.shiftKey || modifierKeys.shiftKey));
-        }
-    }
-
-    if (event.code === 'ArrowDown' &&
-      (!lastSelectedRow || !lastSelectedRow.isConnected)) {
-        lastSelectedRow = document.querySelector('#fileList tr');
-        return;
-    }
-    if (files.length && (event.code === 'KeyI')) {
-        return invertFileSelection();
-    }
-    if (files.length && (event.code === 'KeyE')) {
-        const editPanelEl = document.getElementById('editPanel');
-        if ((event.shiftKey || modifierKeys.shiftKey)) {
-            setTimeout(() => {
-                if (editPanelEl.open) {
-                    const editFileNameEl = document.getElementById(
-                      'editFileName');
-                    const editFilePathEl = document.getElementById(
-                      'editFilePath');
-                    editFileNameEl.removeAttribute('readonly');
-                    editFilePathEl.removeAttribute('readonly');
-                    editFileNameEl.focus();
+                const item = getFileById(lastSelectedRow.dataset.id);
+                if (item.meta.channel) {
+                    changeChannel(event, lastSelectedRow.dataset.id,
+                      event.code.replace('Key', ''));
                 }
-            }, 100);
-        }
-        return lastSelectedRow
-          ? showEditPanel(lastSelectedRow.dataset.id)
-          : false;
-    }
-    if (event.code === 'KeyH' && (event.shiftKey || modifierKeys.shiftKey)) {
-        toggleOptionsPanel();
-    }
-    if (event.code === 'KeyG' && (event.shiftKey || modifierKeys.shiftKey)) {
-        document.body.classList.contains('grid-view')
-          ? document.body.classList.remove('grid-view')
-          : document.body.classList.add('grid-view');
-    }
-    if (eventCodes.includes(event.code) && lastSelectedRow &&
-      lastSelectedRow?.isConnected) {
-        if (event.code === 'ArrowDown' && lastSelectedRow.nextElementSibling) {
-            if (!(event.shiftKey || modifierKeys.shiftKey)) {
-                return handleRowClick(event,
-                  lastSelectedRow.nextElementSibling.dataset.id);
-            }
-            let idx = getFileIndexById(lastSelectedRow.dataset.id);
-            let item = files.splice(idx, 1)[0];
-            files.splice(idx + 1, 0, item);
-            lastSelectedRow.nextElementSibling.after(lastSelectedRow);
-            lastSelectedRow.scrollIntoViewIfNeeded(true);
-            setCountValues();
-        } else if (event.code === 'ArrowUp' &&
-          lastSelectedRow.previousElementSibling) {
-            if (!(event.shiftKey || modifierKeys.shiftKey)) {
-                return handleRowClick(event,
-                  lastSelectedRow.previousElementSibling.dataset.id);
-            }
-            let idx = getFileIndexById(lastSelectedRow.dataset.id);
-            let item = files.splice(idx, 1)[0];
-            files.splice(idx - 1, 0, item);
-            lastSelectedRow.previousElementSibling.before(lastSelectedRow);
-            lastSelectedRow.scrollIntoViewIfNeeded(true);
-            setCountValues();
-        } else if (event.code === 'Enter') {
-            toggleCheck(event, lastSelectedRow.dataset.id);
-        } else if (event.code === 'KeyP') {
-            event.altKey
-              ? stopPlayFile(false, lastSelectedRow.dataset.id)
-              : playFile(event, lastSelectedRow.dataset.id);
-        } else if (masterChannels === 1 &&
-          (event.code === 'KeyL' || event.code === 'KeyR' || event.code ===
-            'KeyS' || event.code === 'KeyD')) {
-            const item = getFileById(lastSelectedRow.dataset.id);
-            if (item.meta.channel) {
-                changeChannel(event, lastSelectedRow.dataset.id,
-                  event.code.replace('Key', ''));
             }
         }
-    }
-});
-
-window.addEventListener('beforeunload', (event) => {
-    audioCtx?.close();
-});
-
-/*Actions based on restored local storage states*/
-pitchExports(pitchModifier, true);
-document.querySelector('.touch-buttons').classList[
-  showTouchModifierKeys ? 'remove' : 'add'
-  ]('hidden');
-if (localStorage.getItem('darkModeTheme') === null) {
-    darkModeTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    localStorage.setItem('darkModeTheme',
-      JSON.stringify(darkModeTheme)
-    );
-}
-document.querySelector(`.logo h3`).dataset.version = document.querySelector(
-  'meta[name=version]').content;
-document.body.classList[
-  darkModeTheme ? 'remove' : 'add'
-  ]('light');
-document.body.classList[
-  normalizeContrast ? 'add' : 'remove'
-  ]('normalize-contrast');
-if (restoreLastUsedAudioConfig) {
-    changeAudioConfig( lastUsedAudioConfig, true);
-} else {
-    setEditorConf({
-        audioCtx,
-        masterSR,
-        masterChannels,
-        masterBitDepth
     });
-}
-setTimeout(() => toggleOptionsPanel(), 250);
 
-let db, dbReq;
+    window.addEventListener('beforeunload', (event) => {
+        audioCtx?.close();
+    });
+
+    /*Actions based on restored local storage states*/
+    pitchExports(pitchModifier, true);
+    document.querySelector('.touch-buttons').classList[
+      showTouchModifierKeys ? 'remove' : 'add'
+      ]('hidden');
+    if (localStorage.getItem('darkModeTheme') === null) {
+        darkModeTheme = window.matchMedia(
+          '(prefers-color-scheme: dark)').matches;
+        localStorage.setItem('darkModeTheme',
+          JSON.stringify(darkModeTheme)
+        );
+    }
+    document.querySelector(`.logo h3`).dataset.version = document.querySelector(
+      'meta[name=version]').content;
+    document.body.classList[
+      darkModeTheme ? 'remove' : 'add'
+      ]('light');
+    document.body.classList[
+      normalizeContrast ? 'add' : 'remove'
+      ]('normalize-contrast');
+    if (restoreLastUsedAudioConfig) {
+        changeAudioConfig(lastUsedAudioConfig, true);
+    } else {
+        setEditorConf({
+            audioCtx,
+            masterSR,
+            masterChannels,
+            masterBitDepth
+        });
+    }
+    setTimeout(() => toggleOptionsPanel(), 250);
+    configDb();
+    document.getElementById('modifierKeyctrlKey').textContent= navigator.userAgent.indexOf('Mac') !== -1 ? 'CMD' : 'CTRL';
+}
+
 function configDb(skipLoad = false) {
     if (!retainSessionState) {return;}
     dbReq = indexedDB.open('digichain', 1);
@@ -4719,8 +4731,6 @@ function clearDbBuffers() {
     db.transaction(['state'], 'readwrite', {durability: 'relaxed'}).objectStore('state').clear();
 }
 
-configDb();
-
 function saveSession() {
     const zip = new JSZip();
     const data = files.map(f => ({
@@ -4759,14 +4769,23 @@ function saveSession() {
     });
 }
 
-document.getElementById('modifierKeyctrlKey').textContent= navigator.userAgent.indexOf('Mac') !== -1 ? 'CMD' : 'CTRL';
-
 if ('launchQueue' in window) {
     window.launchQueue.setConsumer((launchParams) => {
         if (launchParams.files && launchParams.files.length) {
             consumeFileInput({}, launchParams.files);
         }
     });
+}
+
+try {
+    init();
+} catch (err) {
+    let alertText = 'An unexpected error was encountered, please refresh the page. ';
+    if (navigator.brave) {
+        alertText += 'If you are using Brave browser, please disable Brave Shields for digichain.brianbar.net.';
+    }
+    alert(alertText);
+    console.log(err);
 }
 
 /*Expose properties/methods used in html events to the global scope.*/

@@ -7,6 +7,7 @@ latest
  - Snap to zero-crossing toggle option on selections on edit panel.
  - Visual zero-crossing indicator on edit panel selection start and end points.
  - Surface tempo detection method to the edit panel to detect from the currently selected section of the waveform.
+ - Fixed regression on .ot file generation not correctly setting the quantize value default to 'direct' instead of 'pattern length'.
 
 2023.11.04 1.4.9
  - Store list in indexedDb for optional restoring of the last session on next load.

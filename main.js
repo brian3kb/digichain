@@ -327,6 +327,11 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
       true
     ));
 
+    selectSliceAmount({
+        shiftKey: true,
+        target: document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)
+    }, sliceOptions[+document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)?.dataset?.sel??0]);
+
     if (!onloadRestore) {
         checkAndSetAudioContext();
     }
@@ -4790,7 +4795,7 @@ try {
 
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {
-    sliceOptions,
+    sliceOptions: () => sliceOptions,
     saveSession,
     changeAudioConfig,
     removeSelected,

@@ -12,6 +12,10 @@
     "mincsslib": "csso lib.css --output latest/lib.css"
   },
   "devDependencies": {
+    "csso": "^5.0.5",
+    "csso-cli": "^4.0.2",
+    "rollup": "^4.9.0",
+    "terser": "^5.26.0",
     "@rollup/plugin-terser": "^0.4.3"
   }
 }

@@ -1,3 +1,6 @@
+latest
+
+
 2023.12.13 1.4.10
  - .xrns file contents parsing (useful for getting the samples out of a Renoise project file).
  - Parse the Renoise song data from within project files and extract slice markers.

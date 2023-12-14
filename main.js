@@ -4483,6 +4483,7 @@ function init() {
             ...numberKeys
         ];
         if (keyboardShortcutsDisabled) { return; }
+
         if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
         if (event.ctrlKey || event.metaKey) {
             document.body.classList.add('ctrlKey-down');
@@ -4499,6 +4500,12 @@ function init() {
           document.activeElement.nodeName === 'INPUT' &&
           document.activeElement.disabled === false
         ) {
+            return;
+        }
+
+        if (event.shiftKey && (event.code === 'KeyK' || event.code === 'Slash')) {
+            const shortcutsPanel = document.getElementById('keyboardShortcuts');
+            shortcutsPanel.open ? shortcutsPanel.close() : shortcutsPanel.showModal();
             return;
         }
 
@@ -4750,6 +4757,11 @@ function saveSession() {
             channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
         }
     }));
+    const settings = {
+        lastUsedAudioConfig,
+        workingSR: masterSR,
+        sliceOptions
+    };
     zip.file('files', JSON.stringify(data), {
         compression: "DEFLATE",
         compressionOptions: {
@@ -4757,6 +4769,12 @@ function saveSession() {
         }
     });
     zip.file('unsorted', JSON.stringify(unsorted), {
+        compression: "DEFLATE",
+        compressionOptions: {
+            level: 9
+        }
+    });
+    zip.file('settings', JSON.stringify(settings), {
         compression: "DEFLATE",
         compressionOptions: {
             level: 9

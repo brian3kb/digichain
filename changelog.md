@@ -1,5 +1,5 @@
-latest
- - Allow .xrns file contents to be parsed (useful for getting the samples out of a Renoise project file).
+2023.12.13 1.4.10
+ - .xrns file contents parsing (useful for getting the samples out of a Renoise project file).
  - Parse the Renoise song data from within project files and extract slice markers.
  - When slicing from OP-1 Field tape.json, prevent the ot slice loop point CSS class being applied.
  - Drag-out single file from list (Chrome).
@@ -9,6 +9,7 @@ latest
  - Surface tempo detection method to the edit panel to detect from the currently selected section of the waveform.
  - Fixed regression on .ot file generation not correctly setting the quantize value default to 'direct' instead of 'pattern length'.
  - Fixed bug when setting slice-grid options from the audio settings panel.
+ - Added keyboard shortcuts info pop-up (Shift + ? / Shift + K).
 
 2023.11.04 1.4.9
  - Store list in indexedDb for optional restoring of the last session on next load.

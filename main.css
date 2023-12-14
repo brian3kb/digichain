@@ -470,6 +470,14 @@ td button { margin: 0.5rem; }
     display: none;
 }
 
+.shortcut-container {
+    display: flex;
+}
+.shortcut-section {
+    margin: -1rem 1rem 0 1rem;
+    min-width: 48%;
+}
+
 #exportSettingsPanel .disabled {
     pointer-events: none;
     user-focus: none;
@@ -588,6 +596,7 @@ dialog {
     box-sizing: content-box;
     transition: opacity .33s ease-in;
     max-height: 89vh;
+    outline: none;
 }
 
 .op-export-panel-options { top: 1vh;}

@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
     <meta name="author" content="Brian Barnett [ sfxBrian / brian3kb ]">
-    <meta name="version" content="1.4.9">
+    <meta name="version" content="1.4.10">
     <meta
             name="description"
             content="DigiChain makes the creation of sample chains as easy as possible; Edit, trim, reverse, crush, join, slice, convert; Drag-and-drop uncompressed wav, aif (OP-1 Field/OP-Z), flac, or syx (MachineDrum) audio files and converts them to wav files for transfer via the Elektron Transfer app, or to aif files for use on Teenage Engineering OP-1 Field / OP-Z, or record from direct playback with pop markers. Include slice data as cue markers for use on Dirtywave M8, or export with a .ot file for direct use on Octatrack. Converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids. Files are generated at the chosen session sample rate and bit depth. All processing is done in the browser, on *your* computer, no data is sent to a server, and there is no, and never will be any user tracking. The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
@@ -35,6 +35,102 @@
 <dialog id="infoPanelMd" class="dialog-pop-up">
     <a class="float-right" onclick="document.getElementById('infoPanelMd').close();"><i class="gg-close"></i></a>
     <div class="content"></div>
+</dialog>
+
+<dialog id="keyboardShortcuts" class="dialog-pop-up">
+    <a class="float-right" onclick="document.getElementById('keyboardShortcuts').close();"><i
+            class="gg-close"></i></a>
+    <div class="content">
+        <h4>Keyboard Shortcuts</h4>
+        <div class="shortcut-container">
+            <div class="shortcut-section">
+                <code>Up / Down Arrow Keys</code> when a sample row is highlighted, this changes the highlighted sample<br>
+                <code>P</code> plays the currently highlighted sample in the list. (also in edit panel)<br>
+                <code>I</code> inverts the selected items in the list<br>
+                <code>Escape</code> closes any open dialog windows and stops all sample playback<br>
+                <code>Enter / Return</code> toggles the selection of the currently highlighted sample in the list<br>
+                <code>L / S / R / D</code> changes the channel for stereo files being processed to mono (also on edit panel
+                in mono contexts.)
+            </div>
+            <div class="shortcut-section">
+                <code>Number keys 1 through 0</code> play the selected sample in the position of the key with 0 == 10<br>
+                <code>E</code> Opens the edit panel for the currently highlighted sample<br>
+                <code>Hold Shift Key</code> while dropping files will randomly select files upto the currently set
+                grid-size value<br>
+                <code>Edit Panel, N</code> Create new slice<br>
+                <code>Edit Panel, U</code> Update current slice<br>
+                <code>Edit Panel, X</code> Remove current slice
+            </div>
+        </div>
+
+        <br><h5>Shift + Click / Shift + Key</h5>
+        <div class="shortcut-container">
+            <div class="shortcut-section">
+                <code>Up / Down Keys</code> moves the highlighted sample up or down in the list<br>
+                <code>Waveform View</code> plays the sample looped, click again to go back to one-shot<br>
+                <code>Slice Grid Number & Off Buttons</code> changes the slice grid size, but keeps the selected samples in
+                the list<br>
+                <code>Duplicate Icon</code> puts the duplicated file at the end of the sample list<br>
+                <code>Move Up Icon</code> moves directly to the top of the sample list<br>
+                <code>Move Down Icon</code> moved directly to the end of the sample list<br>
+                <code>L S R D Options</code> sets all stereo samples method for mono conversion (take left, right, or sum to
+                mono)<br>
+                <code>Download All</code> processed files will have the imported folder structure flattened into their file
+                names (all files will be at the root level of the zip file)<br>
+                <code>Joined / Joined Spaced</code> audio will be resampled internally back to the list instead of prompting
+                to save as a file (clicking the filename in the list will still allow the wav download)<br>
+                <code>E</code> Opens the editor panel for the currently highlighted sample, with the file name and path
+                inputs editable, and the filename input keyboard focused
+            </div>
+            <div class="shortcut-section">
+                <code>P</code> plays the currently highlighted sample looped<br>
+                <code>H</code> Toggles showing/hiding the top buttons panel, to give more space for the grid<br>
+                <code>Slice Sample Options</code> Will put the slices in the list directly below the source sample<br>
+                <code>G</code> Toggles grid-view/list-view (grid-view is now the default for narrow screen width devices
+                like phones)<br>
+                <code>Column Header</code> Sorts the list, but will keep the selected items grouped to the top of the
+                list<br>
+                <code>Reset Button</code> Randomizes the order of the list<br>
+                <code>Check Sample Row Button</code> Will select all samples between the highlighted sample and the
+                clicked sample (inclusive). Ctrl+Shift+Click will de-select<br>
+                <code>Truncate / Crush</code> Shows popup to enter a custom value<br>
+                <code>Sample Slice</code> In slicing panel, toggles looping the clicked slice (for .ot exports)
+            </div>
+        </div>
+
+        <br><h5>Ctrl/CMD + Click</h5>
+        <div class="shortcut-container">
+            <div class="shortcut-section">
+                <code>Slice Grid Number Buttons</code> prompts to enter a custom value for the slice grid<br>
+                <code>Slice Grid Off Button</code> restores the default slice grid options<br>
+                <code>Row Selected Header</code> Toggles select / de-select all samples in list<br>
+                <code>Row Slice Icon</code> Clear any related slice data
+            </div>
+            <div class="shortcut-section">
+                <code>Time Limit</code> prompts to enter a custom value for the timed chain lengths when that mode is
+                enabled<br>
+                <code>Sample Slice</code> In slicing panel, previews (plays) the slice clicked on<br>
+                <code>Add Samples Icon</code> Adds a blank sample to list
+            </div>
+        </div>
+
+        <br><h5>Ctrl/CMD + Shift + Click</h5>
+        <div class="shortcut-container">
+            <div class="shortcut-section">
+                On the edit panel, when clicking the waveform, this will set the end point selection to the
+                clicked position and move the start point to the previous end point value<br>
+                <code>Sample Slice</code> In slicing panel, toggles the file loop start point to be from the
+                start of the clicked slice, blue dotted line is loop on, yellow dashed line is loop ping-pong
+                (for .ot exports)
+            </div>
+        </div>
+        <br><h5>Alt + Key</h5>
+        <div class="shortcut-container">
+            <div class="shortcut-section">
+                <code>Number 1 - 0, P</code> Stops the playback and looping of the sample
+            </div>
+        </div>
+    </div>
 </dialog>
 
 <dialog id="exportSettingsPanel" class="dialog-pop-up">
@@ -315,32 +411,32 @@
                         onclick="digichain.selectSliceAmount(event, 0)"
                         class="button check has-shift-mod has-ctrl-mod sel-0 slice-grid-off" data-sel="0">Off
                 </button>
-                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[1])"
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions()[1])"
                         class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-1" data-sel="1"
                         title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
                     4
                 </button>
-                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[2])"
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions()[2])"
                         class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-2" data-sel="2"
                         title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
                     8
                 </button>
-                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[3])"
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions()[3])"
                         class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-3" data-sel="3"
                         title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
                     16
                 </button>
-                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[4])"
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions()[4])"
                         class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-4" data-sel="4"
                         title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
                     32
                 </button>
-                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[5])"
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions()[5])"
                         class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-5" data-sel="5"
                         title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
                     64
                 </button>
-                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions[6])"
+                <button onclick="digichain.selectSliceAmount(event, digichain.sliceOptions()[6])"
                         class="button-outline has-shift-mod has-ctrl-mod check master-slice-option sel-6" data-sel="6"
                         title="Change the slice grid size. Shift+click will change the grid without changing the number of selected samples. Ctrl+click will allow setting a custom grid size.">
                     120
@@ -439,6 +535,5 @@
         });
     }
 </script>
-<div style="position: fixed; bottom: 0; left: 0; opacity: .33;"><img src="https://github.com/brian3kb/digichain/raw/main/digichain.gif" alt="DigiChain"></div>
 </body>
 </html>

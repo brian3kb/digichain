@@ -156,6 +156,15 @@ metaFiles.getByFile = function(file) {
             sliceCount: opSlices.length,
             slices: opSlices
         };
+    } else if (file.meta.customSlices) {
+        return {
+            uuid: file.meta.uuid,
+            name: file.file.name,
+            path: file.file.path,
+            cssClass: 'is-dc-file',
+            sliceCount: file.meta.customSlices.sliceCount,
+            slices: file.meta.customSlices.slices
+        };
     } else if (file.meta.slices) {
         return {
             uuid: file.meta.uuid,

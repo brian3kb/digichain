@@ -4282,7 +4282,13 @@ const consumeFileInput = (event, inputFiles) => {
                                 file.channels = dv.getUint16(i + 10, true);
                                 file.sampleRate = dv.getUint32(i + 12, true);
                                 file.bitDepth = dv.getUint16(i + 22, true);
-                                break;
+                                if (file.channels < 1 || file.sampleRate === 0 || file.bitDepth > 32) {
+                                    delete file.channels;
+                                    delete file.sampleRate;
+                                    delete file.bitDepth;
+                                } else {
+                                    break;
+                                }
                             }
                         }
                     }

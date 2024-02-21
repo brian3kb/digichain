@@ -1,5 +1,6 @@
-latest
-
+2024.02.20 1.4.11
+ - Fixes bug where saving slice data from imported slice file did not apply slice markers consistently.
+ - Bug fix where parsing wav file headers contains multiple fmt chunks, where the first fmt chunk does not contain the samples format data.
 
 2023.12.13 1.4.10
  - .xrns file contents parsing (useful for getting the samples out of a Renoise project file).

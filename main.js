@@ -3,7 +3,7 @@ DigiChain v.1.4.9 [ https://digichain.brianbar.net/ ]
 <https://github.com/brian3kb/digichain>
 
 (c) 2023 Brian Barnett <me [at] brianbar.net>
-[ @brian3kb / @sfxBrian ]
+[ @brian3kb ]
 Licenced under GPLv3 <https://github.com/brian3kb/digichain/blob/main/LICENSE>
 
 DigiChain bundled resources:
@@ -1150,7 +1150,7 @@ function showInfo() {
   <h3>DigiChain (${version})</h3>
   <p>${description}</p>
   <p class="float-right"><a href="https://brianbar.net/" target="_blank">Brian Barnett</a>
-  (<a href="https://www.youtube.com/c/sfxBrian" target="_blank">sfxBrian</a> / <a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>
+  (<a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>
 `;
     document.querySelector('#infoPanelMd').showModal();
 }

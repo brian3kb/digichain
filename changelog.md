@@ -1,4 +1,4 @@
-1.4.12
+latest
  - Added Double selected action to add a copy of a sample to the end of itself for the selected samples.
 
 2024.02.20 1.4.11

@@ -17,13 +17,15 @@
   ],
   "theme_color": "#202124",
   "background_color": "#202124",
-  "start_url": "https://digichain.brianbar.net/",
+  "start_url": "https://latest.digichain.brianbar.net/",
   "display": "standalone",
   "cache": [
     "/index.html",
     "/lib.css",
     "/main.css",
-    "/main.js"
+    "/main.js",
+    "/editor.js",
+    "/resources.js"
   ],
   "dir": "auto",
   "lang": "en",

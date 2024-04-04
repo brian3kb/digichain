@@ -1,5 +1,5 @@
 /*!
-DigiChain v.1.4.12 [ https://digichain.brianbar.net/ ]
+DigiChain v.1.4.12.latest [ https://digichain.brianbar.net/ ]
 <https://github.com/brian3kb/digichain>
 
 (c) 2023 Brian Barnett <me [at] brianbar.net>

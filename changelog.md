@@ -1,3 +1,6 @@
+1.4.12
+ - Added Double selected action to add a copy of a sample to the end of itself for the selected samples.
+
 2024.02.20 1.4.11
  - Fixes bug where saving slice data from imported slice file did not apply slice markers consistently.
  - Bug fix where parsing wav file headers contains multiple fmt chunks, where the first fmt chunk does not contain the samples format data.
@@ -211,7 +214,7 @@
 - Export settings panel with pitch up export setting (1, 2, or 3 octaves), and the zip file on/off toggle.
 - Added offline support and install as app from the browser.
 
-2023-03-27 1.2.0 
+2023-03-27 1.2.0
 - Added support for slicing files in the list into new items.
 - Added ability to resample joined files back into the list instead of downloading.
 - Sample import times are about a third faster than previously.

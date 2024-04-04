@@ -1,5 +1,5 @@
 /*!
-DigiChain v.1.4.9 [ https://digichain.brianbar.net/ ]
+DigiChain v.1.4.12 [ https://digichain.brianbar.net/ ]
 <https://github.com/brian3kb/digichain>
 
 (c) 2023 Brian Barnett <me [at] brianbar.net>
@@ -1050,20 +1050,24 @@ function pitchUpSelected(event) {
     }, 250);
 }
 
-function pingPongSelected(event) {
+function doubleSelected(event, pingPong = false) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     document.getElementById('loadingText').textContent = 'Processing';
     document.body.classList.add('loading');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
-            editor.double(event, f, true, false);
+            editor.double(event, f, pingPong, false);
             if (idx === selected.length - 1) {
                 document.body.classList.remove('loading');
             }
         });
         renderList();
     }, 250);
+}
+
+function pingPongSelected(event) {
+    doubleSelected(event, true);
 }
 
 function fuzzSelected(event) {
@@ -1371,7 +1375,7 @@ function showExportSettingsPanel(page = 'settings') {
     if (page === 'settings') {
         panelContentEl.innerHTML = `
   <div class="export-options">
-  <span class="${page !== 'settings' ? 'active': ''}" onclick="digichain.showExportSettingsPanel('audio')">Audio Config</span> 
+  <span class="${page !== 'settings' ? 'active': ''}" onclick="digichain.showExportSettingsPanel('audio')">Audio Config</span>
   <span class="${page === 'settings' ? 'active': ''}">Settings</span>
   </div>
   <span class="settings-info">All settings here will persist when the app re-opens.</span>
@@ -1519,7 +1523,7 @@ function showExportSettingsPanel(page = 'settings') {
     } else {
         panelContentEl.innerHTML = `
   <div class="export-options">
-    <span class="${page !== 'settings' ? 'active': ''}">Audio Config</span> 
+    <span class="${page !== 'settings' ? 'active': ''}">Audio Config</span>
     <span class="${page === 'settings' ? 'active': ''}" onclick="digichain.showExportSettingsPanel()">Settings</span>
   </div>
   <table style="padding-top:0;" id="settingAudioConfig">
@@ -1534,10 +1538,10 @@ function showExportSettingsPanel(page = 'settings') {
       <td style="border: none;"><span>Working Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
           <div class="input-set" id="settingsWorkingSampleRateGroup" style="display: flex; align-items: flex-start;">
-              <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz" 
+              <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz"
               onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
               onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
-              id="settingsWorkingSampleRate" value="${masterSR}" data-sample-rate="${masterSR}" list="commonSR" 
+              id="settingsWorkingSampleRate" value="${masterSR}" data-sample-rate="${masterSR}" list="commonSR"
               data-placeholder="Sample Rate between ${supportedSampleRates.toString()}"
               min="${supportedSampleRates[0]}" max="${supportedSampleRates[1]}">
               <datalist id="commonSR">
@@ -1553,11 +1557,11 @@ function showExportSettingsPanel(page = 'settings') {
       <td style="border: none;"><span>Target Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
           <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup" style="display: flex; align-items: flex-start;">
-              <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz" 
+              <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz"
               ${targetContainer === 'a' ? 'disabled="disabled"' : ''}
               onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
               onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
-              id="settingsSampleRate" value="${targetSR}" data-sample-rate="${targetSR}" list="commonSR" 
+              id="settingsSampleRate" value="${targetSR}" data-sample-rate="${targetSR}" list="commonSR"
               data-placeholder="Sample Rate between ${supportedSampleRates.toString()}"
               min="${supportedSampleRates[0]}" max="${supportedSampleRates[1]}">
               <datalist id="commonSR">
@@ -1569,7 +1573,7 @@ function showExportSettingsPanel(page = 'settings') {
       </td>
   </tr>
   <tr><td colspan="2"></td></tr>
-  
+
   <tr>
   <td><span>Bit Depth&nbsp;&nbsp;&nbsp;</span></td>
   <td>
@@ -1596,7 +1600,7 @@ function showExportSettingsPanel(page = 'settings') {
           </div>
       </td>
   </tr>
-  
+
   <tr>
       <td style="border: none;"><span>Container&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
@@ -1621,9 +1625,9 @@ function showExportSettingsPanel(page = 'settings') {
       </td>
   </tr>
     <tr><td colspan="3"><span><small>Note: Choosing AIF will set the sample rate to 44100 and the bit depth to 16 bit.</small></span><br><br></td></tr>
-  
+
   <tr>
-  
+
   <tr>
     <td><span>Slice Grid Options&nbsp;&nbsp;&nbsp;</span></td>
     <td>
@@ -1636,7 +1640,7 @@ function showExportSettingsPanel(page = 'settings') {
         </div>
     </td>
   </tr>
-  
+
   <td style="border-bottom: none;">
     <a class="button" style="margin: 2.5rem 2rem;" onclick="digichain.changeAudioConfig()">Apply Audio Settings</a>
   </td>
@@ -2975,19 +2979,24 @@ const drawSliceLines = (slices, file, otMeta) => {
     let lines = [];
     if (file && otMeta) {
         let scaleSize = file.buffer.length / waveformWidth;
-        lines = otMeta.slices.map((slice, idx) => `
-      <div class="line ${(slice.loopPoint??-1) !== -1 ? 'slice-loop' : ''} ${(file.meta?.otLoop === 1 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-on' : ''} ${(file.meta?.otLoop === 2 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-pp' : ''}" data-idx="${idx}" onclick="digichain.sliceAction(event, '${file.meta.id}', {startPoint: '${slice.startPoint}', endPoint: '${slice.endPoint}'})" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')" 
-      title="${slice.name || ('Slice ' + (idx + 1))}"
-      style="margin-left:${(slice.startPoint /
-          scaleSize)}px; width:${(slice.endPoint / scaleSize) -
-        (slice.startPoint / scaleSize)}px;"></div>
-  `);
+        lines = otMeta.slices.map(
+            (slice, idx) => `
+                <div
+                    class="line ${(slice.loopPoint??-1) !== -1 ? 'slice-loop' : ''} ${(file.meta?.otLoop === 1 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-on' : ''} ${(file.meta?.otLoop === 2 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-pp' : ''}"
+                    data-idx="${idx}"
+                    onclick="digichain.sliceAction(event, '${file.meta.id}', {startPoint: '${slice.startPoint}', endPoint: '${slice.endPoint}'})"
+                    ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"
+                    title="${slice.name || ('Slice ' + (idx + 1))}"
+                    style="margin-left:${(slice.startPoint / scaleSize)}px; width:${(slice.endPoint / scaleSize) - (slice.startPoint / scaleSize)}px;"
+                ></div>
+            `
+        );
     } else {
         lines = _slices.map((slice, idx) => `
-    <div class="line" data-idx="${idx}" onclick="digichain.playSlice(event, '${file.meta.id}', '${slice.startPoint}', '${slice.endPoint}')" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"style="margin-left:${(waveformWidth /
-          _slices.length) * idx}px; width:${(waveformWidth /
-          _slices.length)}px;" title="Slice ${idx + 1}"></div>
-`);
+            <div class="line" data-idx="${idx}" onclick="digichain.playSlice(event, '${file.meta.id}', '${slice.startPoint}', '${slice.endPoint}')" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"style="margin-left:${(waveformWidth /
+                _slices.length) * idx}px; width:${(waveformWidth /
+                _slices.length)}px;" title="Slice ${idx + 1}"></div>
+        `);
         //
         // lines = _slices.map((slice, idx) => `
         //   <div class="line" onclick="digichain.selectSlice(event)" style="margin-left:${(waveformWidth/_slices.length) * idx}px; width:${(waveformWidth/_slices.length)}px;"></div>
@@ -3172,7 +3181,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
         ? 'checked'
         : ''}" data-id="${f.meta.id}"
           onclick="digichain.handleRowClick(event, '${f.meta.id}')"
-          onmousedown="digichain.handleRowClick(event, '${f.meta.id}')"  
+          onmousedown="digichain.handleRowClick(event, '${f.meta.id}')"
           ondragstart="digichain.rowDragStart(event)" draggable="true">
       <td>
           <i class="gg-more-vertical"></i>
@@ -3270,7 +3279,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
         f)?.cssClass}" data-slice-count="${f.meta?.slices?.length || f.meta?.op1Json?.sliceCount || ''}"><i class="gg-menu-grid-r has-ctrl-mod-i"></i></button>
       </td>
       <td class="duplicate-td">
-          <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button> 
+          <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
       </td>
       <td class="toggle-edit-td">
           <button title="Edit" onclick="digichain.showEditPanel(event, '${f.meta.id}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
@@ -4839,6 +4848,7 @@ window.digichain = {
     normalizeSelected,
     reverseSelected,
     pitchUpSelected,
+    doubleSelected,
     pingPongSelected,
     fuzzSelected,
     crushSelected,

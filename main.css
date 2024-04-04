@@ -718,7 +718,7 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     z-index: 1;
 }
 .selected-actions-button-list .button-outline {
-    width: 16.5rem;
+    width: 14rem;
     padding: 0;
 }
 
@@ -1524,5 +1524,3 @@ html.scaled {
     font-size: 54%;
     overflow-x: hidden;
 }
-
-

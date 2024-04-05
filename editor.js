@@ -85,13 +85,13 @@ function renderKey(color, index) {
            ondragenter="this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
            ondrop="this.classList.remove('drag-over')"
-        >L</div>     
+        >L</div>
         <div class="right-b"
            ondragenter="this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
            ondrop="this.classList.remove('drag-over')"
-        >R</div>     
-    </div>   
+        >R</div>
+    </div>
   `;
 }
 
@@ -227,7 +227,7 @@ export function renderEditor(item) {
       <button title="Clicking on the waveform will set the selection start point." onclick="digichain.editor.setSelStart(true);" class="button check btn-select-start">Start</button>
     <button title="Clicking on the waveform will set the selection end point." onclick="digichain.editor.setSelStart(false);" class="button-outline check btn-select-end">End</button>
       <button title="Reset the waveform selection to the whole sample." onclick="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
-  </div>  
+  </div>
   <div class="channel-options editor-channel-options float-right" style="border: 0.1rem solid #d79c4e; display: ${editing.buffer.numberOfChannels >
     1 && conf.masterChannels === 1 ? 'inline-block' : 'none'}">
             <a title="Left channel" onclick="digichain.editor.changeChannel(event, 'L')" class="${editing.meta.channel ===
@@ -244,7 +244,7 @@ export function renderEditor(item) {
   <div class="playback-controls text-align-right float-left" style="position: absolute;">
     <button title="Play selection" onclick="digichain.editor.editorPlayFile(event);" class="button-clear check"><i class="gg-play-button"></i></button>
     <button title="Loop playback of selection" onclick="digichain.editor.editorPlayFile(event, true);" class="button-clear check"><i class="gg-repeat"></i></button>
-    <button title="Stop playback" onclick="digichain.editor.editorPlayFile(event, false, true);" class="button-clear check"><i class="gg-play-stop"></i></button>  
+    <button title="Stop playback" onclick="digichain.editor.editorPlayFile(event, false, true);" class="button-clear check"><i class="gg-play-stop"></i></button>
   </div>
   <div class="zoom-level text-align-right float-right">
     <button title="Zoom out waveform view." class="zoom-out button-outline check" style="width:2.5rem;" onclick="digichain.editor.zoomLevel('editor', .5)">-</button>
@@ -266,9 +266,9 @@ export function renderEditor(item) {
 
   <div class="sample-op-buttons">
   <div class="edit-btn-group float-left">
-  
+
   <button title="Normalize the volume of the sample." class="normalize button button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
-  
+
   <button title="Reverses the sample playback" class="reverse button button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>
   <button title="Crop the sample to the selected area." class="trim-right button button-outline" onclick="digichain.editor.truncate(event)">Crop</button>
   <button title="Fade in the selected audio." class="fade-in button button-outline" onclick="digichain.editor.fade('in')">Fade In</button>
@@ -278,14 +278,14 @@ export function renderEditor(item) {
   <button title="Fade out the selected audio." class="fade-out button button-outline" onclick="digichain.editor.fade('out')">Fade Out</button>
 </div>
 <div class="edit-btn-group float-right">
-    <div class="edit-pitch-btn-group pitch-semi-tones">  
+    <div class="edit-pitch-btn-group pitch-semi-tones">
     <button title="Lower pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5, 12)">-12</button>
     <button title="Lower pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12), 1)">-1</button>
     &nbsp;<a href="javascript:;" onclick="digichain.editor.togglePitchSemitoneCents(event, 'cent')" title="Click to toggle between semi-tones and cents."> Pitch (semitones) </a>&nbsp;
     <button title="Increase pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12), -1)">+1</button>
     <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2, -12)">+12</button>
     </div>
-    <div class="edit-pitch-btn-group pitch-cents hide">  
+    <div class="edit-pitch-btn-group pitch-cents hide">
     <button title="Lower pitch by 10 cents" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/120), 1)">-10</button>
     <button title="Lower pitch by 1 cent" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/1200), 1)">-1</button>
     &nbsp;<a href="javascript:;" onclick="digichain.editor.togglePitchSemitoneCents(event, 'semi')" title="Click to toggle between semi-tones and cents." style="display: inline-block; width: 13rem;"> Pitch (cents) </a>&nbsp;
@@ -302,6 +302,10 @@ export function renderEditor(item) {
     Normalize, Silence, Louder, Quieter, Fade In, Fade Out, Crop, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo. Pitch adjustments are done via sample-rate, cumulative changes will affect sample quality.
   </span>
+  <div class="file-nav-buttons">
+    <button title="Edit previous file" class="prev-file button button-clear check" onclick="digichain.editor.changeSelectedFile(event, -1)">Prev</button>
+    <button title="Edit next file" class="next-file button button-clear check" onclick="digichain.editor.changeSelectedFile(event, 1)">Next</button>
+  </div>
   `;
 }
 
@@ -1314,8 +1318,17 @@ function editorPlayFile(event, loop = false, stop = false) {
     }
 }
 
+function changeSelectedFile(event, direction = 1) {
+    const newSelected = document.querySelector('#fileList tr.selected')[direction === 1 ? 'nextElementSibling' : 'previousElementSibling'];
+    if (newSelected && newSelected.tagName === 'TR') {
+        digichain.handleRowClick({}, newSelected.dataset.id);
+        digichain.showEditPanel({}, newSelected.dataset.id);
+    }
+}
+
 export const editor = {
     updateFile,
+    changeSelectedFile,
     toggleReadOnlyInput,
     togglePitchSemitoneCents,
     zoomLevel,

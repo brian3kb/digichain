@@ -716,8 +716,14 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     border-radius: 0.4rem;
     background-color: #202124;
     z-index: 1;
+    max-width: 45rem;
+    max-height: 60vh;
+    overflow: auto;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: space-around;
 }
-.selected-actions-button-list .button-outline {
+.selected-actions-button-list .button-outline, .selected-actions-button-list .button-clear {
     width: 14rem;
     padding: 0;
 }
@@ -900,13 +906,16 @@ body.shiftKey-down .has-shift-mod-i {
     max-height: 60vh;
     overflow: auto;
 }
-.merge-info, .edit-info {
+.merge-info, .edit-info, .file-nav-buttons {
     position: relative;
     font-size: 1.05rem;
     opacity: .8;
     float: left;
     max-width: 80%;
     margin-top: 1rem;
+}
+.file-nav-buttons {
+    float: right;
 }
 .settings-info {
     position: absolute;

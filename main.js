@@ -821,7 +821,7 @@ function toggleSelectedActionsList() {
     const actionListEl = document.querySelector(
       `.selected-actions-button-list`);
     actionListEl.style.display = actionListEl.style.display === 'none'
-      ? 'block'
+      ? 'flex'
       : 'none';
 }
 

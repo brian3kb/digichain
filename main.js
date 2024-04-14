@@ -968,8 +968,9 @@ function stretchSelected(event, shortest = false) {
     }
     let stretchLength = sortedItems[0].buffer.length;
     if (event.shiftKey || modifierKeys.shiftKey) {
+        const unitOfMeasure = event.ctrlKey || event.metaKey || modifierKeys.ctrlKey ? 'samples' : 'seconds';
         const userResponse = prompt(
-          `Please enter a custom length in seconds to stretch the selected samples to...`);
+          `Please enter a custom length in ${unitOfMeasure} to stretch the selected samples to...`);
         if (userResponse) {
             if (['x', '*'].includes(userResponse[0])) {
                 stretchLength = (bufferLength) => Math.floor(
@@ -978,7 +979,7 @@ function stretchSelected(event, shortest = false) {
                 stretchLength = (bufferLength) => Math.floor(
                   bufferLength / (+userResponse.replace(/[^0-9.]/g, '')));
             } else if (!isNaN(userResponse)) {
-                stretchLength = Math.floor(Math.abs(+userResponse) * masterSR);
+                stretchLength = Math.floor(Math.abs(+userResponse) * (unitOfMeasure === 'seconds' ? masterSR : 1));
             }
         }
     }

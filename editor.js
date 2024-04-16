@@ -293,7 +293,7 @@ export function renderEditor(item) {
     <button title="Increase pitch by 10 cents" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/120), 1)">+10</button>
     </div>
     <br>
-      <button title="Trims any zero valued audio from the end of the sample." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
+      <button title="Trims any zero valued audio from the end of the sample. Shift+click to trim both left and right." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
       <button class="trim-right button button-outline hide ${editing.buffer.numberOfChannels >
     1 ? '' : 'hide'}" onclick="digichain.editor.interpolate(event)">Interpolate</button>
   </div>
@@ -890,14 +890,21 @@ function reverse(event, item, renderEditPanel = true) {
     item.waveform = false;
 }
 
-function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
+function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003, trimLeft = false) {
     if (!renderEditPanel && item) {
         selection.start = 0;
         selection.end = item.buffer.length;
     }
     item = item || editing;
 
+    if (event.shiftKey) {
+        trimLeft = true;
+    }
+
     let trimIndex = [];
+    let trimLeftIndex = [];
+    let newBufferLength = item.buffer.length;
+
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
         trimIndex.push(item.buffer.length);
         let data = item.buffer.getChannelData(channel);
@@ -909,15 +916,33 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
             }
         }
     }
+    newBufferLength = +Math.max(...trimIndex);
+
+    if (trimLeft) {
+        for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+            trimLeftIndex.push(0);
+            let data = item.buffer.getChannelData(channel);
+            for (let i = 0; i < newBufferLength; i++) {
+                if (Math.abs(data[i]) > ampFloor && data[i] !== undefined &&
+                  data[i] !== null) {
+                    trimLeftIndex[channel] = i + 1;
+                    break;
+                }
+            }
+        }
+        newBufferLength = newBufferLength - +Math.max(...trimLeftIndex);
+    }
+
     const audioArrayBuffer = conf.audioCtx.createBuffer(
       item.buffer.numberOfChannels,
-      +Math.max(...trimIndex),
+      newBufferLength,
       conf.masterSR
     );
+    let bufferOffset = +Math.max(...trimLeftIndex);
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
         for (let i = 0; i < audioArrayBuffer.length; i++) {
             audioArrayBuffer.getChannelData(
-              channel)[i] = item.buffer.getChannelData(channel)[i];
+              channel)[i] = item.buffer.getChannelData(channel)[i + bufferOffset];
         }
     }
     item.buffer = audioArrayBuffer;
@@ -928,7 +953,8 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003) {
         startFrame: 0, endFrame: audioArrayBuffer.length
     };
     if (item.meta.slices && item.meta.slices.length > 0) {
-        item.meta.slices[item.meta.slices.length - 1].e = item.buffer.length;
+        item.meta.slices = false;
+        //item.meta.slices[item.meta.slices.length - 1].e = item.buffer.length;
     }
     if (renderEditPanel) {
         showEditor(editing, conf, 'sample', folders);

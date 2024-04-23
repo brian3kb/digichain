@@ -1345,7 +1345,7 @@ function editorPlayFile(event, loop = false, stop = false) {
 }
 
 function changeSelectedFile(event, direction = 1) {
-    const newSelected = document.querySelector('#fileList tr.selected')[direction === 1 ? 'nextElementSibling' : 'previousElementSibling'];
+    const newSelected = document.querySelector('#fileList tr.selected')?.[direction === 1 ? 'nextElementSibling' : 'previousElementSibling'];
     if (newSelected && newSelected.tagName === 'TR') {
         digichain.handleRowClick({}, newSelected.dataset.id);
         digichain.showEditPanel({}, newSelected.dataset.id);

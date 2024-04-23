@@ -101,6 +101,7 @@ let sliceGrid = 0;
 let sliceOptions = Array.from(DefaultSliceOptions);
 let lastSliceOptions = Array.from(sliceOptions);
 let keyboardShortcutsDisabled = false;
+let showSamplesList = true;
 let modifierKeys = {
     shiftKey: false,
     ctrlKey: false
@@ -491,6 +492,11 @@ const toggleOptionsPanel = () => {
       'hidden') : buttonsEl.classList.add('hidden');
     buttonsEl.classList.contains('hidden') ? toggleButtonEl.classList.add(
       'collapsed') : toggleButtonEl.classList.remove('collapsed');
+};
+
+const toggleListVisibility = () => {
+    showSamplesList = !showSamplesList;
+    renderList(true);
 };
 
 function chainFileNamesAvailable(getCount = false) {
@@ -2354,13 +2360,13 @@ function sliceAction(event, id, params) {
     }
 }
 
-const toggleCheck = (event, id, silent = false) => {
+const toggleCheck = (event, id, silent = false, ignoreShiftKey = false) => {
     try {
         const rowEl = getRowElementById(id);
         const el = getRowElementById(id).querySelector('.toggle-check');
         const file = getFileById(id);
         event.preventDefault();
-        if ((event.shiftKey || modifierKeys.shiftKey)) {
+        if ((event.shiftKey || modifierKeys.shiftKey) && !ignoreShiftKey) {
             const lastRowId = getFileIndexById(lastLastSelectedRow.dataset.id);
             const thisRowId = getFileIndexById(id);
             const from = Math.min(lastRowId, thisRowId);
@@ -2495,12 +2501,14 @@ const selectSliceAmount = (event, size) => {
     if (size === 0) {
         files.forEach(f => f.source?.stop());
     }
-    if ((event.shiftKey || modifierKeys.shiftKey)) { return; } /*Shift+click to change grid but keep selections.*/
-    files.forEach(f => f.meta.checked = false);
-    for (let i = 0; i < (size < files.length ? size : files.length); i++) {
-        toggleCheck(event, files[i].meta.id);
+    if ((event.shiftKey || modifierKeys.shiftKey)) {
+        /*Shift+click to change grid and set the selection to the grid size.*/
+        files.forEach(f => f.meta.checked = false);
+        for (let i = 0; i < (size < files.length ? size : files.length); i++) {
+            toggleCheck(event, files[i].meta.id, true, true);
+        }
+        renderList();
     }
-    renderList();
 };
 
 const duplicate = (event, id, prepForEdit = false) => {
@@ -3363,7 +3371,9 @@ const renderRow = (item, type) => {
 };
 
 const renderList = (fromIdb = false) => {
-    listEl.innerHTML = files.map(f => buildRowMarkupFromFile(f)).join('');
+    listEl.innerHTML = showSamplesList ?
+      files.map(f => buildRowMarkupFromFile(f)).join('') :
+      `<tr><td colspan="14" style="padding: 2.5rem 1rem 0 4rem;"><p>Hiding samples list, press <code>Shift + L</code> to show.</p></td></tr>`;
     if (files.length === 0) {
         listEl.innerHTML = '';
     }
@@ -4602,6 +4612,10 @@ function init() {
           (event.shiftKey || modifierKeys.shiftKey)) {
             toggleOptionsPanel();
         }
+        if (event.code === 'KeyL' &&
+          (event.shiftKey || modifierKeys.shiftKey)) {
+            toggleListVisibility();
+        }
         if (event.code === 'KeyG' &&
           (event.shiftKey || modifierKeys.shiftKey)) {
             document.body.classList.contains('grid-view')
@@ -4889,6 +4903,7 @@ window.digichain = {
     splitFromTrack,
     convertChain,
     toggleModifier,
+    toggleListVisibility,
     toggleOptionsPanel,
     showExportSettingsPanel,
     showEditPanel,

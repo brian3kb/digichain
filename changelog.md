@@ -4,6 +4,8 @@ latest
  - Cleaned up selected actions list, added overflow so list can scroll on mobile and flex to the width of the panel.
  - Shift + Ctrl/Cmd click stretch longest/shortest selected action to set the stretch length in samples instead of seconds.
  - Shift + Click on Trim Right button in editor, or selected actions, to also trim silence from the start (left) of the sample.
+ - Changed the behavior of the grid size buttons, clicking will now set the grid size and keep the selection, to also change the selection is now the shift+click action; This is inverted from other versions, but has been a requested change by several users.
+ - Shift + L will toggle the lists visibility, useful for simple chaining/conversion if loading a large number of files that can cause the browser dom rendering to slow.
 
 2024.02.20 1.4.11
  - Fixes bug where saving slice data from imported slice file did not apply slice markers consistently.

@@ -1655,6 +1655,7 @@ function showExportSettingsPanel(page = 'settings') {
     <select id="audioValuesFromCommonSelect" class="btn-audio-config" style="margin: 0 2rem; max-width: 25rem; float: right;" onchange="digichain.setAudioOptionsFromCommonConfig(event)">
         <option value="none" disabled selected>Common Configurations</option>
         <option value="48000m16w0-4-8-16-32-64-128">Digitakt</option>
+        <option value="48000s16w0-4-8-16-32-64-128">Digitakt II</option>
         <option value="44100s16w0-4-8-16-32-64-128">Dirtywave M8</option>
         <option value="48000m16w0-8-10-12-15-30-60">Model:Samples</option>
         <option value="44100s16w0-4-8-16-32-48-64">Octatrack (16bit)</option>

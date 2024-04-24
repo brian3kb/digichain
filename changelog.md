@@ -1,4 +1,4 @@
-latest
+2024.04.24 1.4.12
  - Added Double selected action to add a copy of a sample to the end of itself for the selected samples.
  - Prev / Next buttons on the edit panel to navigate between samples without needing to close the edit panel and re-select from the list.
  - Cleaned up selected actions list, added overflow so list can scroll on mobile and flex to the width of the panel.

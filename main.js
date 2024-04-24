@@ -332,6 +332,8 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     targetContainer = configData.f;
     sliceOptions = configData.go.map(g => +g);
 
+    document.body.dataset.targetSr = targetSR;
+
     sliceOptions.forEach((option, index) => changeSliceOption(
       document.querySelector(`.master-slices .sel-${index}`), option,
       true

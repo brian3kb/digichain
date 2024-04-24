@@ -6,6 +6,8 @@ latest
  - Shift + Click on Trim Right button in editor, or selected actions, to also trim silence from the start (left) of the sample.
  - Changed the behavior of the grid size buttons, clicking will now set the grid size and keep the selection, to also change the selection is now the shift+click action; This is inverted from other versions, but has been a requested change by several users.
  - Shift + L will toggle the lists visibility, useful for simple chaining/conversion if loading a large number of files that can cause the browser dom rendering to slow.
+ - Hide 'Create .OT' button on sample panel if target SR is not 44100.
+ - Added common configuration for Digitakt II.
 
 2024.02.20 1.4.11
  - Fixes bug where saving slice data from imported slice file did not apply slice markers consistently.

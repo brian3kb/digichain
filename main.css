@@ -813,6 +813,12 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     margin-right: .5rem;
     min-width: 11rem;
 }
+#splitOptions .button-create-ot {
+    visibility: hidden;
+}
+body[data-target-sr="44100"] #splitOptions .button-create-ot {
+    visibility: visible;
+}
 .slice-options {
     margin-top: -1.5rem !important;
 }

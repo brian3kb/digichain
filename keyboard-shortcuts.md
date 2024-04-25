@@ -49,3 +49,4 @@
 **Ctrl + Shift + Click**
  - On the edit panel, when clicking the waveform, this will set the end point selection to the clicked position and move the start point to the previous end point value.
  - Sample Slice : In slicing panel, toggles the file loop start point to be from the start of the clicked slice, blue dotted line is loop on, yellow dashed line is loop ping-pong (for .ot exports).
+ - Stretch Longest / Shortest : Value entered will be treated as samples instead of seconds when setting the stretch length.

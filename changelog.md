@@ -1,3 +1,18 @@
+2024.04.24 1.4.12
+ - Added Double selected action to add a copy of a sample to the end of itself for the selected samples.
+ - Prev / Next buttons on the edit panel to navigate between samples without needing to close the edit panel and re-select from the list.
+ - Cleaned up selected actions list, added overflow so list can scroll on mobile and flex to the width of the panel.
+ - Shift + Ctrl/Cmd click stretch longest/shortest selected action to set the stretch length in samples instead of seconds.
+ - Shift + Click on Trim Right button in editor, or selected actions, to also trim silence from the start (left) of the sample.
+ - Changed the behavior of the grid size buttons, clicking will now set the grid size and keep the selection, to also change the selection is now the shift+click action; This is inverted from other versions, but has been a requested change by several users.
+ - Shift + L will toggle the lists visibility, useful for simple chaining/conversion if loading a large number of files that can cause the browser dom rendering to slow.
+ - Hide 'Create .OT' button on sample panel if target SR is not 44100.
+ - Added common configuration for Digitakt II.
+
+2024.02.20 1.4.11
+ - Fixes bug where saving slice data from imported slice file did not apply slice markers consistently.
+ - Bug fix where parsing wav file headers contains multiple fmt chunks, where the first fmt chunk does not contain the samples format data.
+
 2023.12.13 1.4.10
  - .xrns file contents parsing (useful for getting the samples out of a Renoise project file).
  - Parse the Renoise song data from within project files and extract slice markers.
@@ -207,7 +222,7 @@
 - Export settings panel with pitch up export setting (1, 2, or 3 octaves), and the zip file on/off toggle.
 - Added offline support and install as app from the browser.
 
-2023-03-27 1.2.0 
+2023-03-27 1.2.0
 - Added support for slicing files in the list into new items.
 - Added ability to resample joined files back into the list instead of downloading.
 - Sample import times are about a third faster than previously.

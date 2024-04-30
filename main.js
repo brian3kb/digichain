@@ -76,6 +76,8 @@ let normalizeContrast = JSON.parse(
   localStorage.getItem('normalizeContrast')) ?? false;
 let importFileLimit = JSON.parse(
   localStorage.getItem('importFileLimit')) ?? true;
+let skipMiniWaveformRender = JSON.parse(
+  localStorage.getItem('skipMiniWaveformRender')) ?? false;
 let attemptToFindCrossingPoint = JSON.parse(
   localStorage.getItem('attemptToFindCrossingPoint')) ?? false;
 let deClick = JSON.parse(
@@ -1226,6 +1228,11 @@ function toggleSetting(param, value) {
         localStorage.setItem('importFileLimit', importFileLimit);
         showExportSettingsPanel();
     }
+    if (param === 'skipMiniWaveformRender') {
+        skipMiniWaveformRender = !skipMiniWaveformRender;
+        localStorage.setItem('skipMiniWaveformRender', skipMiniWaveformRender);
+        showExportSettingsPanel();
+    }
     if (param === 'reverseEvenSamplesInChains') {
         reverseEvenSamplesInChains = !reverseEvenSamplesInChains;
         localStorage.setItem('reverseEvenSamplesInChains', reverseEvenSamplesInChains);
@@ -1497,9 +1504,15 @@ function showExportSettingsPanel(page = 'settings') {
 </tr>
 <tr>
 <td><span>Limit imports to maximum of 750 files?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="(Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts)." onclick="digichain.toggleSetting('importFileLimit')" class="check ${importFileLimit
+<td><button title="Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts." onclick="digichain.toggleSetting('importFileLimit')" class="check ${importFileLimit
           ? 'button'
           : 'button-outline'}">${importFileLimit ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<td><span>Skip rendering the mini audio waveform in the list?&nbsp;&nbsp;&nbsp;</span></td>
+<td><button title="When processing large lists of files, skiping the renderings of the waveform can improve the responsiveness of the browse as no canvas element per row will be rendered." onclick="digichain.toggleSetting('skipMiniWaveformRender')" class="check ${skipMiniWaveformRender
+          ? 'button'
+          : 'button-outline'}">${skipMiniWaveformRender ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Show Shift/Ctrl modifier touch buttons?&nbsp;&nbsp;&nbsp;</span></td>
@@ -2231,6 +2244,9 @@ const stopPlayFile = (event, id) => {
         file.playHead = false;
     }
     file.waveform?.classList?.remove('playing');
+    if (file.meta.playing === true) {
+        file.meta.playing = false;
+    }
     let playHead = file.playHead ||
       file.waveform?.parentElement?.querySelector('.play-head');
     if (playHead) { playHead.remove(); }
@@ -2278,7 +2294,11 @@ const playFile = (event, id, loop, start, end) => {
     file.source.connect(audioCtx.destination);
     file.source.loop = loop;
 
-    if (id && !event?.editor) {
+    if (id && !event?.editor &&event.target && event.target !== file.waveform) {
+        file.waveform = event.target;
+    }
+
+    if (id && !event?.editor && file.waveform && file.waveform.nodeName !== 'BUTTON') {
         playHead = document.createElement('span');
         playHead.classList.add('play-head');
         playHead.style.animationDuration = `${file.meta.duration}s`;
@@ -2293,25 +2313,31 @@ const playFile = (event, id, loop, start, end) => {
     );
 
     if (id && !event?.editor) {
-        playHead.style.animationIterationCount = file.source.loop
-          ? 'infinite'
-          : 'unset';
         file.waveform?.classList?.add('playing');
+        if (playHead) {
+            playHead.style.animationIterationCount = file.source.loop
+              ? 'infinite'
+              : 'unset';
 
-        if (file.source.loop) {
-            file.meta.playing = 'Interval_' + setInterval(() => {
-                const ph = file.waveform?.parentElement?.querySelector(
-                  '.play-head');
-                if (ph) {
-                    const phClone = ph.cloneNode(true);
-                    ph.remove();
-                    file.waveform.parentElement.appendChild(phClone);
-                } else { // Buffer modified while playing, so clear out the meta.
+            if (file.source.loop) {
+                file.meta.playing = 'Interval_' + setInterval(() => {
+                    const ph = file.waveform?.parentElement?.querySelector(
+                      '.play-head');
+                    if (ph) {
+                        const phClone = ph.cloneNode(true);
+                        ph.remove();
+                        file.waveform.parentElement.appendChild(phClone);
+                    } else { // Buffer modified while playing, so clear out the meta.
+                        stopPlayFile(false, file.meta.id);
+                    }
+                }, file.meta.duration * 1000);
+            } else {
+                file.meta.playing = 'Timeout_' + setTimeout(() => {
                     stopPlayFile(false, file.meta.id);
-                }
-            }, file.meta.duration * 1000);
-        } else {
-            file.meta.playing = 'Timeout_' + setTimeout(() => {
+                }, file.meta.duration * 1000);
+            }
+        } else if (file.source.loop) {
+            file.meta.playing = file.source.loop  || 'Timeout_' + setTimeout(() => {
                 stopPlayFile(false, file.meta.id);
             }, file.meta.duration * 1000);
         }
@@ -3186,6 +3212,17 @@ function reRenderListRow(id) {
     rowEl.querySelector('canvas.waveform').replaceWith(item.waveform);
 }
 
+const getWaveformElementContent = f => {
+    if (skipMiniWaveformRender) {
+        return `<i onclick="digichain.playFile(event, '${f.meta.id}')" class="gg-play-button waveform-btn ${f.meta.playing
+          ? 'playing'
+          : ''}"></i>`;
+    }
+    return `<canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id} ${f.meta.playing
+      ? 'playing'
+      : ''}"></canvas>`;
+};
+
 const buildRowMarkupFromFile = (f, type = 'main') => {
     return type === 'main' ?
       `
@@ -3209,11 +3246,9 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
       <td class="move-down-td">
           <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
       </td>
-      <td class="waveform-td">
-          <canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id} ${f.meta.playing
-        ? 'playing'
-        : ''}"></canvas>
-      </td>
+      <td class="waveform-td">` +
+        getWaveformElementContent(f) +
+      `</td>
       <td class="file-path-td">
       ${(f.file.path + f.file.name).length + 4 > 127
         ?
@@ -3346,7 +3381,15 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
 };
 
 const drawEmptyWaveforms = (_files) => {
-    document.querySelectorAll('.waveform').forEach((el, i) => {
+    const canvasElements = document.querySelectorAll('.waveform');
+    if (canvasElements.length === 0) {
+        document.querySelectorAll('.waveform-btn').forEach((el, i) => {
+            if (!_files[i] || _files[i].waveform) { return; }
+            _files[i].waveform = el;
+        });
+        return setCountValues();
+    }
+    canvasElements.forEach((el, i) => {
         if (!_files[i]) { return; }
         if (_files[i].waveform) {
             el.replaceWith(_files[i].waveform);

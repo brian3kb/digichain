@@ -176,6 +176,9 @@ tr.selected {
     /*background-color: #cb9d5b0d;*/
     background-color: #cb9d5b14;
 }
+td.waveform-td:has(canvas) {
+    width: 180px;
+}
 canvas.waveform {
     cursor: pointer;
     opacity: .7;
@@ -216,6 +219,9 @@ canvas.waveform:hover { opacity: .98; }
     border-top: .5rem solid transparent;
     border-bottom: .5rem solid transparent;
     border-left: .75rem solid #008000b0;
+}
+.waveform-btn.playing {
+    color: #008000b0;
 }
 td.waveform-td span.play-head {
     display: none;

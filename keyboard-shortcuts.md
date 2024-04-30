@@ -17,7 +17,7 @@
  - Up / Down Keys : moves the highlighted sample up or down in the list.
  - P : plays the currently highlighted sample looped. 
  - Waveform View : plays the sample looped, click again to go back to one-shot.
- - Slice Grid Number & Off Buttons : changes the slice grid size, but keeps the selected samples in the list.
+ - Slice Grid Number & Off Buttons : changes the slice grid size, and set the number of selected samples to that number.
  - Duplicate Icon : puts the duplicated file at the end of the sample list.
  - Move Up Icon : moves directly to the top of the sample list.
  - Move Down Icon : moved directly to the end of the sample list.
@@ -33,6 +33,8 @@
  - E : Opens the editor panel for the currently highlighted sample, with the file name and path inputs editable, and the filename input keyboard focused.
  - Truncate / Crush : Shows popup to enter a custom value.
  - Sample Slice : In slicing panel, toggles looping the clicked slice (for .ot exports).
+ - Trim Right : will trim  both left and right of the sample.
+ - L : Toggles hiding/showing of the rendered list of samples.
 
 **Ctrl + Click**
  - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.

@@ -1,3 +1,7 @@
+2024.04.30 1.4.13
+ - Option to skip rendering of the mini waveform display in the sample list.
+ - Fix regression bug on trim-right selected action.
+
 2024.04.24 1.4.12
  - Added Double selected action to add a copy of a sample to the end of itself for the selected samples.
  - Prev / Next buttons on the edit panel to navigate between samples without needing to close the edit panel and re-select from the list.

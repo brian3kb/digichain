@@ -902,7 +902,7 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003, trimLe
     }
 
     let trimIndex = [];
-    let trimLeftIndex = [];
+    let trimLeftIndex = [0];
     let newBufferLength = item.buffer.length;
 
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
@@ -920,7 +920,6 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003, trimLe
 
     if (trimLeft) {
         for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-            trimLeftIndex.push(0);
             let data = item.buffer.getChannelData(channel);
             for (let i = 0; i < newBufferLength; i++) {
                 if (Math.abs(data[i]) > ampFloor && data[i] !== undefined &&

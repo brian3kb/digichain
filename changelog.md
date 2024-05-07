@@ -1,3 +1,7 @@
+latest
+ - Added basic error catch in the joinAll method to help surface chain build errors.
+ - User alert for userAgent version checks to inform users if their browser is of a minimum supported version for the browser API's used.
+
 2024.04.30 1.4.13
  - Option to skip rendering of the mini waveform display in the sample list.
  - Fix regression bug on trim-right selected action.

@@ -1946,195 +1946,206 @@ async function joinAll(
     if (files.length === 0) { return; }
     if (toInternal ||
       (event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
-    if (zipDownloads && !toInternal && files.filter(
-      f => f.meta.checked).length > 1) { zip = zip || new JSZip(); }
+    try {
+        if (zipDownloads && !toInternal && files.filter(
+          f => f.meta.checked).length > 1) { zip = zip || new JSZip(); }
 
-    let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(
-      f => f.meta.checked);
+        let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(
+          f => f.meta.checked);
 
-    let tempFiles, slices, largest;
-    let totalLength = 0;
+        let tempFiles, slices, largest;
+        let totalLength = 0;
 
-    if (secondsPerFile === 0) { /*Using slice grid file lengths*/
-        tempFiles = _files.splice(0,
-          (sliceGrid > 0 ? sliceGrid : _files.length));
+        if (secondsPerFile === 0) { /*Using slice grid file lengths*/
+            tempFiles = _files.splice(0,
+              (sliceGrid > 0 ? sliceGrid : _files.length));
 
-        filesRemaining = Array.from(_files);
-        _files = tempFiles;
-        if (pad && sliceGrid !== 0 && _files.length !== 0) {
-            while (_files.length !== sliceGrid) {
-                _files.push(_files[_files.length - 1]);
+            filesRemaining = Array.from(_files);
+            _files = tempFiles;
+            if (pad && sliceGrid !== 0 && _files.length !== 0) {
+                while (_files.length !== sliceGrid) {
+                    _files.push(_files[_files.length - 1]);
+                }
             }
+            largest = _files.reduce(
+              (big, cur) => big > cur.buffer.length ? big : cur.buffer.length, 0);
+            totalLength = _files.reduce((total, file) => {
+                total += pad ? largest : file.buffer.length;
+                return total;
+            }, 0);
+
+        } else { /*Using max length in seconds (if aif also limit upto 24 files per chain)*/
+            _files = _files.filter(f => f.meta.duration < secondsPerFile);
+            let maxChainLength = (
+              targetContainer === 'a' ? 24 : (sliceGrid === 0
+                ? 64
+                : sliceGrid));
+            const processing = _files.reduce((a, f) => {
+                if (
+                  (a.duration + +f.meta.duration <=
+                    (secondsPerFile * pitchModifier)) &&
+                  (a.processed.length < maxChainLength)) {
+                    a.duration = a.duration + +f.meta.duration;
+                    a.totalLength = a.totalLength + +f.meta.length;
+                    a.processed.push(f);
+                } else {
+                    a.skipped.push(f);
+                }
+                return a;
+            }, {duration: 0, totalLength: 0, processed: [], skipped: []});
+
+            totalLength = processing.totalLength;
+            filesRemaining = processing.skipped;
+            _files = processing.processed;
         }
-        largest = _files.reduce(
-          (big, cur) => big > cur.buffer.length ? big : cur.buffer.length, 0);
-        totalLength = _files.reduce((total, file) => {
-            total += pad ? largest : file.buffer.length;
-            return total;
-        }, 0);
 
-    } else { /*Using max length in seconds (if aif also limit upto 24 files per chain)*/
-        _files = _files.filter(f => f.meta.duration < secondsPerFile);
-        let maxChainLength = (
-          targetContainer === 'a' ? 24 : (sliceGrid === 0
-            ? 64
-            : sliceGrid));
-        const processing = _files.reduce((a, f) => {
-            if (
-              (a.duration + +f.meta.duration <=
-                (secondsPerFile * pitchModifier)) &&
-              (a.processed.length < maxChainLength)) {
-                a.duration = a.duration + +f.meta.duration;
-                a.totalLength = a.totalLength + +f.meta.length;
-                a.processed.push(f);
+        slices = [];
+        let offset = 0;
+        for (let x = 0; x < _files.length; x++) {
+            const fileSliceData = _files[x].meta.slices || metaFiles.getByFileInDcFormat(_files[x]);
+            if (fileSliceData.length) {
+                if (slices.length > 0) {
+                    const _slices = JSON.parse(
+                      JSON.stringify(fileSliceData));
+                    _slices.forEach(slice => {
+                        slice.s = slice.s + offset;
+                        slice.e = slice.e + offset;
+                    });
+                    slices = [...slices, ..._slices];
+                } else {
+                    slices = [...slices, ...fileSliceData];
+                }
             } else {
-                a.skipped.push(f);
-            }
-            return a;
-        }, {duration: 0, totalLength: 0, processed: [], skipped: []});
-
-        totalLength = processing.totalLength;
-        filesRemaining = processing.skipped;
-        _files = processing.processed;
-    }
-
-    slices = [];
-    let offset = 0;
-    for (let x = 0; x < _files.length; x++) {
-        const fileSliceData = _files[x].meta.slices || metaFiles.getByFileInDcFormat(_files[x]);
-        if (fileSliceData.length) {
-            if (slices.length > 0) {
-                const _slices = JSON.parse(
-                  JSON.stringify(fileSliceData));
-                _slices.forEach(slice => {
-                    slice.s = slice.s + offset;
-                    slice.e = slice.e + offset;
+                slices.push({
+                    s: offset,
+                    e: offset + (pad ? largest : +_files[x].buffer.length),
+                    n: _files[x].file.name,
+                    p: _files[x].meta.opPan ?? 16384,
+                    pab: _files[x].meta.opPanAb ?? false,
+                    st: _files[x].meta.opPitch ?? 0
                 });
-                slices = [...slices, ..._slices];
-            } else {
-                slices = [...slices, ...fileSliceData];
             }
-        } else {
-            slices.push({
-                s: offset,
-                e: offset + (pad ? largest : +_files[x].buffer.length),
-                n: _files[x].file.name,
-                p: _files[x].meta.opPan ?? 16384,
-                pab: _files[x].meta.opPanAb ?? false,
-                st: _files[x].meta.opPitch ?? 0
-            });
+            offset += (pad ? largest : +_files[x].buffer.length);
         }
-        offset += (pad ? largest : +_files[x].buffer.length);
-    }
-    slices.forEach(s => {
-        s.s = s.s > totalLength ? totalLength : s.s;
-        s.e = s.e > totalLength ? totalLength : s.e;
-    });
-    slices = slices.filter(s => s.s < s.e);
-    const audioArrayBuffer = audioCtx.createBuffer(
-      masterChannels,
-      totalLength,
-      masterSR
-    );
+        slices.forEach(s => {
+            s.s = s.s > totalLength ? totalLength : s.s;
+            s.e = s.e > totalLength ? totalLength : s.e;
+        });
+        slices = slices.filter(s => s.s < s.e);
+        const audioArrayBuffer = audioCtx.createBuffer(
+          masterChannels,
+          totalLength,
+          masterSR
+        );
 
-    for (let channel = 0; channel < masterChannels; channel++) {
-        for (let i = 0; i < totalLength; i++) {
-            audioArrayBuffer.getChannelData(channel)[i] = 0;
+        for (let channel = 0; channel < masterChannels; channel++) {
+            for (let i = 0; i < totalLength; i++) {
+                audioArrayBuffer.getChannelData(channel)[i] = 0;
+            }
         }
-    }
 
-    if (masterChannels === 1) {
-        joinToMono(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains);
-    }
-    if (masterChannels === 2) {
-        joinToStereo(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains);
-    }
+        if (masterChannels === 1) {
+            joinToMono(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains);
+        }
+        if (masterChannels === 2) {
+            joinToStereo(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains);
+        }
 
-    const joinedEl = document.getElementById('getJoined');
-    const path = _files[0].file.path ? `${(_files[0].file.path || '').replace(
-      /\//gi, '-')}` : '';
-    const fileData = {
-        file: {
-            name: chainFileNamesAvailable() ? getNextChainFileName(
-              _files.length) : (_files.length === 1 ?
-              `${path}chain_${pad ? 'spaced_' : ''}${getNiceFileName('',
-                _files[0], true)}_${fileCount + 1}--[${_files.length}].wav` :
-              `${path}chain_${pad ? 'spaced_' : ''}${fileCount +
-              1}--[${_files.length}].wav`)
-        }, buffer: audioArrayBuffer, meta: {slices}
-    };
-    if (toInternal) {
-
-        const wav = await setWavLink(fileData, joinedEl, false, false,
-          (masterBitDepth === 8 ? 8 : 32));
-        const fileReader = new FileReader();
-        fileReader.readAsArrayBuffer(wav.blob);
-        fileReader.fileCount = fileCount;
-        fileReader.onload = async (e) => {
-            const fb = e.target.result.slice(0);
-            await (masterSR !== (wav.sampleRate || masterSR)
-                ? new AudioContext(
-                    {
-                        sampleRate: wav.sampleRate,
-                        latencyHint: 'interactive'
-                    })
-                : audioCtx).decodeAudioData(e.target.result, buffer => {
-                parseWav(buffer, fb, {
-                    lastModified: new Date().getTime(),
-                    name: fileData.file.name,
-                    embedSliceData: embedSliceData,
-                    sampleRate: wav.sampleRate || masterSR,
-                    channels: buffer.numberOfChannels,
-                    // name: _files.length === 1 ?
-                    //     `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('',
-                    //         _files[0], true)}_${fileReader.fileCount +
-                    //     1}--[${_files.length}].wav` :
-                    //     `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount +
-                    //     1}--[${_files.length}].wav`,
-                    size: (((masterBitDepth === 8 ? 8 : 32) * (wav.sampleRate || masterSR) *
-                        (buffer.length / (wav.sampleRate || masterSR))) /
-                      8) * buffer.numberOfChannels / 1024,
-                    type: 'audio/wav'
-                }, '', true, false);
-                renderList();
-            });
+        const joinedEl = document.getElementById('getJoined');
+        const path = _files[0].file.path ? `${(_files[0].file.path || '').replace(
+          /\//gi, '-')}` : '';
+        const fileData = {
+            file: {
+                name: chainFileNamesAvailable() ? getNextChainFileName(
+                  _files.length) : (_files.length === 1 ?
+                  `${path}chain_${pad ? 'spaced_' : ''}${getNiceFileName('',
+                    _files[0], true)}_${fileCount + 1}--[${_files.length}].wav` :
+                  `${path}chain_${pad ? 'spaced_' : ''}${fileCount +
+                  1}--[${_files.length}].wav`)
+            }, buffer: audioArrayBuffer, meta: {slices}
         };
+        if (toInternal) {
 
-    } else {
-        const renderAsAif = targetContainer === 'a';
-        if (zip) {
-            const wav = await setWavLink(fileData, joinedEl, renderAsAif, true);
-            fileData.file.name = targetContainer === 'a' ?
-              fileData.file.name.replace('.wav', '.aif') :
-              fileData.file.name;
-            zip.file(fileData.file.name, wav.blob, {binary: true});
-            let otFile = await createAndSetOtFileLink(
-              fileData.meta.slices ?? [], fileData,
-              fileData.file.name);
-            if (otFile) {
-                zip.file(otFile.name, otFile.blob, {binary: true});
-            }
+            const wav = await setWavLink(fileData, joinedEl, false, false,
+              (masterBitDepth === 8 ? 8 : 32));
+            const fileReader = new FileReader();
+            fileReader.readAsArrayBuffer(wav.blob);
+            fileReader.fileCount = fileCount;
+            fileReader.onload = async (e) => {
+                const fb = e.target.result.slice(0);
+                await (masterSR !== (wav.sampleRate || masterSR)
+                    ? new AudioContext(
+                        {
+                            sampleRate: wav.sampleRate,
+                            latencyHint: 'interactive'
+                        })
+                    : audioCtx).decodeAudioData(e.target.result, buffer => {
+                    parseWav(buffer, fb, {
+                        lastModified: new Date().getTime(),
+                        name: fileData.file.name,
+                        embedSliceData: embedSliceData,
+                        sampleRate: wav.sampleRate || masterSR,
+                        channels: buffer.numberOfChannels,
+                        // name: _files.length === 1 ?
+                        //     `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('',
+                        //         _files[0], true)}_${fileReader.fileCount +
+                        //     1}--[${_files.length}].wav` :
+                        //     `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount +
+                        //     1}--[${_files.length}].wav`,
+                        size: (((masterBitDepth === 8 ? 8 : 32) * (wav.sampleRate || masterSR) *
+                            (buffer.length / (wav.sampleRate || masterSR))) /
+                          8) * buffer.numberOfChannels / 1024,
+                        type: 'audio/wav'
+                    }, '', true, false);
+                    renderList();
+                });
+            };
+
         } else {
-            await setWavLink(fileData, joinedEl, renderAsAif, true);
-            joinedEl.click();
-            let otFile = await createAndSetOtFileLink(
-              fileData.meta.slices ?? [], fileData,
-              fileData.file.name, joinedEl);
-            if (otFile) {joinedEl.click(); }
-        }
-    }
-    if (filesRemaining.length > 0) {
-        fileCount++;
-        joinAll(event, pad, filesRemaining, fileCount, toInternal, zip);
-    } else {
-        if (zip) {
-            zip.generateAsync({type: 'blob'}).then(blob => {
-                joinedEl.href = URL.createObjectURL(blob);
-                joinedEl.setAttribute('download', 'digichain_files.zip');
+            const renderAsAif = targetContainer === 'a';
+            if (zip) {
+                const wav = await setWavLink(fileData, joinedEl, renderAsAif, true);
+                fileData.file.name = targetContainer === 'a' ?
+                  fileData.file.name.replace('.wav', '.aif') :
+                  fileData.file.name;
+                zip.file(fileData.file.name, wav.blob, {binary: true});
+                let otFile = await createAndSetOtFileLink(
+                  fileData.meta.slices ?? [], fileData,
+                  fileData.file.name);
+                if (otFile) {
+                    zip.file(otFile.name, otFile.blob, {binary: true});
+                }
+            } else {
+                await setWavLink(fileData, joinedEl, renderAsAif, true);
                 joinedEl.click();
-            });
+                let otFile = await createAndSetOtFileLink(
+                  fileData.meta.slices ?? [], fileData,
+                  fileData.file.name, joinedEl);
+                if (otFile) {joinedEl.click(); }
+            }
         }
-        renderList();
+        if (filesRemaining.length > 0) {
+            fileCount++;
+            joinAll(event, pad, filesRemaining, fileCount, toInternal, zip);
+        } else {
+            if (zip) {
+                zip.generateAsync({type: 'blob'}).then(blob => {
+                    joinedEl.href = URL.createObjectURL(blob);
+                    joinedEl.setAttribute('download', 'digichain_files.zip');
+                    joinedEl.click();
+                });
+            }
+            renderList();
+        }
+    } catch (joinError) {
+        let errorMessage = `An unexpected error was encountered while building the sample chain(s).`;
+        if (joinError) {
+            errorMessage += `\n\n "${joinError.toString ? joinError.toString() : JSON.stringify(joinError)}"`;
+        }
+        document.getElementById('loadingText').textContent = 'Unexpected Error';
+        alert(errorMessage);
+        setTimeout(() => document.body.classList.remove('loading'), 3000);
+        console.log(joinError);
     }
 }
 
@@ -4498,6 +4509,34 @@ const dropHandler = (event) => {
 };
 
 function init() {
+
+    /*Basic browser version detection - we won't prevent trying to use, just an alert.*/
+    (() => {
+        try {
+            const chromeVersion = navigator.userAgent.match(
+              /\d+\.\d+\.\d+\.\d+/);
+            if (chromeVersion && chromeVersion[0] &&
+              +chromeVersion[0].split('.')[0] < 114) {
+                return alert(
+                  'Chromium browser versions below 114.x.x are not supported.');
+            }
+            const safariVersion = navigator.userAgent.match(
+              /Version\/\d+\.\d+\.\d+/);
+            if (safariVersion && safariVersion[0] &&
+              +safariVersion[0].match(/\d+\.\d+/) < 16.3) {
+                return alert(
+                  'Safari browser versions below 16.3 are not supported.');
+            }
+            const firefoxVersion = navigator.userAgent.match(
+              /Firefox\/\d+\.\d+/);
+            if (firefoxVersion && firefoxVersion[0] &&
+              +firefoxVersion[0].match(/\d+\.\d+/) < 115) {
+                return alert(
+                  'Firefox browser versions below 115.x are not supported.');
+            }
+        } catch (e) {}
+    })();
+
     uploadInput.addEventListener(
       'change',
       () => consumeFileInput({shiftKey: modifierKeys.shiftKey},

@@ -501,8 +501,8 @@ function updateSelectionEl() {
       multiplier) : getSelectionEndPoint();
     selectionEl.style.marginLeft = `${getSelectionStartPoint()}px`;
     selectionEl.style.width = `${width}px`;
-    selectionEl.classList[editing.buffer.getChannelData(0)[selection.start] === 0 ? 'add' : 'remove']('start-is-zero-crossing');
-    selectionEl.classList[editing.buffer.getChannelData(0)[selection.end] === 0 ? 'add' : 'remove']('end-is-zero-crossing');
+    selectionEl.classList[+(editing.buffer.getChannelData(0)[selection.start]??1).toFixed(4) === 0 ? 'add' : 'remove']('start-is-zero-crossing');
+    selectionEl.classList[+(editing.buffer.getChannelData(0)[selection.end]??1).toFixed(4) === 0 ? 'add' : 'remove']('end-is-zero-crossing');
     if (!selection.start || selection.start === 0) {
         selectionEl.classList.remove('start-is-zero-crossing');
     }
@@ -544,14 +544,14 @@ function snapToZeroCrossing(snapEnd = false) {
     }
     if (snapEnd) {
         for (let i = (selection.end ?? editing.buffer.length); editing.buffer.length > i; i--) {
-            if (editing.buffer.getChannelData(0)[i] === 0 || i === 0) {
+            if (+editing.buffer.getChannelData(0)[i].toFixed(4) === 0 || i === 0) {
                 selection.end = i;
                 break;
             }
         }
     } else {
         for (let i = (selection.start ?? 0); i < editing.buffer.length; i++) {
-            if (editing.buffer.getChannelData(0)[i] === 0 || i === editing.buffer.length) {
+            if (+editing.buffer.getChannelData(0)[i].toFixed(4) === 0 || i === editing.buffer.length) {
                 selection.start = i;
                 break;
             }

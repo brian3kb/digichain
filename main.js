@@ -43,8 +43,8 @@ const infoEl = document.getElementById('infoIndicator');
 const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 128];
 const importFileLimitValue = 750;
 let db, dbReq;
-let masterSR = 44100; /*The working sample rate*/
-let targetSR = 44100; /*The target sample rate, what rendered files will output at.*/
+let masterSR = 48000; /*The working sample rate*/
+let targetSR = 48000; /*The target sample rate, what rendered files will output at.*/
 let masterBitDepth = 16;
 let masterChannels = 1;
 let targetContainer = 'w';
@@ -262,6 +262,9 @@ function setAudioOptionsFromCommonConfig(event) {
     document.getElementById(`acoChannel${configValues[1]}`).click();
     document.getElementById(`acoBitDepth${configValues[2]}`).click();
     configValues.slice(4).forEach((g, i) => i > 0 ?document.getElementById(`gridSize${+i}`).value = +g : '');
+    if (files.length === 0) {
+        document.getElementById('settingsWorkingSampleRate').value = +configValues[0];
+    }
 }
 
 async function changeAudioConfig(configString = '', onloadRestore = false) {
@@ -285,7 +288,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
         go: [0, ...[...document.querySelectorAll('.acoSliceGridOption')].map(go => +go.value)]
     };
 
-    let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value || localStorage.getItem('workingSampleRate') || 44100);
+    let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value || localStorage.getItem('workingSampleRate') || 48000);
 
     if (audioValuesFromCommonSelectEl) {
         audioValuesFromCommonSelectEl.value = 'none';

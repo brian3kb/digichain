@@ -1,6 +1,8 @@
 latest
  - Added basic error catch in the joinAll method to help surface chain build errors.
  - User alert for userAgent version checks to inform users if their browser is of a minimum supported version for the browser API's used.
+ - Fixes bug when in the sample editor, and snap to zero was enabled, if no zero crossing could be found on the end point, then browser tab would hang on short samples.
+ - Fixes bug where an end point selected before the current non-zero start point with snap to zero crossing enabled, would result in a negative preview playback value causing looped playback preview in the editor to not play any audio.
 
 2024.04.30 1.4.13
  - Option to skip rendering of the mini waveform display in the sample list.

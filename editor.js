@@ -219,7 +219,7 @@ export function renderEditor(item) {
   <button title="Update the slice marker start/end points." onclick="digichain.editor.sliceUpdate(event);" class="button-outline">Update Slice</button>
   <button title="Remove the current slice marker." onclick="digichain.editor.sliceRemove(event);" class="button-outline">Remove Slice</button>
   <button title="Add the current range as a new slice marker." onclick="digichain.editor.sliceCreate(event);" class="button-outline">New Slice</button>
-  <button title="Snap selections to zero crossings?" onclick="digichain.editor.toggleSnapToZero(event);" class="button button-outline">Snap to Zero</button>
+  <button title="Snap selections to zero crossings?" onclick="digichain.editor.toggleSnapToZero(event);" class="button ${shouldSnapToZeroCrossing ? '' : 'button-outline'}">Snap to Zero</button>
     <button title="Detect BPM from selection." onclick="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
 </div>
 <div class="above-waveform-buttons">
@@ -533,7 +533,7 @@ function zoomLevel(view, level) {
 function setSelStart(value) {
     const startBtnEl = document.querySelector('.btn-select-start');
     const endBtnEl = document.querySelector('.btn-select-end');
-    selection.selStart = value;
+    selection.selStart = Math.abs(Math.round(value));
     startBtnEl.classList[!value ? 'add' : 'remove']('button-outline');
     endBtnEl.classList[value ? 'add' : 'remove']('button-outline');
 }
@@ -544,19 +544,21 @@ function snapToZeroCrossing(snapEnd = false) {
     }
     if (snapEnd) {
         for (let i = (selection.end ?? editing.buffer.length); editing.buffer.length > i; i--) {
-            if (editing.buffer.getChannelData(0)[i] === 0) {
+            if (editing.buffer.getChannelData(0)[i] === 0 || i === 0) {
                 selection.end = i;
                 break;
             }
         }
     } else {
         for (let i = (selection.start ?? 0); i < editing.buffer.length; i++) {
-            if (editing.buffer.getChannelData(0)[i] === 0) {
+            if (editing.buffer.getChannelData(0)[i] === 0 || i === editing.buffer.length) {
                 selection.start = i;
                 break;
             }
         }
     }
+    selection.start = selection.start < 0 ? 0 : selection.start;
+    selection.end = selection.end > editing.buffer.length ? editing.buffer.length : selection.end;
 }
 
 function changeSelectionPoint(event, shiftKey = false) {
@@ -702,8 +704,8 @@ function reSamplePitch(
               };
               if (renderEditPanel) {
                   renderEditPanelWaveform(multiplier);
-                  selection.end = Math.round(selection.end / pitchValue);
-                  selection.start = Math.round(selection.start / pitchValue);
+                  selection.end = Math.abs(Math.round(selection.end / pitchValue));
+                  selection.start = Math.abs(Math.round(selection.start / pitchValue));
                   selection.step = item.buffer.length / (1024 * multiplier);
                   updateSelectionEl();
                   item.waveform = false;
@@ -1167,8 +1169,8 @@ function stretch(event, item, renderEditPanel = true, targetLength, returnBuffer
     };
     if (renderEditPanel) {
         renderEditPanelWaveform(multiplier);
-        selection.end = Math.round(selection.end * factor);
-        selection.start = Math.round(selection.start * factor);
+        selection.end = Math.abs(Math.round(selection.end * factor));
+        selection.start = Math.abs(Math.round(selection.start * factor));
         selection.step = item.buffer.length / (1024 * multiplier);
         updateSelectionEl();
         item.waveform = false;
@@ -1329,8 +1331,10 @@ function serialize(event, item, renderEditPanel = true, method = 'LR') {
 }
 
 function editorPlayFile(event, loop = false, stop = false) {
-    const start = selection.start / conf.masterSR;
-    const end = (selection.end / conf.masterSR) - start;
+    let start = selection.start / conf.masterSR;
+    let end = (selection.end / conf.masterSR) - start;
+    start = start < 0 ? 0 : start;
+    end = end > editing.buffer.length ? editing.buffer.length : end;
     clearTimeout(editorPlayFile.nextLoop);
     if (stop || !editPanelEl.open) {
         digichain.stopPlayFile(event, editing.meta.id);

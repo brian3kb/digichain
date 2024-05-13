@@ -1933,7 +1933,7 @@ function performBlend(mFiles, blendLength) {
 }
 
 function joinAllUICall(event, pad) {
-    if (files.length === 0) { return; }
+    if (files.length === 0 || files.filter(f => f.meta.checked).length === 0) { return; }
     if (secondsPerFile !== 0) {
         let _files = files.filter(f => f.meta.duration < secondsPerFile);
         if (_files.length === 0) { return;}
@@ -3158,16 +3158,22 @@ const setCountValues = () => {
       'fileNum').textContent = `${files.length}/${selectionCount}`;
     document.querySelector(
       '.selection-count').textContent = ` ${selectionCount || '-'} `;
+    document.querySelector(
+      '.selection-count').dataset.selectionCount = selectionCount;
     document.getElementById(
       'lengthHeaderLink').textContent = `Length (${secondsToMinutes(
       filesSelectedDuration)}/${secondsToMinutes(filesDuration)})`;
     if (secondsPerFile === 0) {
         document.querySelectorAll('.join-count').
-          forEach((el, idx) => el.textContent = ` ${joinCount === 0
-            ? '-'
-            : joinCount}${idx === 0 ? ' Spaced' : ''}${joinCount === 1
-            ? ' Chain'
-            : ' Chains'}`);
+          forEach((el, idx) => {
+              el.textContent = ` ${
+                joinCount === 0
+                  ? '-'
+                  : joinCount}${idx === 0 ? ' Spaced' : ''}${joinCount === 1
+                ? ' Chain'
+                : ' Chains'}`;
+              el.dataset.joinCount = joinCount;
+          });
         try {
             document.querySelectorAll('tr').
               forEach(row => row.classList.remove('end-of-grid'));
@@ -3211,6 +3217,8 @@ const setCountValues = () => {
           '.join-count-chain').textContent = ` ${joinCountSec === 0
           ? '-'
           : joinCountSec}${joinCountSec === 1 ? ' Chain' : ' Chains'}`;
+        document.querySelector(
+          '.join-count-chain').dataset.joinCount = joinCountSec;
         try {
             document.querySelectorAll('tr').
               forEach(row => row.classList.remove('end-of-grid'));

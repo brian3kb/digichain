@@ -139,7 +139,7 @@ table#masterList { padding-bottom: 12rem; padding-top: 1rem; }
     content-visibility: auto;
 }
 #fileList:empty::after {
-    content: 'Load / Drop samples here to get started...';
+    content: 'Load / Drop samples here to get started... (Shift+K to see keyboard shortcuts)';
     text-align: center;
     padding-top: 7rem;
     padding-bottom: 7rem;
@@ -655,6 +655,12 @@ dialog {
     width: 15.5rem;
     padding: 0;
     float: left;
+}
+
+button:has(.selection-count[data-selection-count="0"]),
+button:has(.join-count[data-join-count="0"]) {
+    opacity: .2;
+    cursor: not-allowed;
 }
 .toggle-export-settings, .toggle-seconds-per-file {
     padding: 0 1rem;

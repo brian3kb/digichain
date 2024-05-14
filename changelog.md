@@ -1,4 +1,4 @@
-latest
+2024.05.14 1.4.14
  - Added basic error catch in the joinAll method to help surface chain build errors.
  - User alert for userAgent version checks to inform users if their browser is of a minimum supported version for the browser API's used.
  - Fixes bug when in the sample editor, and snap to zero was enabled, if no zero crossing could be found on the end point, then browser tab would hang on short samples.

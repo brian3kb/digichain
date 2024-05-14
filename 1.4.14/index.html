@@ -525,21 +525,6 @@
     if (window.location !== window.parent.location) {
         document.documentElement.classList.add('scaled');
     }
-
-    if ('serviceWorker' in navigator && !location.origin.includes('localhost') &&
-      !location.pathname.includes('latest') && !location.origin.includes('latest') &&
-      window.location === window.parent.location) {
-        window.addEventListener('load', async () => {
-            try {
-                let reg;
-                reg = await navigator.serviceWorker.register('sw.js', {
-                    type: 'module'
-                });
-            } catch (err) {
-                console.log('Service worker registration failed: ', err);
-            }
-        });
-    }
 </script>
 </body>
 </html>

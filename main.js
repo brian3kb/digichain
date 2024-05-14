@@ -345,7 +345,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     ));
 
     selectSliceAmount({
-        shiftKey: true,
+        shiftKey: false,
         target: document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)
     }, sliceOptions[+document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)?.dataset?.sel??0]);
 

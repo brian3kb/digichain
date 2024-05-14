@@ -6,7 +6,8 @@ latest
  - Defaulting to 48kHz as the working sample rate for broader compatibility with built-in audio devices (continues to be user configurable in Audio Settings Panel, does not change if DigiChain has been used before as this is a restored setting).
  - If the sample list is empty, choosing an option from the 'Common Configurations' list will set both the Working Sample Rate and the Target Sample Rate to the same value.
  - When no samples are selected, clicking the chain buttons showed the processing overlay but did not remove it.
- - When no samples are selected, the download buttons will no visually indicate their non-clickable state.
+ - Selections won't clear when changing the slice-grid values via the audio config panel (grid choice will still be set to OFF).
+ - The download buttons will now visually indicate their clickable state.
 
 2024.04.30 1.4.13
  - Option to skip rendering of the mini waveform display in the sample list.

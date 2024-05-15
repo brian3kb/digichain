@@ -964,6 +964,35 @@ function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003, trimLe
     item.waveform = false;
 }
 
+function thresholdCondense(event, item, renderEditPanel = true, lower = 0.003, upper = 1) {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = item.buffer.length;
+    }
+    item = item || editing;
+
+    const audioArrayBuffer = conf.audioCtx.createBuffer(
+      item.buffer.numberOfChannels,
+      item.buffer.length,
+      conf.masterSR
+    );
+
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        let data = item.buffer.getChannelData(channel);
+        let aabIndex = selection.start;
+        for (let i = selection.start; i < item.buffer.length; i++) {
+            const absValue = Math.abs(data[i]);
+            if (absValue > lower && absValue < upper) {
+                audioArrayBuffer.getChannelData(channel)[aabIndex] = absValue;
+                aabIndex++;
+            }
+        }
+    }
+    item.buffer = audioArrayBuffer;
+
+    trimRight(event, item, renderEditPanel, 0, false);
+}
+
 function paulStretchNot(event, item, renderEditPanel = true, stretchFactor = 2) {
     if (!renderEditPanel && item) {
         selection.start = 0;
@@ -1369,6 +1398,7 @@ export const editor = {
     normalize,
     fade,
     trimRight,
+    thresholdCondense,
     truncate,
     interpolate,
     perSamplePitch,

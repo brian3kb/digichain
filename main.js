@@ -885,6 +885,32 @@ function trimRightSelected(event) {
     }, 250);
 }
 
+function condenseSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    let lower = prompt(
+      `Please enter the LOWER threshold (decimal value between 0 and 1)...`);
+    if (lower && !isNaN(lower)) {
+        lower = Math.abs(+lower);
+    }
+    let upper = prompt(
+      `Please enter the UPPER threshold (decimal value between 0 and 1)...`);
+    if (upper && !isNaN(upper)) {
+        upper = Math.abs(+upper);
+    }
+    document.getElementById('loadingText').textContent = 'Processing';
+    document.body.classList.add('loading');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach((f, idx) => {
+            editor.thresholdCondense(event, f, false, +lower, +upper);
+            if (idx === selected.length - 1) {
+                document.body.classList.remove('loading');
+            }
+        });
+        renderList();
+    }, 250);
+}
+
 function roughStretchSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     document.getElementById('loadingText').textContent = 'Processing';
@@ -4967,6 +4993,7 @@ window.digichain = {
     stretchSelected,
     shortenNameSelected,
     serializeSelected,
+    condenseSelected,
     showMergePanel,
     showBlendPanel,
     sort,

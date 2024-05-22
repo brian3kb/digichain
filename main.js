@@ -2997,14 +2997,22 @@ const sort = (event, by, prop = 'meta') => {
     } else {
         if (lastSort === by) {
             //files.reverse();
-            files = forLocaleCompare.includes(by) ?
-              files.sort((a, b) => b[prop][by].localeCompare(a[prop][by])) :
-              files.sort((a, b) => (b[prop][by] - a[prop][by]));
+            if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
+                files.sort((a, b) => (+(b[prop][by].replace(/\D+/gi, ''))  - +(a[prop][by].replace(/\D+/gi, '')) ));
+            } else {
+                files = forLocaleCompare.includes(by) ?
+                  files.sort((a, b) => b[prop][by].localeCompare(a[prop][by])) :
+                  files.sort((a, b) => (b[prop][by] - a[prop][by]));
+            }
             lastSort = '';
         } else {
-            files = forLocaleCompare.includes(by) ?
-              files.sort((a, b) => a[prop][by].localeCompare(b[prop][by])) :
-              files.sort((a, b) => (a[prop][by] - b[prop][by]));
+            if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
+                files.sort((a, b) => (+(a[prop][by].replace(/\D+/gi, '')) - +(b[prop][by].replace(/\D+/gi, '')) ));
+            } else {
+                files = forLocaleCompare.includes(by) ?
+                  files.sort((a, b) => a[prop][by].localeCompare(b[prop][by])) :
+                  files.sort((a, b) => (a[prop][by] - b[prop][by]));
+            }
             lastSort = by;
         }
     }

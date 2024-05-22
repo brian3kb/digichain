@@ -117,7 +117,8 @@
                 <code>Time Limit</code> prompts to enter a custom value for the timed chain lengths when that mode is
                 enabled<br>
                 <code>Sample Slice</code> In slicing panel, previews (plays) the slice clicked on<br>
-                <code>Add Samples Icon</code> Adds a blank sample to list
+                <code>Add Samples Icon</code> Adds a blank sample to list<br>
+                <code>Filename Column Header</code> Sorts the list, but will sort by numeric filename content only.<br>
             </div>
         </div>
 
@@ -475,9 +476,8 @@
                     <th></th>
                     <th class="waveform-col"></th>
                     <th>
-                        <a title="Click to sort. Shift+Click will keep the selected items grouped to the top of the list."
-                           onclick="digichain.sort(event, 'name', 'file')" class="has-shift-mod-i">Filename /
-                            Download</a>
+                        <a title="Click to sort. Shift+Click will keep the selected items grouped to the top of the list. Ctrl+Click will sort using numeric values only."
+                           onclick="digichain.sort(event, 'name', 'file')" class="has-shift-mod-i has-ctrl-mod-i">Filename</a>
                         <a title="Click to sort." onclick="digichain.sort(event, 'sliceNumber')"
                            class="has-shift-mod-i"> - slice # </a>
                         <a title="Click to sort." onclick="digichain.sort(event, 'note')" class="has-shift-mod-i"> -

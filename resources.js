@@ -79,14 +79,14 @@ export function bufferToFloat32Array(
         masterSR
       ) : new Float32Array(buffer.length);
 
-    if (channel === 'S') {
+    if (channel === 'S' && buffer.numberOfChannels > 1) {
         for (let i = 0; i < buffer.length; i++) {
             (getAudioBuffer
               ? result.getChannelData(0)
               : result)[i] = (buffer.getChannelData(0)[i] +
               buffer.getChannelData(1)[i]) / 2;
         }
-    } else if (channel === 'D') {
+    } else if (channel === 'D' && buffer.numberOfChannels > 1) {
         for (let i = 0; i < buffer.length; i++) {
             (getAudioBuffer
               ? result.getChannelData(0)
@@ -94,7 +94,7 @@ export function bufferToFloat32Array(
               buffer.getChannelData(1)[i]) / 2;
         }
     } else {
-        const _channel = channel === 'R' ? 1 : 0;
+        const _channel = channel === 'R' && buffer.numberOfChannels > 1 ? 1 : 0;
         for (let i = 0; i < buffer.length; i++) {
             (getAudioBuffer
               ? result.getChannelData(0)

@@ -40,6 +40,7 @@ import {
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
 const infoEl = document.getElementById('infoIndicator');
+const supportedAudioTypes = ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a', 'pti', 'mp3'];
 const DefaultSliceOptions = [0, 4, 8, 16, 32, 64, 128];
 const importFileLimitValue = 750;
 let db, dbReq;
@@ -90,6 +91,7 @@ let secondsPerFile = 0;
 let audioCtx;
 let files = [];
 let unsorted = [];
+let importOrder = [];
 let metaFiles = [];
 let mergeFiles = [];
 let chainFileNames = []; //{ name: '', used: false }
@@ -843,11 +845,13 @@ function removeSelected() {
     files.filter(f => f.meta.checked).forEach(f => remove(f.meta.id));
     files = files.filter(f => !f.meta.checked);
     unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
+    importOrder = importOrder.filter(id => unsorted.includes(id));
     setCountValues();
     if (files.length === 0 || unsorted.length === 0) {
         files.forEach(f => f.buffer ? delete f.buffer : false);
         files = [];
         unsorted = [];
+        importOrder = [];
     }
     storeState();
     renderList();
@@ -2951,12 +2955,19 @@ const move = (event, id, direction) => {
 const sort = (event, by, prop = 'meta') => {
     const groupByChecked = (event.shiftKey || modifierKeys.shiftKey);
     const forLocaleCompare = ['name'];
+    const mapOrder = (order, prop, by) => (a, b) => {
+        let oA = order.indexOf(a[prop][by]);
+        let oB = order.indexOf(b[prop][by]);
+        return oA >= oB ? 1 : -1;
+    }
     if (by === 'id') {
         if (groupByChecked === true) {
             files.sort(
               () => crypto.randomUUID().localeCompare(crypto.randomUUID()));
         } else {
-            files = unsorted.map(key => files.find(f => f.meta.id === key));
+            const newImports = unsorted.filter(u => !importOrder.includes(u));
+            importOrder = [...importOrder, ...newImports];
+            files.sort(mapOrder(importOrder, prop, by));
             lastSort = '';
         }
     } else if (by === 'note') {
@@ -3018,6 +3029,9 @@ const sort = (event, by, prop = 'meta') => {
     }
     if (groupByChecked === true && by !== 'id') {
         files.sort((a, b) => (b.meta.checked - a.meta.checked));
+    }
+    if (event.skipRender) {
+        return;
     }
     renderList();
 };
@@ -4163,7 +4177,9 @@ const parseWav = (
 
 const renderListWhenReady = (count, fileCount) => {
     count = count.filter(c => c !== false);
+    importOrder = [...new Set(importOrder)];
     if (count.every(c => unsorted.includes(c))) {
+        sort({skipRender: true}, 'id');
         renderList();
     } else {
         setTimeout(() => renderListWhenReady(count), 1000);
@@ -4229,7 +4245,6 @@ const addBlankFile = () => {
 };
 
 const consumeFileInput = (event, inputFiles) => {
-    const supportedAudioTypes = ['syx', 'wav', 'flac', 'aif', 'webm', 'm4a', 'pti'];
     const loadingEl = document.getElementById('loadingText');
     loadingEl.textContent = 'Loading samples';
     document.body.classList.add('loading');
@@ -4270,6 +4285,10 @@ const consumeFileInput = (event, inputFiles) => {
                         blobData.fullPath = `${archive.name}/${key}`;
                         blobData.fromArchive = archive.name;
                         inputFiles.push(blobData);
+                        blobData.uuid = crypto.randomUUID();
+                        if (supportedAudioTypes.some(ext => blobData.name.toLowerCase().endsWith(ext))) {
+                            importOrder.push(blobData.uuid);
+                        }
                         if (zidx === _zips.length - 1 && prog === fileCount) {
                             consumeFileInput(event, inputFiles);
                         }
@@ -4347,7 +4366,10 @@ const consumeFileInput = (event, inputFiles) => {
         const reader = new FileReader();
         reader.onload = async function(e) {
             try {
-                file.uuid = crypto.randomUUID();
+                file.uuid = file.uuid || crypto.randomUUID();
+                if (supportedAudioTypes.some(ext => file.name.toLowerCase().endsWith(ext))) {
+                    importOrder.push(file.uuid);
+                }
                 file.fullPath = file.fullPath || '';
                 const buffer = e.target.result;
 
@@ -4385,7 +4407,8 @@ const consumeFileInput = (event, inputFiles) => {
                     file.type === 'audio/wav') ||
                   file.name.toLowerCase().endsWith('.flac') ||
                   file.name.toLowerCase().endsWith('.webm') ||
-                  file.name.toLowerCase().endsWith('.m4a')
+                  file.name.toLowerCase().endsWith('.m4a') ||
+                  file.name.toLowerCase().endsWith('.mp3')
                 ) {
                     count.push(file.uuid);
                     const fb = buffer.slice(0);
@@ -4497,6 +4520,10 @@ const dropHandler = (event) => {
                 item.file(
                   (file) => {
                       file.fullPath = item.fullPath.replace('/', '');
+                      file.uuid = crypto.randomUUID();
+                      if (supportedAudioTypes.some(ext => file.name.toLowerCase().endsWith(ext))) {
+                          importOrder.push(file.uuid);
+                      }
                       toConsume.push(file);
                   }
                 );
@@ -4856,7 +4883,9 @@ function storeState() {
     if (!retainSessionState) {return new Promise(resolve => resolve(true));}
     const transaction = db.transaction(['state'], 'readwrite', {durability: 'relaxed'});
     const objectStore = transaction.objectStore('state');
+    importOrder = importOrder.filter(id => unsorted.includes(id));
     objectStore.put(unsorted, 'unsorted');
+    objectStore.put(importOrder, 'importOrder');
     return new Promise(resolve => {
         objectStore.put(files.map(f => {
             if (f === files.at(-1)) {
@@ -4883,9 +4912,15 @@ function loadState(skipConfirm = false) {
     const transaction = db.transaction(['state'], 'readonly');
     const objectStore = transaction.objectStore('state');
     let requestUnsorted = objectStore.get('unsorted');
+    let requestImportOrder = objectStore.get('importOrder');
     requestUnsorted.onsuccess = () => {
         if (requestUnsorted.result) {
             unsorted = requestUnsorted.result;
+        }
+    }
+    requestImportOrder.onsuccess = () => {
+        if (requestImportOrder.result) {
+            importOrder = requestImportOrder.result;
         }
     }
     let requestFiles = objectStore.get('files');
@@ -4938,6 +4973,12 @@ function saveSession() {
         }
     });
     zip.file('unsorted', JSON.stringify(unsorted), {
+        compression: "DEFLATE",
+        compressionOptions: {
+            level: 9
+        }
+    });
+    zip.file('importOrder', JSON.stringify(importOrder), {
         compression: "DEFLATE",
         compressionOptions: {
             level: 9

@@ -584,13 +584,13 @@ function renderChainNamePanelContent() {
         <tr>
         <td
             class="chain-file-name-option ${v.used ? 'used' : ''}"
-            onclick="digichain.changeChainName(event, ${i})"
+            onpointerdown="digichain.changeChainName(event, ${i})"
         >${v.name} </td>
         <td>
-        <button title="Remove this name from the list." class="remove-chain float-right button-clear" onclick="digichain.changeChainName(event, ${i}, 'remove')"><i class="gg-remove"></i></button>
+        <button title="Remove this name from the list." class="remove-chain float-right button-clear" onpointerdown="digichain.changeChainName(event, ${i}, 'remove')"><i class="gg-remove"></i></button>
         <button title="Reset this name so it can be reused for a sample chain name." class="reuse-chain p-0 float-right button-clear ${v.used
         ? ''
-        : 'hidden'}" onclick="digichain.changeChainName(event, ${i}, 'reuse')"><i class="gg-undo"></i></button>
+        : 'hidden'}" onpointerdown="digichain.changeChainName(event, ${i}, 'reuse')"><i class="gg-undo"></i></button>
         </td>
         </tr>
 `, '');
@@ -605,7 +605,7 @@ function renderChainNamePanelContent() {
           <table>
               <tr>
                   <th class="p-0"><h5>Sample Chain Names</h5></th>
-                  <th class="p-0"><button title="Remove all names from the list." class="remove-chain float-right button-clear" style="transform: translateX(-0.5rem);" onclick="digichain.changeChainName(event, -1, 'remove-all')"><i class="gg-remove"></i></button></th>
+                  <th class="p-0"><button title="Remove all names from the list." class="remove-chain float-right button-clear" style="transform: translateX(-0.5rem);" onpointerdown="digichain.changeChainName(event, -1, 'remove-all')"><i class="gg-remove"></i></button></th>
               </tr>
               <tbody>
                   ${namesHtml}
@@ -614,8 +614,8 @@ function renderChainNamePanelContent() {
       </div>
     </div>
     <div style="padding-top:1rem;">
-        <button title="Generates a list of filenames based on the folder path of the files in the list. This will replace all other names in the sample names list." class="button-outline float-left" onclick="digichain.generateChainNames()">Generate</button>
-        <button title="Add a name to use for sample chains, if the list is empty, or all the names have already been used, the DigiChain default naming convention will be used. (Names must be unique, caps are ignored.)" class="button float-right" onclick="digichain.changeChainName(event)">Add Name</button>
+        <button title="Generates a list of filenames based on the folder path of the files in the list. This will replace all other names in the sample names list." class="button-outline float-left" onpointerdown="digichain.generateChainNames()">Generate</button>
+        <button title="Add a name to use for sample chains, if the list is empty, or all the names have already been used, the DigiChain default naming convention will be used. (Names must be unique, caps are ignored.)" class="button float-right" onpointerdown="digichain.changeChainName(event)">Add Name</button>
     </div>
     `;
 }
@@ -1424,7 +1424,7 @@ function showExportSettingsPanel(page = 'settings') {
     if (page === 'settings') {
         panelContentEl.innerHTML = `
   <div class="export-options">
-  <span class="${page !== 'settings' ? 'active': ''}" onclick="digichain.showExportSettingsPanel('audio')">Audio Config</span>
+  <span class="${page !== 'settings' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('audio')">Audio Config</span>
   <span class="${page === 'settings' ? 'active': ''}">Settings</span>
   </div>
   <span class="settings-info">All settings here will persist when the app re-opens.</span>
@@ -1438,18 +1438,18 @@ function showExportSettingsPanel(page = 'settings') {
   <tbody>
   <tr>
   <td><span>Pitch up exported files by octave &nbsp;&nbsp;&nbsp;</span></td>
-  <td>    <button onclick="digichain.pitchExports(1)" class="check ${pitchModifier ===
+  <td>    <button onpointerdown="digichain.pitchExports(1)" class="check ${pitchModifier ===
         1 ? 'button' : 'button-outline'}">OFF</button>
-  <button onclick="digichain.pitchExports(2)" class="check ${pitchModifier ===
+  <button onpointerdown="digichain.pitchExports(2)" class="check ${pitchModifier ===
         2 ? 'button' : 'button-outline'}">1</button>
-  <button onclick="digichain.pitchExports(4)" class="check ${pitchModifier ===
+  <button onpointerdown="digichain.pitchExports(4)" class="check ${pitchModifier ===
         4 ? 'button' : 'button-outline'}">2</button>
-  <button onclick="digichain.pitchExports(8)" class="check ${pitchModifier ===
+  <button onpointerdown="digichain.pitchExports(8)" class="check ${pitchModifier ===
         8 ? 'button' : 'button-outline'}">3</button><br></td>
 </tr>
 <tr>
 <td><span>Reverse all even samples in a chain? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('reverseEvenSamplesInChains')"
+<td><button onpointerdown="digichain.toggleSetting('reverseEvenSamplesInChains')"
  title="When enabled, all even samples in chains will be reversed (back-to-back mode)."
  class="check ${reverseEvenSamplesInChains
           ? 'button'
@@ -1457,118 +1457,118 @@ function showExportSettingsPanel(page = 'settings') {
 </tr>
 <tr>
 <td><span>Restore the last used Sample Rate/Bit Depth/Channel? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('restoreLastUsedAudioConfig')" class="check ${restoreLastUsedAudioConfig
+<td><button onpointerdown="digichain.toggleSetting('restoreLastUsedAudioConfig')" class="check ${restoreLastUsedAudioConfig
           ? 'button'
           : 'button-outline'}">${restoreLastUsedAudioConfig ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Retain session data between browser refreshes? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('retainSessionState')" class="check ${retainSessionState
+<td><button onpointerdown="digichain.toggleSetting('retainSessionState')" class="check ${retainSessionState
           ? 'button'
           : 'button-outline'}">${retainSessionState ? 'YES' : 'NO'}</button></td>
 </tr>
   <tr>
   <td><span>Play pop markers when playing back samples?&nbsp;&nbsp;&nbsp;</span></td>
   <td>
-  <button onclick="digichain.toggleSetting('playWithPopMarker', 0)" class="check ${playWithPopMarker ===
+  <button onpointerdown="digichain.toggleSetting('playWithPopMarker', 0)" class="check ${playWithPopMarker ===
         0 ? 'button' : 'button-outline'}">OFF</button>
-  <button title="0db prevents DT normalization." onclick="digichain.toggleSetting('playWithPopMarker', 1)" class="check ${playWithPopMarker ===
+  <button title="0db prevents DT normalization." onpointerdown="digichain.toggleSetting('playWithPopMarker', 1)" class="check ${playWithPopMarker ===
         1 ? 'button' : 'button-outline'}">0db</button>
-  <button title="Peak sets pop to loudest sample peak." onclick="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${playWithPopMarker ===
+  <button title="Peak sets pop to loudest sample peak." onpointerdown="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${playWithPopMarker ===
         2 ? 'button' : 'button-outline'}">Peak</button>
   </td>
   </tr>
   <td><span>Try to match start/end sample when cropping/truncating?&nbsp;&nbsp;&nbsp;</span></td>
 <td><button title="Could give shorter length samples than specified but can help
-   reduce clicks on looping cropped/truncated samples" onclick="digichain.toggleSetting('attemptToFindCrossingPoint')" class="check ${attemptToFindCrossingPoint
+   reduce clicks on looping cropped/truncated samples" onpointerdown="digichain.toggleSetting('attemptToFindCrossingPoint')" class="check ${attemptToFindCrossingPoint
           ? 'button'
           : 'button-outline'}">${attemptToFindCrossingPoint ? 'YES' : 'NO'}</button></td>
 </tr>
     <tr>
   <td><span>De-click exported samples?<br>Helps when importing non-wav files of a different<br>sample rate than the export file, or small buffered audio interfaces. &nbsp;&nbsp;&nbsp;</span></td>
   <td>
-  <button onclick="digichain.toggleSetting('deClick', 0)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0)" class="check ${+deClick ===
         0 ? 'button' : 'button-outline'}">OFF</button>
-  <button onclick="digichain.toggleSetting('deClick', 0.1)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.1)" class="check ${+deClick ===
         0.1 ? 'button' : 'button-outline'}">&gt;10%</button>
-  <button onclick="digichain.toggleSetting('deClick', 0.2)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.2)" class="check ${+deClick ===
         0.2 ? 'button' : 'button-outline'}">&gt;20%</button>
-  <button onclick="digichain.toggleSetting('deClick', 0.3)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.3)" class="check ${+deClick ===
         0.3 ? 'button' : 'button-outline'}">&gt;30%</button>
-  <button onclick="digichain.toggleSetting('deClick', 0.4)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.4)" class="check ${+deClick ===
         0.4 ? 'button' : 'button-outline'}">&gt;40%</button>
-  <button onclick="digichain.toggleSetting('deClick', 0.5)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.5)" class="check ${+deClick ===
         0.5 ? 'button' : 'button-outline'}">&gt;50%</button>
-  <button onclick="digichain.toggleSetting('deClick', 0.75)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.75)" class="check ${+deClick ===
         0.75 ? 'button' : 'button-outline'}">&gt;75%</button>
   </td>
   </tr>
 <tr>
 <td><span>Download multi-file/joined downloads as one zip file? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('zipDl')" class="check ${zipDownloads
+<td><button onpointerdown="digichain.toggleSetting('zipDl')" class="check ${zipDownloads
           ? 'button'
           : 'button-outline'}">${zipDownloads ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <tr>
 <td><span>When exporting stereo, export dual mono files as mono? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Often, stereo files are just the same mono audio data on both channels, if this is the case, export the file as mono." onclick="digichain.toggleSetting('treatDualMonoStereoAsMono')" class="check ${treatDualMonoStereoAsMono
+<td><button title="Often, stereo files are just the same mono audio data on both channels, if this is the case, export the file as mono." onpointerdown="digichain.toggleSetting('treatDualMonoStereoAsMono')" class="check ${treatDualMonoStereoAsMono
           ? 'button'
           : 'button-outline'}">${treatDualMonoStereoAsMono ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Embed slice information in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Embed the slice information into the wav file in DigiChain format, this includes start, end points and the source file name for the slice." onclick="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData
+<td><button title="Embed the slice information into the wav file in DigiChain format, this includes start, end points and the source file name for the slice." onpointerdown="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData
           ? 'button'
           : 'button-outline'}">${embedSliceData ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Embed slice information as CUE points in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Embed slice data as wav CUE point markers, compatible with DirtyWave M8 slice sampler. The end points will extend to the start point of the next sample, or the end of the wav file for the last slice." onclick="digichain.toggleSetting('embedCuePoints')" class="check ${embedCuePoints
+<td><button title="Embed slice data as wav CUE point markers, compatible with DirtyWave M8 slice sampler. The end points will extend to the start point of the next sample, or the end of the wav file for the last slice." onpointerdown="digichain.toggleSetting('embedCuePoints')" class="check ${embedCuePoints
           ? 'button'
           : 'button-outline'}">${embedCuePoints ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <tr>
 <td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 16/24 [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('exportWithOtFile')" class="check ${exportWithOtFile
+<td><button onpointerdown="digichain.toggleSetting('exportWithOtFile')" class="check ${exportWithOtFile
           ? 'button'
           : 'button-outline'}">${exportWithOtFile ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Limit imports to maximum of 750 files?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts." onclick="digichain.toggleSetting('importFileLimit')" class="check ${importFileLimit
+<td><button title="Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts." onpointerdown="digichain.toggleSetting('importFileLimit')" class="check ${importFileLimit
           ? 'button'
           : 'button-outline'}">${importFileLimit ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Skip rendering the mini audio waveform in the list?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="When processing large lists of files, skiping the renderings of the waveform can improve the responsiveness of the browse as no canvas element per row will be rendered." onclick="digichain.toggleSetting('skipMiniWaveformRender')" class="check ${skipMiniWaveformRender
+<td><button title="When processing large lists of files, skiping the renderings of the waveform can improve the responsiveness of the browse as no canvas element per row will be rendered." onpointerdown="digichain.toggleSetting('skipMiniWaveformRender')" class="check ${skipMiniWaveformRender
           ? 'button'
           : 'button-outline'}">${skipMiniWaveformRender ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Show Shift/Ctrl modifier touch buttons?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('showTouchModifierKeys')" class="check ${showTouchModifierKeys
+<td><button onpointerdown="digichain.toggleSetting('showTouchModifierKeys')" class="check ${showTouchModifierKeys
           ? 'button'
           : 'button-outline'}">${showTouchModifierKeys ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <tr>
 <td><span>Shift+Click to download single files from the list?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('shiftClickForFileDownload')" class="check ${shiftClickForFileDownload
+<td><button onpointerdown="digichain.toggleSetting('shiftClickForFileDownload')" class="check ${shiftClickForFileDownload
           ? 'button'
           : 'button-outline'}">${shiftClickForFileDownload ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Use Dark theme as the default? (No = Light theme)&nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('darkModeTheme')" class="check ${darkModeTheme
+<td><button onpointerdown="digichain.toggleSetting('darkModeTheme')" class="check ${darkModeTheme
           ? 'button'
           : 'button-outline'}">${darkModeTheme ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Normalize text/waveform color contrast? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onclick="digichain.toggleSetting('normalizeContrast')" class="check ${normalizeContrast
+<td><button onpointerdown="digichain.toggleSetting('normalizeContrast')" class="check ${normalizeContrast
           ? 'button'
           : 'button-outline'}">${normalizeContrast ? 'YES' : 'NO'}</button></td>
 </tr>
@@ -1579,7 +1579,7 @@ function showExportSettingsPanel(page = 'settings') {
         panelContentEl.innerHTML = `
   <div class="export-options">
     <span class="${page !== 'settings' ? 'active': ''}">Audio Config</span>
-    <span class="${page === 'settings' ? 'active': ''}" onclick="digichain.showExportSettingsPanel()">Settings</span>
+    <span class="${page === 'settings' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel()">Settings</span>
   </div>
   <table style="padding-top:0;" id="settingAudioConfig">
   <thead>
@@ -1603,7 +1603,7 @@ function showExportSettingsPanel(page = 'settings') {
                 ${[12000, 24000, 32000, 44100, 48000].map(
           v => '<option value="' + v + '">').join('')}
               </datalist>
-              <button title="Restore currently active working sample rate" class="button-clear" onclick="(() => {const i = document.getElementById('settingsWorkingSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
+              <button title="Restore currently active working sample rate" class="button-clear" onpointerdown="(() => {const i = document.getElementById('settingsWorkingSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
           </div>
       </td>
   </tr>
@@ -1623,7 +1623,7 @@ function showExportSettingsPanel(page = 'settings') {
                 ${[12000, 24000, 32000, 44100, 48000].map(
                   v => '<option value="' + v + '">').join('')}
               </datalist>
-              <button title="Restore currently active sample rate" class="button-clear" onclick="(() => {const i = document.getElementById('settingsSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
+              <button title="Restore currently active sample rate" class="button-clear" onpointerdown="(() => {const i = document.getElementById('settingsSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
           </div>
       </td>
   </tr>
@@ -1632,7 +1632,7 @@ function showExportSettingsPanel(page = 'settings') {
   <tr>
   <td><span>Bit Depth&nbsp;&nbsp;&nbsp;</span></td>
   <td>
-  <div style="padding: 1.5rem 0;" class="${targetContainer === 'a' ? 'disabled' : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onclick="((event, el) => {
+  <div style="padding: 1.5rem 0;" class="${targetContainer === 'a' ? 'disabled' : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onpointerdown="((event, el) => {
       el.dataset.bitDepth = event.target.dataset.bitDepth || el.dataset.bitDepth;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.bitDepth === el.dataset.bitDepth ? 'check button' : 'check button-outline')
   })(event, this);">
@@ -1646,7 +1646,7 @@ function showExportSettingsPanel(page = 'settings') {
   <tr>
       <td><span>Channels&nbsp;&nbsp;&nbsp;</span></td>
       <td>
-        <div style="padding: 1.5rem 0;" id="channelsGroup" data-channels="${masterChannels}" onclick="((event, el) => {
+        <div style="padding: 1.5rem 0;" id="channelsGroup" data-channels="${masterChannels}" onpointerdown="((event, el) => {
       el.dataset.channels = event.target.dataset.channels || el.dataset.channels;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.channels === el.dataset.channels ? 'check button' : 'check button-outline')
   })(event, this);">
@@ -1659,7 +1659,7 @@ function showExportSettingsPanel(page = 'settings') {
   <tr>
       <td style="border: none;"><span>Container&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
-        <div style="padding: 1.5rem 0;" id="targetContainerGroup" data-container="${targetContainer}" onclick="((event, el) => {
+        <div style="padding: 1.5rem 0;" id="targetContainerGroup" data-container="${targetContainer}" onpointerdown="((event, el) => {
       el.dataset.container = event.target.dataset.container || el.dataset.container;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.container === el.dataset.container ? 'check button' : 'check button-outline');
   if (el.dataset.container === 'a') {
@@ -1697,7 +1697,7 @@ function showExportSettingsPanel(page = 'settings') {
   </tr>
 
   <td style="border-bottom: none;">
-    <a class="button" style="margin: 2.5rem 2rem;" onclick="digichain.changeAudioConfig()">Apply Audio Settings</a>
+    <a class="button" style="margin: 2.5rem 2rem;" onpointerdown="digichain.changeAudioConfig()">Apply Audio Settings</a>
   </td>
   <td style="border-bottom: none;">
     <select id="audioValuesFromCommonSelect" class="btn-audio-config" style="margin: 0 2rem; max-width: 25rem; float: right;" onchange="digichain.setAudioOptionsFromCommonConfig(event)">
@@ -3093,7 +3093,7 @@ const drawSliceLines = (slices, file, otMeta) => {
         );
     } else {
         lines = _slices.map((slice, idx) => `
-            <div class="line" data-idx="${idx}" onclick="digichain.playSlice(event, '${file.meta.id}', '${slice.startPoint}', '${slice.endPoint}')" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"style="margin-left:${(waveformWidth /
+            <div class="line" data-idx="${idx}" onpointerdown="digichain.playSlice(event, '${file.meta.id}', '${slice.startPoint}', '${slice.endPoint}')" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"style="margin-left:${(waveformWidth /
                 _slices.length) * idx}px; width:${(waveformWidth /
                 _slices.length)}px;" title="Slice ${idx + 1}"></div>
         `);
@@ -3284,11 +3284,11 @@ function reRenderListRow(id) {
 
 const getWaveformElementContent = f => {
     if (skipMiniWaveformRender) {
-        return `<i onclick="digichain.playFile(event, '${f.meta.id}')" class="gg-play-button waveform-btn ${f.meta.playing
+        return `<i onpointerdown="digichain.playFile(event, '${f.meta.id}')" class="gg-play-button waveform-btn ${f.meta.playing
           ? 'playing'
           : ''}"></i>`;
     }
-    return `<canvas onclick="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id} ${f.meta.playing
+    return `<canvas onpointerdown="digichain.playFile(event, '${f.meta.id}')" class="waveform waveform-${f.meta.id} ${f.meta.playing
       ? 'playing'
       : ''}"></canvas>`;
 };
@@ -3299,22 +3299,21 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
     <tr class="file-row ${f.meta.checked
         ? 'checked'
         : ''}" data-id="${f.meta.id}"
-          onclick="digichain.handleRowClick(event, '${f.meta.id}')"
-          onmousedown="digichain.handleRowClick(event, '${f.meta.id}')"
+          onpointerdown="digichain.handleRowClick(event, '${f.meta.id}')"
           ondragstart="digichain.rowDragStart(event)" draggable="true">
       <td>
           <i class="gg-more-vertical"></i>
       </td>
       <td class="toggle-td">
-          <button onclick="digichain.toggleCheck(event, '${f.meta.id}')" class="${f.meta.checked
+          <button onpointerdown="digichain.toggleCheck(event, '${f.meta.id}')" class="${f.meta.checked
         ? ''
         : 'button-outline'} check toggle-check">&nbsp;</button>
       </td>
       <td class="move-up-td">
-          <button title="Move up in sample list." onclick="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
+          <button title="Move up in sample list." onpointerdown="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
       </td>
       <td class="move-down-td">
-          <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
+          <button title="Move down in sample list." onpointerdown="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
       </td>
       <td class="waveform-td">` +
         getWaveformElementContent(f) +
@@ -3343,13 +3342,13 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
       <td class="channel-options-td">
           <div class="channel-options has-shift-mod" style="display: ${f.buffer.numberOfChannels >
       1 && masterChannels === 1 ? 'block' : 'none'}">
-          <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel ===
+          <a title="Left channel" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel ===
       'L' ? 'selected' : ''} channel-option-L">L</a>
-          <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S')" class="${f.meta.channel ===
+          <a title="Sum to mono" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'S')" class="${f.meta.channel ===
       'S' ? 'selected' : ''} channel-option-S">S</a>
-          <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R')" class="${f.meta.channel ===
+          <a title="Right channel" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'R')" class="${f.meta.channel ===
       'R' ? 'selected' : ''} channel-option-R">R</a>
-          <a title="Difference between Left and Right channels" onclick="digichain.changeChannel(event, '${f.meta.id}', 'D')" class="${f.meta.channel ===
+          <a title="Difference between Left and Right channels" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'D')" class="${f.meta.channel ===
       'D' ? 'selected' : ''} channel-option-D">D</a>
           </div>` +
 
@@ -3392,14 +3391,14 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
 
       `</td>
       <td class="split-td">
-          <button title="Slice sample." onclick="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(
+          <button title="Slice sample." onpointerdown="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(
         f)?.cssClass}" data-slice-count="${f.meta?.slices?.length || f.meta?.op1Json?.sliceCount || ''}"><i class="gg-menu-grid-r has-ctrl-mod-i"></i></button>
       </td>
       <td class="duplicate-td">
-          <button title="Duplicate sample." onclick="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
+          <button title="Duplicate sample." onpointerdown="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
       </td>
       <td class="toggle-edit-td">
-          <button title="Edit" onclick="digichain.showEditPanel(event, '${f.meta.id}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
+          <button title="Edit" onpointerdown="digichain.showEditPanel(event, '${f.meta.id}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
       </td>
       <td class="remove-td">
           <button title="Remove sample (double-click)." ondblclick="digichain.remove('${f.meta.id}')" class="button-clear remove"><i class="gg-trash"></i></button>
@@ -3423,13 +3422,13 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
   <td class="channel-options-td"">
       <div class="channel-options" style="display: ${f.buffer.numberOfChannels >
       1 ? 'block' : 'none'}">
-      <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L', false, '#mergeList')" class="${f.meta.channel ===
+      <a title="Left channel" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'L', false, '#mergeList')" class="${f.meta.channel ===
       'L' ? 'selected' : ''} channel-option-L">L</a>
-      <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S', false, '#mergeList')" class="${f.meta.channel ===
+      <a title="Sum to mono" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'S', false, '#mergeList')" class="${f.meta.channel ===
       'S' ? 'selected' : ''} channel-option-S">S</a>
-      <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R', false, '#mergeList')" class="${f.meta.channel ===
+      <a title="Right channel" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'R', false, '#mergeList')" class="${f.meta.channel ===
       'R' ? 'selected' : ''} channel-option-R">R</a>
-      <a title="Difference between Left and Right channels" onclick="digichain.changeChannel(event, '${f.meta.id}', 'D', false, '#mergeList')" class="${f.meta.channel ===
+      <a title="Difference between Left and Right channels" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'D', false, '#mergeList')" class="${f.meta.channel ===
       'D' ? 'selected' : ''} channel-option-D">D</a>
       </div>
       <div class="channel-options channel-options-stereo" title="Mono sample" style="display: ${f.buffer.numberOfChannels ===
@@ -3439,11 +3438,11 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
   </td>
   <td class="pan-options-td ${type === 'blend' ? 'hide' : ''}">
       <div class="pan-options" style="display: block;">
-      <a title="Hard Left" onclick="digichain.changePan(event, '${f.meta.id}', 'L')" class="${f.meta.pan ===
+      <a title="Hard Left" onpointerdown="digichain.changePan(event, '${f.meta.id}', 'L')" class="${f.meta.pan ===
       'L' ? 'selected' : ''} pan-option-L">L</a>
-      <a title="Centre" onclick="digichain.changePan(event, '${f.meta.id}', 'C')" class="${f.meta.pan ===
+      <a title="Centre" onpointerdown="digichain.changePan(event, '${f.meta.id}', 'C')" class="${f.meta.pan ===
       'C' ? 'selected' : ''} pan-option-C">C</a>
-      <a title="Hard Right" onclick="digichain.changePan(event, '${f.meta.id}', 'R')" class="${f.meta.pan ===
+      <a title="Hard Right" onpointerdown="digichain.changePan(event, '${f.meta.id}', 'R')" class="${f.meta.pan ===
       'R' ? 'selected' : ''} pan-option-R">R</a>
       </div>
   </td>

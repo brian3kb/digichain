@@ -209,47 +209,47 @@ export function renderEditor(item) {
     const canvasMarkup = `
   <canvas class="edit-panel-waveform"
         oncontextmenu="return false;"
-        onclick="digichain.editor.changeSelectionPoint(event)"
+        onpointerdown="digichain.editor.changeSelectionPoint(event)"
         ></canvas>
   `;
     editEl.innerHTML = `
 <div class="slice-options input-set">
   <label for="sliceSelection" class="before-input">Slice</label>
   <select title="Choose a slice marker to edit." name="sliceSelection" id="sliceSelection" onchange="digichain.editor.sliceSelect(event);"></select>
-  <button title="Update the slice marker start/end points." onclick="digichain.editor.sliceUpdate(event);" class="button-outline">Update Slice</button>
-  <button title="Remove the current slice marker." onclick="digichain.editor.sliceRemove(event);" class="button-outline">Remove Slice</button>
-  <button title="Add the current range as a new slice marker." onclick="digichain.editor.sliceCreate(event);" class="button-outline">New Slice</button>
-  <button title="Snap selections to zero crossings?" onclick="digichain.editor.toggleSnapToZero(event);" class="button ${shouldSnapToZeroCrossing ? '' : 'button-outline'}">Snap to Zero</button>
-    <button title="Detect BPM from selection." onclick="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
+  <button title="Update the slice marker start/end points." onpointerdown="digichain.editor.sliceUpdate(event);" class="button-outline">Update Slice</button>
+  <button title="Remove the current slice marker." onpointerdown="digichain.editor.sliceRemove(event);" class="button-outline">Remove Slice</button>
+  <button title="Add the current range as a new slice marker." onpointerdown="digichain.editor.sliceCreate(event);" class="button-outline">New Slice</button>
+  <button title="Snap selections to zero crossings?" onpointerdown="digichain.editor.toggleSnapToZero(event);" class="button ${shouldSnapToZeroCrossing ? '' : 'button-outline'}">Snap to Zero</button>
+    <button title="Detect BPM from selection." onpointerdown="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
 </div>
 <div class="above-waveform-buttons">
   <div class="sample-selection-buttons text-align-left float-left">
-      <button title="Clicking on the waveform will set the selection start point." onclick="digichain.editor.setSelStart(true);" class="button check btn-select-start">Start</button>
-    <button title="Clicking on the waveform will set the selection end point." onclick="digichain.editor.setSelStart(false);" class="button-outline check btn-select-end">End</button>
-      <button title="Reset the waveform selection to the whole sample." onclick="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
+      <button title="Clicking on the waveform will set the selection start point." onpointerdown="digichain.editor.setSelStart(true);" class="button check btn-select-start">Start</button>
+    <button title="Clicking on the waveform will set the selection end point." onpointerdown="digichain.editor.setSelStart(false);" class="button-outline check btn-select-end">End</button>
+      <button title="Reset the waveform selection to the whole sample." onpointerdown="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
   </div>
   <div class="channel-options editor-channel-options float-right" style="border: 0.1rem solid #d79c4e; display: ${editing.buffer.numberOfChannels >
     1 && conf.masterChannels === 1 ? 'inline-block' : 'none'}">
-            <a title="Left channel" onclick="digichain.editor.changeChannel(event, 'L')" class="${editing.meta.channel ===
+            <a title="Left channel" onpointerdown="digichain.editor.changeChannel(event, 'L')" class="${editing.meta.channel ===
     'L' ? 'selected' : ''} channel-option-L">L</a>
-            <a title="Sum to mono" onclick="digichain.editor.changeChannel(event, 'S')" class="${editing.meta.channel ===
+            <a title="Sum to mono" onpointerdown="digichain.editor.changeChannel(event, 'S')" class="${editing.meta.channel ===
     'S' ? 'selected' : ''} channel-option-S">S</a>
-            <a title="Right channel" onclick="digichain.editor.changeChannel(event, 'R')" class="${editing.meta.channel ===
+            <a title="Right channel" onpointerdown="digichain.editor.changeChannel(event, 'R')" class="${editing.meta.channel ===
     'R' ? 'selected' : ''} channel-option-R">R</a>
-            <a title="Difference between Left and Right channels" onclick="digichain.editor.changeChannel(event, 'D')" class="${editing.meta.channel ===
+            <a title="Difference between Left and Right channels" onpointerdown="digichain.editor.changeChannel(event, 'D')" class="${editing.meta.channel ===
     'D' ? 'selected' : ''} channel-option-D">D</a>
   </div>
 </div>
 
   <div class="playback-controls text-align-right float-left" style="position: absolute;">
-    <button title="Play selection" onclick="digichain.editor.editorPlayFile(event);" class="button-clear check"><i class="gg-play-button"></i></button>
-    <button title="Loop playback of selection" onclick="digichain.editor.editorPlayFile(event, true);" class="button-clear check"><i class="gg-repeat"></i></button>
-    <button title="Stop playback" onclick="digichain.editor.editorPlayFile(event, false, true);" class="button-clear check"><i class="gg-play-stop"></i></button>
+    <button title="Play selection" onpointerdown="digichain.editor.editorPlayFile(event);" class="button-clear check"><i class="gg-play-button"></i></button>
+    <button title="Loop playback of selection" onpointerdown="digichain.editor.editorPlayFile(event, true);" class="button-clear check"><i class="gg-repeat"></i></button>
+    <button title="Stop playback" onpointerdown="digichain.editor.editorPlayFile(event, false, true);" class="button-clear check"><i class="gg-play-stop"></i></button>
   </div>
   <div class="zoom-level text-align-right float-right">
-    <button title="Zoom out waveform view." class="zoom-out button-outline check" style="width:2.5rem;" onclick="digichain.editor.zoomLevel('editor', .5)">-</button>
-    <button title="Reset zoom level waveform view."  class="zoom-reset button-outline check" onclick="digichain.editor.zoomLevel('editor', 1)">1x</button>
-    <button title="Zoom in on waveform view."  class="zoom-in button-outline check" style="width:2.5rem;" onclick="digichain.editor.zoomLevel('editor', 2)">+</button>
+    <button title="Zoom out waveform view." class="zoom-out button-outline check" style="width:2.5rem;" onpointerdown="digichain.editor.zoomLevel('editor', .5)">-</button>
+    <button title="Reset zoom level waveform view."  class="zoom-reset button-outline check" onpointerdown="digichain.editor.zoomLevel('editor', 1)">1x</button>
+    <button title="Zoom in on waveform view."  class="zoom-in button-outline check" style="width:2.5rem;" onpointerdown="digichain.editor.zoomLevel('editor', 2)">+</button>
   </div>
 
  </div>
@@ -303,8 +303,8 @@ export function renderEditor(item) {
     Note: sample operations are destructive, applied immediately, no undo. Pitch adjustments are done via sample-rate, cumulative changes will affect sample quality.
   </span>
   <div class="file-nav-buttons">
-    <button title="Edit previous file" class="prev-file button button-clear check" onclick="digichain.editor.changeSelectedFile(event, -1)">Prev</button>
-    <button title="Edit next file" class="next-file button button-clear check" onclick="digichain.editor.changeSelectedFile(event, 1)">Next</button>
+    <button title="Edit previous file" class="prev-file button button-clear check" onpointerdown="digichain.editor.changeSelectedFile(event, -1)">Prev</button>
+    <button title="Edit next file" class="next-file button button-clear check" onpointerdown="digichain.editor.changeSelectedFile(event, 1)">Next</button>
   </div>
   `;
 }
@@ -315,7 +315,7 @@ function renderEditableItems() {
       <label for="editFileName" class="before-input">File Name</label>
       <input type="text" onkeyup="digichain.editor.updateFile(event)" placeholder="Sample file name" id="editFileName" value="${getNiceFileName(
       '', editing, true)}" readonly>
-      <button class="button-clear" onclick="digichain.editor.toggleReadOnlyInput('editFileName')"><i class="gg-pen"></i></button>
+      <button class="button-clear" onpointerdown="digichain.editor.toggleReadOnlyInput('editFileName')"><i class="gg-pen"></i></button>
     </div><br>
     <div class="input-set">
     <label for="editFilePath" class="before-input">File Path</label>
@@ -323,7 +323,7 @@ function renderEditableItems() {
       <datalist id="folderOptions">
         ${folders.map(f => '<option value="' + f + '">').join('')}
       </datalist>
-      <button class="button-clear" onclick="digichain.editor.toggleReadOnlyInput('editFilePath')"><i class="gg-pen"></i></button>
+      <button class="button-clear" onpointerdown="digichain.editor.toggleReadOnlyInput('editFilePath')"><i class="gg-pen"></i></button>
     </div>
   `;
 }

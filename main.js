@@ -1632,7 +1632,7 @@ function showExportSettingsPanel(page = 'settings') {
   <tr>
   <td><span>Bit Depth&nbsp;&nbsp;&nbsp;</span></td>
   <td>
-  <div style="padding: 1.5rem 0;" class="${targetContainer === 'a' ? 'disabled' : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onpointerdown="((event, el) => {
+  <div style="padding: 1.5rem 0;" class="${targetContainer === 'a' ? 'disabled' : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onclick="((event, el) => {
       el.dataset.bitDepth = event.target.dataset.bitDepth || el.dataset.bitDepth;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.bitDepth === el.dataset.bitDepth ? 'check button' : 'check button-outline')
   })(event, this);">
@@ -1646,7 +1646,7 @@ function showExportSettingsPanel(page = 'settings') {
   <tr>
       <td><span>Channels&nbsp;&nbsp;&nbsp;</span></td>
       <td>
-        <div style="padding: 1.5rem 0;" id="channelsGroup" data-channels="${masterChannels}" onpointerdown="((event, el) => {
+        <div style="padding: 1.5rem 0;" id="channelsGroup" data-channels="${masterChannels}" onclick="((event, el) => {
       el.dataset.channels = event.target.dataset.channels || el.dataset.channels;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.channels === el.dataset.channels ? 'check button' : 'check button-outline')
   })(event, this);">
@@ -1659,7 +1659,7 @@ function showExportSettingsPanel(page = 'settings') {
   <tr>
       <td style="border: none;"><span>Container&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
-        <div style="padding: 1.5rem 0;" id="targetContainerGroup" data-container="${targetContainer}" onpointerdown="((event, el) => {
+        <div style="padding: 1.5rem 0;" id="targetContainerGroup" data-container="${targetContainer}" onclick="((event, el) => {
       el.dataset.container = event.target.dataset.container || el.dataset.container;
   el.querySelectorAll('button').forEach(b => b.classList = b.dataset.container === el.dataset.container ? 'check button' : 'check button-outline');
   if (el.dataset.container === 'a') {
@@ -3163,7 +3163,7 @@ const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
             }
         }
         if (saveSlicesMetaOnly) {
-            setTimeout(() => sliceByOtButtonEl.click(), 250);
+            setTimeout(() => sliceByOtButtonEl.dispatchEvent(new PointerEvent('pointerdown')), 250);
         } else {
             return el.close();
         }
@@ -3178,6 +3178,9 @@ const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
         width: +splitPanelWaveformContainerEl.dataset.waveformWidth, height: 128
     });
     item.meta.customSlices = false;
+    if (otMeta?.sliceCount) {
+        sliceByOtButtonEl.dispatchEvent(new PointerEvent('pointerdown'));
+    }
     reRenderListRow(item.meta.id);
 };
 
@@ -3310,10 +3313,10 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
         : 'button-outline'} check toggle-check">&nbsp;</button>
       </td>
       <td class="move-up-td">
-          <button title="Move up in sample list." onpointerdown="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
+          <button title="Move up in sample list." onclick="digichain.move(event, '${f.meta.id}', -1)" class="button-clear move-up"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
       </td>
       <td class="move-down-td">
-          <button title="Move down in sample list." onpointerdown="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
+          <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
       </td>
       <td class="waveform-td">` +
         getWaveformElementContent(f) +
@@ -3342,13 +3345,13 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
       <td class="channel-options-td">
           <div class="channel-options has-shift-mod" style="display: ${f.buffer.numberOfChannels >
       1 && masterChannels === 1 ? 'block' : 'none'}">
-          <a title="Left channel" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel ===
+          <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L')" class="${f.meta.channel ===
       'L' ? 'selected' : ''} channel-option-L">L</a>
-          <a title="Sum to mono" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'S')" class="${f.meta.channel ===
+          <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S')" class="${f.meta.channel ===
       'S' ? 'selected' : ''} channel-option-S">S</a>
-          <a title="Right channel" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'R')" class="${f.meta.channel ===
+          <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R')" class="${f.meta.channel ===
       'R' ? 'selected' : ''} channel-option-R">R</a>
-          <a title="Difference between Left and Right channels" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'D')" class="${f.meta.channel ===
+          <a title="Difference between Left and Right channels" onclick="digichain.changeChannel(event, '${f.meta.id}', 'D')" class="${f.meta.channel ===
       'D' ? 'selected' : ''} channel-option-D">D</a>
           </div>` +
 
@@ -3422,13 +3425,13 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
   <td class="channel-options-td"">
       <div class="channel-options" style="display: ${f.buffer.numberOfChannels >
       1 ? 'block' : 'none'}">
-      <a title="Left channel" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'L', false, '#mergeList')" class="${f.meta.channel ===
+      <a title="Left channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'L', false, '#mergeList')" class="${f.meta.channel ===
       'L' ? 'selected' : ''} channel-option-L">L</a>
-      <a title="Sum to mono" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'S', false, '#mergeList')" class="${f.meta.channel ===
+      <a title="Sum to mono" onclick="digichain.changeChannel(event, '${f.meta.id}', 'S', false, '#mergeList')" class="${f.meta.channel ===
       'S' ? 'selected' : ''} channel-option-S">S</a>
-      <a title="Right channel" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'R', false, '#mergeList')" class="${f.meta.channel ===
+      <a title="Right channel" onclick="digichain.changeChannel(event, '${f.meta.id}', 'R', false, '#mergeList')" class="${f.meta.channel ===
       'R' ? 'selected' : ''} channel-option-R">R</a>
-      <a title="Difference between Left and Right channels" onpointerdown="digichain.changeChannel(event, '${f.meta.id}', 'D', false, '#mergeList')" class="${f.meta.channel ===
+      <a title="Difference between Left and Right channels" onclick="digichain.changeChannel(event, '${f.meta.id}', 'D', false, '#mergeList')" class="${f.meta.channel ===
       'D' ? 'selected' : ''} channel-option-D">D</a>
       </div>
       <div class="channel-options channel-options-stereo" title="Mono sample" style="display: ${f.buffer.numberOfChannels ===
@@ -3438,11 +3441,11 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
   </td>
   <td class="pan-options-td ${type === 'blend' ? 'hide' : ''}">
       <div class="pan-options" style="display: block;">
-      <a title="Hard Left" onpointerdown="digichain.changePan(event, '${f.meta.id}', 'L')" class="${f.meta.pan ===
+      <a title="Hard Left" onclick="digichain.changePan(event, '${f.meta.id}', 'L')" class="${f.meta.pan ===
       'L' ? 'selected' : ''} pan-option-L">L</a>
-      <a title="Centre" onpointerdown="digichain.changePan(event, '${f.meta.id}', 'C')" class="${f.meta.pan ===
+      <a title="Centre" onclick="digichain.changePan(event, '${f.meta.id}', 'C')" class="${f.meta.pan ===
       'C' ? 'selected' : ''} pan-option-C">C</a>
-      <a title="Hard Right" onpointerdown="digichain.changePan(event, '${f.meta.id}', 'R')" class="${f.meta.pan ===
+      <a title="Hard Right" onclick="digichain.changePan(event, '${f.meta.id}', 'R')" class="${f.meta.pan ===
       'R' ? 'selected' : ''} pan-option-R">R</a>
       </div>
   </td>

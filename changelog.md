@@ -3,6 +3,7 @@ latest
  - Ctrl + Click on Filename column header to sort the list by numeric filename content only.
  - Improved drop file order consistency.
  - Allow dropping mp3 files.
+ - If sample has slice information, the slices will be shown on the waveform when the slice panel opens.
 
 2024.05.14 1.4.14
  - Added basic error catch in the joinAll method to help surface chain build errors.

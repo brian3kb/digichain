@@ -943,6 +943,107 @@ export function detectTempo(audioBuffer, fileName = '') {
 
 }
 
+export function Paula() {
+    const pChannel = () => ({
+        en: false,
+        lch: 0,
+        lcl: 0,
+        len: 0,
+        per: 0,
+        vol: 0,
+        ciata: 0,
+        offset: 0,
+        ex: false,
+        start: 0,
+        length: 0
+    });
+
+    return (monoAudioArrayBuffer, sampleRate = 44100, callbacks = {}, ciaTimerInterval = 0, regionNTSC = false) => {
+        const numChannels = 4;
+        const fps = 50;
+
+        const callback = {
+            vBlank: () => {},
+            audioInterrupt: () => {},
+            ciaTimer: () => {},
+
+            ...callbacks
+        };
+
+        let ciata = ciaTimerInterval;
+        let clock = regionNTSC ? 3579545 : 3579545;
+        let clockAdvance = clock / sampleRate;
+        let ciaClockAdvance = clockAdvance / 5;
+
+        let frameCount = 0;
+        let ciaClock = 0;
+
+        let frameAdvance = fps / sampleRate;
+
+        let channel = [];
+
+        let ram = new DataView(monoAudioArrayBuffer);
+
+        for (let i = 0; i < numChannels; i++) {
+            channel.push(pChannel());
+        }
+
+        const channelLatch = ch => {
+            ch.start = ch.lch << 16 | ch.lcl;
+            ch.length = ch.len * 2;
+            ch.offset = 0;
+            callback.audioInterrupt(ch);
+        };
+
+        // Get Next Sample Value;
+        return (output = 0) => {
+            if (Math.floor(frameCount + frameAdvance) > frameCount) {
+                frameCount--;
+                callback.vBlank();
+            }
+
+            frameCount = frameCount + frameAdvance;
+
+            if (Math.floor(ciaClock + ciaClockAdvance) > ciaTimerInterval) {
+                ciaClock = ciaClock - ciaTimerInterval;
+                ciaTimerInterval = ciata;
+                callback.ciaTimer();
+            }
+
+            ciaClock = ciaClock + ciaClockAdvance;
+
+            channel.forEach(ch => {
+                if (ch.en) {
+                    if (ch.ex === false) {
+                        channelLatch(ch);
+                        ch.ex = true;
+                    }
+
+                    ch.offset = ch.offset + (clockAdvance / ch.per);
+
+                    let offset = Math.floor(ch.offset);
+
+                    if (offset >= ch.length) {
+                        channelLatch(ch);
+                        offset = 0;
+                    }
+
+                    let delta = ch.offset = offset;
+
+                    let current = ram.getInt8(ch.start + offset);
+                    let next = ((offset + 1) < ch.length) ?
+                      ram.getInt8(ch.start + offset + 1) :
+                      ram.getInt8(ch.start);
+                    output = output + (ch.vol * (current + delta * (next - current)));
+                } else {
+                    ch.ex = false;
+                }
+            });
+            return output / 32768;
+        };
+    };
+}
+
 CanvasRenderingContext2D.prototype.clear =
   CanvasRenderingContext2D.prototype.clear || function(preserveTransform) {
       if (preserveTransform) {

@@ -4,6 +4,7 @@ latest
  - Improved drop file order consistency.
  - Allow dropping mp3 files.
  - If sample has slice information, the slices will be shown on the waveform when the slice panel opens.
+ - Support multi-touch for selecting/deselecting samples.
 
 2024.05.14 1.4.14
  - Added basic error catch in the joinAll method to help surface chain build errors.

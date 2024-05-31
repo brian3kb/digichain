@@ -981,8 +981,10 @@ function thresholdCondense(event, item, renderEditPanel = true, lower = 0.003, u
         let data = item.buffer.getChannelData(channel);
         let aabIndex = selection.start;
         for (let i = selection.start; i < item.buffer.length; i++) {
+            const absValueLast = Math.abs(data[(i - 1 > 0 ? i - 1 : 0)]);
             const absValue = Math.abs(data[i]);
-            if (absValue > lower && absValue < upper) {
+            const absValueNext = Math.abs(data[(i + 1 < item.buffer.length ? i + 1: item.buffer.length)]);
+            if ((absValue > lower && absValue < upper) || absValueNext.toFixed(4) === 0|| absValueLast.toFixed(4) === 0) {
                 audioArrayBuffer.getChannelData(channel)[aabIndex] = absValue;
                 aabIndex++;
             }

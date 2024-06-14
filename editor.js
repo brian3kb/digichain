@@ -892,6 +892,67 @@ function reverse(event, item, renderEditPanel = true) {
     item.waveform = false;
 }
 
+function shift(event, item, renderEditPanel = true) {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = item.buffer.length;
+    }
+    item = item || editing;
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        let data = item.buffer.getChannelData(channel).slice(0);
+        let dataCount = Math.floor(selection.end / 2);
+        for (let i = selection.start; i < selection.end; i++) {
+            item.buffer.getChannelData(channel)[i] = data[dataCount];
+            dataCount++;
+            dataCount = dataCount > selection.end ? 0 : dataCount;
+        }
+    }
+    item.meta = {...item.meta};
+    if (selection.start === 0 && selection.end === item.buffer.length) {
+        item.meta.slices = item.meta.slices ? item.meta.slices.map(slice => ({
+            ...slice,
+            n: slice.n, s: selection.end - slice.e,
+            e: selection.end - slice.s
+        })) : false;
+    } else {
+        //item.meta.slices = false;
+    }
+
+    if (renderEditPanel) {
+        renderEditPanelWaveform(multiplier);
+    }
+    item.waveform = false;
+}
+
+function nudgeCrossings(event, item, renderEditPanel = true) {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = item.buffer.length;
+    }
+    item = item || editing;
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        let data = item.buffer.getChannelData(channel);
+        for (let i = selection.start; i < selection.end; i++) {
+            item.buffer.getChannelData(channel)[i] = data[i] === 0 ? 0.003 : data[i];
+        }
+    }
+    item.meta = {...item.meta};
+    if (selection.start === 0 && selection.end === item.buffer.length) {
+        item.meta.slices = item.meta.slices ? item.meta.slices.map(slice => ({
+            ...slice,
+            n: slice.n, s: selection.end - slice.e,
+            e: selection.end - slice.s
+        })) : false;
+    } else {
+        //item.meta.slices = false;
+    }
+
+    if (renderEditPanel) {
+        renderEditPanelWaveform(multiplier);
+    }
+    item.waveform = false;
+}
+
 function trimRight(event, item, renderEditPanel = true, ampFloor = 0.003, trimLeft = false) {
     if (!renderEditPanel && item) {
         selection.start = 0;
@@ -1320,6 +1381,49 @@ function double(event, item, reverse = false, renderEditPanel = true) {
     item.waveform = false;
 }
 
+function padWithZero(event, item, renderEditPanel = true) {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = item.buffer.length;
+    }
+    item = item || editing;
+
+    const audioArrayBuffer = conf.audioCtx.createBuffer(
+      item.buffer.numberOfChannels,
+      item.buffer.length + 2,
+      conf.masterSR
+    );
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        let x = 0;
+        let data = item.buffer.getChannelData(channel).
+          slice(selection.start, selection.end);
+        audioArrayBuffer.getChannelData(channel)[x] = 0;
+        x++;
+        for (let i = selection.start; i < selection.end; i++) {
+            audioArrayBuffer.getChannelData(channel)[x] = data[i];
+            x++;
+        }
+        audioArrayBuffer.getChannelData(channel)[x] = 0;
+    }
+    item.buffer = audioArrayBuffer;
+    item.meta = {
+        ...item.meta,
+        length: audioArrayBuffer.length,
+        duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
+        startFrame: 0, endFrame: audioArrayBuffer.length
+    };
+    if (item.meta.slices) {
+        item.meta.slices = false;
+    }
+    if (item.meta.op1Json) {
+        item.meta.op1Json = false;
+    }
+    if (renderEditPanel) {
+        showEditor(editing, conf, 'sample', folders);
+    }
+    item.waveform = false;
+}
+
 function serialize(event, item, renderEditPanel = true, method = 'LR') {
     if (!renderEditPanel && item) {
         selection.start = 0;
@@ -1407,6 +1511,8 @@ export const editor = {
     double,
     stretch,
     roughStretch,
+    nudgeCrossings,
+    padWithZero,
     buildOpKit,
     sliceUpdate,
     sliceCreate,
@@ -1417,5 +1523,6 @@ export const editor = {
     changeChannel,
     getLastItem: () => editing?.meta?.id,
     reverse,
+    shift,
     serialize
 };

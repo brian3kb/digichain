@@ -1061,6 +1061,54 @@ function reverseSelected(event) {
     }, 250);
 }
 
+function shiftSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    document.getElementById('loadingText').textContent = 'Processing';
+    document.body.classList.add('loading');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach((f, idx) => {
+            editor.shift(event, f, false);
+            if (idx === selected.length - 1) {
+                document.body.classList.remove('loading');
+            }
+        });
+        renderList();
+    }, 250);
+}
+
+function nudgeCrossingsSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    document.getElementById('loadingText').textContent = 'Processing';
+    document.body.classList.add('loading');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach((f, idx) => {
+            editor.nudgeCrossings(event, f, false);
+            if (idx === selected.length - 1) {
+                document.body.classList.remove('loading');
+            }
+        });
+        renderList();
+    }, 250);
+}
+
+function padWithZeroSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    document.getElementById('loadingText').textContent = 'Processing';
+    document.body.classList.add('loading');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach((f, idx) => {
+            editor.padWithZero(event, f, false);
+            if (idx === selected.length - 1) {
+                document.body.classList.remove('loading');
+            }
+        });
+        renderList();
+    }, 250);
+}
+
 function serializeSelected(event, method = 'LR') {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     document.getElementById('loadingText').textContent = 'Processing';
@@ -5035,6 +5083,7 @@ window.digichain = {
     truncateSelected,
     normalizeSelected,
     reverseSelected,
+    shiftSelected,
     pitchUpSelected,
     doubleSelected,
     pingPongSelected,
@@ -5045,6 +5094,8 @@ window.digichain = {
     shortenNameSelected,
     serializeSelected,
     condenseSelected,
+    nudgeCrossingsSelected,
+    padWithZeroSelected,
     showMergePanel,
     showBlendPanel,
     sort,

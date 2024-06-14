@@ -383,6 +383,18 @@
                             class="button-outline">
                         Condense
                     </button>
+                    <button title="Nudges all zero crossings off from zero." onclick="digichain.nudgeCrossingsSelected(event)"
+                            class="button-outline">
+                        Nudge Crossings
+                    </button>
+                    <button title="Adds a zero sample to the beginning and end of each file." onclick="digichain.padWithZeroSelected(event)"
+                            class="button-outline">
+                        Pad With Zero
+                    </button>
+                    <button title="Moves the sample start position over 50%." onclick="digichain.shiftSelected(event)"
+                            class="button-outline">
+                        Shift
+                    </button>
                     <div class="button-clear"></div>
                 </div>
                 <button title="Merge/mix-down all selected" onpointerdown="digichain.showMergePanel(event)"

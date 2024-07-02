@@ -4115,6 +4115,26 @@ const parseWav = (
                     n: `Cue ${cue.cueId + 1}`
                 }));
             }
+            if (code === 'ORSL') {
+                const size = dv.getUint32(i + 4);
+                const sliceCount = dv.getUint8(i + 8);
+                i += 12;
+                const slicePoints = [];
+                for (let si = 0; si < sliceCount; si++) {
+                    const sliceId = dv.getUint8(i);
+                    const sliceStart = dv.getUint32(i + 4, true);
+                    const sliceEnd = dv.getUint32(i + 8, true);
+                    slicePoints.push({sliceId, sliceStart, sliceEnd});
+                    i += 32;
+                }
+                slices = [];
+                slicePoints.forEach(slice => slices.push({
+                    s: Math.round((slice.sliceStart / file.sampleRate) * masterSR),
+                    e: Math.round((slice.sliceEnd / file.sampleRate) * masterSR),
+                    l: -1,
+                    n: `Slice ${slice.sliceId + 1}`
+                }));
+            }
         }
     } catch (e) {
         slices = false;

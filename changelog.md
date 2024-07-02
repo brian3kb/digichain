@@ -2,6 +2,7 @@ latest
  - Nudge Crossings selected action, nudges all zero crossings off from zero.
  - Pad with Zero selected action, adds a zero sample to the beginning and end of each file.
  - Shift selected action, moves the sample start position over 50%.
+ - Support for reading slice data from the Sonicware LoFi 12XT custom header data.
 
 2024.05.28 1.4.15
  - Amplitude threshold condense selected action, enter an upper and lower amplitude value (between 0 and 1), the sample will be modified to only include amplitudes within the given range, gaps between the audio is removed condensing the sample size.

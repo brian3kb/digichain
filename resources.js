@@ -269,7 +269,7 @@ function getResampleIfNeeded(meta, buffer, sampleRate) {
 export function audioBufferToWav(
   buffer, meta, sampleRate, bitDepth, masterNumChannels,
   deClickThreshold = false, renderAsAif = false, pitchModifier = 1,
-  embedSliceData = true, embedCuePoints = true) {
+  embedSliceData = true, embedCuePoints = true, embedOrslData = false) {
     const treatDualMonoStereoAsMono = (JSON.parse(
         localStorage.getItem('treatDualMonoStereoAsMono')) ?? true) &&
       !meta.editing && !meta.bypassStereoAsDualMono;
@@ -326,7 +326,7 @@ export function audioBufferToWav(
       ) :
       encodeWAV(
         result, format, sampleRate, numChannels, bitDepth, buffer.length,
-        meta?.slices, pitchModifier, embedSliceData, embedCuePoints
+        meta?.slices, pitchModifier, embedSliceData, embedCuePoints, embedOrslData
       );
 }
 
@@ -337,7 +337,7 @@ DataView.prototype.setInt24 = function(pos, val, littleEndian) {
 
 export function encodeWAV(
   samples, format, sampleRate, numChannels, bitDepth, inputBufferLength, slices, pitchModifier = 1,
-  embedSliceData = true, embedCuePoints = true) {
+  embedSliceData = true, embedCuePoints = true, embedOrslData = false) {
 
     const hasSlices = slices &&
       Array.isArray(slices) &&
@@ -354,6 +354,7 @@ export function encodeWAV(
     let riffSize = 36 + samples.length * bytesPerSample;
     let bufferLength = 44 + samples.length * bytesPerSample;
     let sliceCueLength = 0;
+    let sliceOrslLength = 0;
 
     let _slices = hasSlices ? (pitchModifier === 1 ? slices : slices.map(
       slice => ({
@@ -376,6 +377,11 @@ export function encodeWAV(
             sliceCueLength = (12 + (24 * slices.length));
             bufferLength += sliceCueLength;
             riffSize += sliceCueLength;
+        }
+        if (embedOrslData && (sampleRate === 12000 || sampleRate === 24000)) {
+            sliceOrslLength = (12 + (32 * slices.length));
+            bufferLength += sliceOrslLength;
+            riffSize += sliceOrslLength;
         }
     }
 
@@ -466,6 +472,33 @@ export function encodeWAV(
                 view.setUint32(
                   view.byteLength - sliceCueLength + increment + 20,
                   _slices[sIdx].s, true);
+            }
+        }
+        if (embedOrslData && (sampleRate === 12000 || sampleRate === 24000)) {
+            writeString(view, view.byteLength - sliceOrslLength, 'ORSL');
+            /*Chunk size */
+            view.setUint32(view.byteLength - sliceOrslLength + 4, (slices.length * 32) + 4, true);
+            /*Slice count*/
+            view.setUint32(view.byteLength - sliceOrslLength + 8, slices.length, true);
+
+            for (let sIdx = 0; sIdx < slices.length; sIdx++) {
+                const increment = 12 + (sIdx * 32);
+                /*Slice number*/
+                view.setUint32(view.byteLength - sliceOrslLength + increment,
+                  sIdx,
+                  true);
+                /*Start point*/
+                view.setUint32(view.byteLength - sliceOrslLength + increment + 4,
+                  _slices[sIdx].s,
+                  true);
+                /*End point*/
+                view.setUint32(view.byteLength - sliceOrslLength + increment + 8,
+                  _slices[sIdx].e,
+                  true);
+                /*Level default of 100*/
+                view.setUint32(view.byteLength - sliceOrslLength + increment + 12,
+                  100,
+                  true);
             }
         }
     }

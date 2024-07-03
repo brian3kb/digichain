@@ -67,6 +67,8 @@ let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData')) ??
   true;
 let embedCuePoints = JSON.parse(localStorage.getItem('embedCuePoints')) ??
   true;
+let embedOrslData = JSON.parse(localStorage.getItem('embedOrslData')) ??
+  true;
 let showTouchModifierKeys = JSON.parse(
   localStorage.getItem('showTouchModifierKeys')) ?? false;
 let exportWithOtFile = JSON.parse(
@@ -427,7 +429,7 @@ function bufferRateResampler(f, workingSR, audioCtxOverride)  {
                 e: slice.e === f.buffer.length ?
                   Math.round(resample.outputBuffer.length) :
                   Math.round((slice.e / f.buffer.sampleRate) * workingSR),
-                l: Math.round(((slice.l || -1) / f.buffer.sampleRate) * workingSR)
+                l: slice.l && slice.l > -1 ? Math.round((slice.l / f.buffer.sampleRate) * workingSR) : -1
             }));
         }
 
@@ -693,7 +695,7 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
       file.buffer, {...file.meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
       masterChannels, deClick,
       (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData,
-      embedCuePoints
+      embedCuePoints, embedOrslData
     );
     wavSR = wav.sampleRate;
     wav = wav.buffer;
@@ -715,7 +717,7 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
         wav = audioBufferToWav(
           pitchedBuffer, {...meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
           masterChannels, deClick,
-          renderAsAif, 1, embedSliceData, embedCuePoints
+          renderAsAif, 1, embedSliceData, embedCuePoints, embedOrslData
         );
         wavSR = wav.sampleRate;
         wav = wav.buffer;
@@ -1299,6 +1301,11 @@ function toggleSetting(param, value) {
         localStorage.setItem('embedCuePoints', embedCuePoints);
         showExportSettingsPanel();
     }
+    if (param === 'embedOrslData') {
+        embedOrslData = !embedOrslData;
+        localStorage.setItem('embedOrslData', embedOrslData);
+        showExportSettingsPanel();
+    }
     if (param === 'exportWithOtFile') {
         exportWithOtFile = !exportWithOtFile;
         localStorage.setItem('exportWithOtFile', exportWithOtFile);
@@ -1558,7 +1565,6 @@ function showExportSettingsPanel(page = 'settings') {
           : 'button-outline'}">${zipDownloads ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
-<tr>
 <td><span>When exporting stereo, export dual mono files as mono? &nbsp;&nbsp;&nbsp;</span></td>
 <td><button title="Often, stereo files are just the same mono audio data on both channels, if this is the case, export the file as mono." onpointerdown="digichain.toggleSetting('treatDualMonoStereoAsMono')" class="check ${treatDualMonoStereoAsMono
           ? 'button'
@@ -1577,8 +1583,13 @@ function showExportSettingsPanel(page = 'settings') {
           : 'button-outline'}">${embedCuePoints ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
+<td><span>Embed slice information as Lofi-12 XT points in exported wav files?<br>(Applied only to 12/24 kHz wav exports) &nbsp;&nbsp;&nbsp;</span></td>
+<td><button title="Embed slice data in wav file header in the Sonicware custom format for the Lofi-12 XT sampler." onpointerdown="digichain.toggleSetting('embedOrslData')" class="check ${embedOrslData
+          ? 'button'
+          : 'button-outline'}">${embedOrslData ? 'YES' : 'NO'}</button></td>
+</tr>
 <tr>
-<td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 16/24 [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
+<td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 kHz 16/24 [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
 <td><button onpointerdown="digichain.toggleSetting('exportWithOtFile')" class="check ${exportWithOtFile
           ? 'button'
           : 'button-outline'}">${exportWithOtFile ? 'YES' : 'NO'}</button></td>
@@ -1601,7 +1612,6 @@ function showExportSettingsPanel(page = 'settings') {
           ? 'button'
           : 'button-outline'}">${showTouchModifierKeys ? 'YES' : 'NO'}</button></td>
 </tr>
-<tr>
 <tr>
 <td><span>Shift+Click to download single files from the list?&nbsp;&nbsp;&nbsp;</span></td>
 <td><button onpointerdown="digichain.toggleSetting('shiftClickForFileDownload')" class="check ${shiftClickForFileDownload
@@ -1761,6 +1771,8 @@ function showExportSettingsPanel(page = 'settings') {
         <option value="44100m16w0-4-8-16-24-32-48">Polyend Tracker</option>
         <option value="44100s16w0-4-8-16-24-32-48">Polyend Tracker Mini</option>
         <option value="48000m16w0-8-10-12-15-30-60">Rytm</option>
+        <option value="12000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 12kHz</option>
+        <option value="24000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 24kHz</option>
     </select>
   </td>
   </tr>

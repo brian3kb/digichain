@@ -378,11 +378,11 @@ export function encodeWAV(
             bufferLength += sliceCueLength;
             riffSize += sliceCueLength;
         }
-        if (embedOrslData && (sampleRate === 12000 || sampleRate === 24000)) {
+        /*if (embedOrslData && (sampleRate === 12000 || sampleRate === 24000)) {
             sliceOrslLength = (12 + (32 * slices.length));
             bufferLength += sliceOrslLength;
             riffSize += sliceOrslLength;
-        }
+        }*/
     }
 
     buffer = new ArrayBuffer(bufferLength);
@@ -474,33 +474,33 @@ export function encodeWAV(
                   _slices[sIdx].s, true);
             }
         }
-        if (embedOrslData && (sampleRate === 12000 || sampleRate === 24000)) {
+        /*if (embedOrslData && (sampleRate === 12000 || sampleRate === 24000)) {
             writeString(view, view.byteLength - sliceOrslLength, 'ORSL');
-            /*Chunk size */
+            // Chunk size
             view.setUint32(view.byteLength - sliceOrslLength + 4, (slices.length * 32) + 4, true);
-            /*Slice count*/
+            // Slice count
             view.setUint32(view.byteLength - sliceOrslLength + 8, slices.length, true);
 
             for (let sIdx = 0; sIdx < slices.length; sIdx++) {
                 const increment = 12 + (sIdx * 32);
-                /*Slice number*/
+                // Slice number
                 view.setUint32(view.byteLength - sliceOrslLength + increment,
                   sIdx,
                   true);
-                /*Start point*/
+                // Start point
                 view.setUint32(view.byteLength - sliceOrslLength + increment + 4,
                   _slices[sIdx].s,
                   true);
-                /*End point*/
+                // End point
                 view.setUint32(view.byteLength - sliceOrslLength + increment + 8,
                   _slices[sIdx].e,
                   true);
-                /*Level default of 100*/
+                // Level default of 100
                 view.setUint32(view.byteLength - sliceOrslLength + increment + 12,
                   100,
                   true);
             }
-        }
+        }*/
     }
 
     return {buffer, sampleRate};

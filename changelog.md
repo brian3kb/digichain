@@ -4,7 +4,7 @@ latest
  - Shift selected action, moves the sample start position over 50%.
  - Fixed bug where resampling the list when changing the working samplerate caused the loop point to bet set on .ot slice metadata.
  - Support for reading slice data from the Sonicware LoFi-12 XT custom header data.
- - Support for writing slice data into wav files for use on the Sonicware LoFi-12 XT (in 12/24 kHz target sample rate).
+ - Added common configurations for Sonicware LoFi-12 XT (12/24 kHz target sample rate).
 
 2024.05.28 1.4.15
  - Amplitude threshold condense selected action, enter an upper and lower amplitude value (between 0 and 1), the sample will be modified to only include amplitudes within the given range, gaps between the audio is removed condensing the sample size.

@@ -68,7 +68,7 @@ let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData')) ??
 let embedCuePoints = JSON.parse(localStorage.getItem('embedCuePoints')) ??
   true;
 let embedOrslData = JSON.parse(localStorage.getItem('embedOrslData')) ??
-  true;
+  false;
 let showTouchModifierKeys = JSON.parse(
   localStorage.getItem('showTouchModifierKeys')) ?? false;
 let exportWithOtFile = JSON.parse(
@@ -1582,12 +1582,12 @@ function showExportSettingsPanel(page = 'settings') {
           ? 'button'
           : 'button-outline'}">${embedCuePoints ? 'YES' : 'NO'}</button></td>
 </tr>
-<tr>
+<!--<tr>
 <td><span>Embed slice information as Lofi-12 XT points in exported wav files?<br>(Applied only to 12/24 kHz wav exports) &nbsp;&nbsp;&nbsp;</span></td>
 <td><button title="Embed slice data in wav file header in the Sonicware custom format for the Lofi-12 XT sampler." onpointerdown="digichain.toggleSetting('embedOrslData')" class="check ${embedOrslData
           ? 'button'
           : 'button-outline'}">${embedOrslData ? 'YES' : 'NO'}</button></td>
-</tr>
+</tr>-->
 <tr>
 <td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 kHz 16/24 [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
 <td><button onpointerdown="digichain.toggleSetting('exportWithOtFile')" class="check ${exportWithOtFile

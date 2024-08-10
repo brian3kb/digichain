@@ -8,7 +8,7 @@ This Privacy Policy governs the manner in which DigiChain handles and protects u
 DigiChain does not collect any personal identification information from its Users. We do not request or store names, email addresses, mailing addresses, phone numbers, payment information, or any other personally identifiable information.
 
 ### Non-personal Identification Information
-DigiChain may collect non-personal identification information about Users whenever they interact with the application via the GitHub Insights feature. This may include technical information about Users' devices, browsers, such as the browser name, device type and operating system.
+DigiChain may collect non-personal identification information about Users whenever they interact with the application via the GitHub Insights feature, or via the CloudFlare Web Analytics platform. This may include technical information about Users' devices, browsers, such as the browser name, device type and operating system.
 
 ### Web Browser Cookies
 DigiChain does not use cookies or similar tracking technologies. No information is stored on Users' devices through the use of cookies beyond the settings configuration options, which are not user identifiable.
@@ -17,7 +17,7 @@ DigiChain does not use cookies or similar tracking technologies. No information 
 No user data is ever collected, and the app runs entirely on the users computer, transmitting no data over the internet beyond its own application code. The source code is freely available on GitHub for verification of this.
 
 ### Third-Party Services
-DigiChain does not share any user information with third-party services, partners, advertisers, or affiliates, as we do not collect any user information.
+DigiChain does not share any user information with third-party services, partners, advertisers, or affiliates, as we do not collect any user information beyond basic web analytics.
 
 ### External Links
 DigiChain may provide links to external websites or resources for informational purposes. We are not responsible for the content or practices employed by these third-party websites. Users should review the privacy policies of those websites as they may differ from ours.

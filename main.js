@@ -1773,6 +1773,8 @@ function showExportSettingsPanel(page = 'settings') {
         <option value="48000m16w0-8-10-12-15-30-60">Rytm</option>
         <option value="12000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 12kHz</option>
         <option value="24000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 24kHz</option>
+        <option value="46875m16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (mono)</option>
+        <option value="46875s16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (stereo)</option>
     </select>
   </td>
   </tr>

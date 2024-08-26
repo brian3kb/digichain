@@ -194,6 +194,8 @@ canvas.waveform:hover { opacity: .98; }
     margin-left: -1.5rem;
     height: 0;
     transition: all .25s ease;
+    display: block;
+    margin-top: -1.5rem;
 }
 .chain-name-toggle:hover {
     color: #d79c4e;

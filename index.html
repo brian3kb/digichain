@@ -395,7 +395,11 @@
                             class="button-outline">
                         Shift
                     </button>
-                    <div class="button-clear"></div>
+                    <button title="De-serialize mono serialized L/R samples back to stereo."
+                            onclick="digichain.deserializeSelected(event, 'LR')"
+                            class="button-outline">De-serialize L/R
+                    </button>
+<!--                    <div class="button-clear"></div>-->
                 </div>
                 <button title="Merge/mix-down all selected" onpointerdown="digichain.showMergePanel(event)"
                         class="button button-outline" style="width: 23%;">Merge

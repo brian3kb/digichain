@@ -216,11 +216,13 @@ export function renderEditor(item) {
 <div class="slice-options input-set">
   <label for="sliceSelection" class="before-input">Slice</label>
   <select title="Choose a slice marker to edit." name="sliceSelection" id="sliceSelection" onchange="digichain.editor.sliceSelect(event);"></select>
+<div style="display: inline-block; margin-top: .2rem; padding-left: .5rem;">
   <button title="Update the slice marker start/end points." onpointerdown="digichain.editor.sliceUpdate(event);" class="button-outline">Update Slice</button>
   <button title="Remove the current slice marker." onpointerdown="digichain.editor.sliceRemove(event);" class="button-outline">Remove Slice</button>
   <button title="Add the current range as a new slice marker." onpointerdown="digichain.editor.sliceCreate(event);" class="button-outline">New Slice</button>
   <button title="Snap selections to zero crossings?" onpointerdown="digichain.editor.toggleSnapToZero(event);" class="button ${shouldSnapToZeroCrossing ? '' : 'button-outline'}">Snap to Zero</button>
     <button title="Detect BPM from selection." onpointerdown="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
+</div>
 </div>
 <div class="above-waveform-buttons">
   <div class="sample-selection-buttons text-align-left float-left">
@@ -1424,6 +1426,47 @@ function padWithZero(event, item, renderEditPanel = true) {
     item.waveform = false;
 }
 
+function deserialize(event, item, renderEditPanel = true, method = 'LR') {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = Math.floor(item.buffer.length / method.split('').length);
+    }
+    item = item || editing;
+
+    const audioArrayBuffer = conf.audioCtx.createBuffer(
+      2,
+      selection.end,
+      conf.masterSR
+    );
+
+    let x = 0;
+    method.split('').forEach((channel, idx) => {
+        const buffer = item.buffer.getChannelData(0);
+        for (let i = selection.start; i < selection.end; i++) {
+            audioArrayBuffer.getChannelData(idx)[i] = buffer[x];
+            x++;
+        }
+    });
+
+    item.buffer = audioArrayBuffer;
+    item.meta = {
+        ...item.meta,
+        length: audioArrayBuffer.length,
+        duration: Number(audioArrayBuffer.length / conf.masterSR).toFixed(3),
+        startFrame: 0, endFrame: audioArrayBuffer.length
+    };
+    if (item.meta.slices) {
+        item.meta.slices = false;
+    }
+    if (item.meta.op1Json) {
+        item.meta.op1Json = false;
+    }
+    if (renderEditPanel) {
+        showEditor(editing, conf, 'sample', folders);
+    }
+    item.waveform = false;
+}
+
 function serialize(event, item, renderEditPanel = true, method = 'LR') {
     if (!renderEditPanel && item) {
         selection.start = 0;
@@ -1524,5 +1567,6 @@ export const editor = {
     getLastItem: () => editing?.meta?.id,
     reverse,
     shift,
-    serialize
+    serialize,
+    deserialize
 };

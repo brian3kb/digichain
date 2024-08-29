@@ -114,9 +114,11 @@ input, .btn-audio-config { color: #a8a8a8; }
 }
 .input-set {
     margin-top: -1.5rem;
+    display: flex;
 }
 .input-set:first-child {
     margin-top: 0;
+    margin-bottom: -1rem;
 }
 #getJoined, .wav-link-hidden, .meta-link-hidden, .hidden { visibility: hidden; }
 .hide { display: none !important; }
@@ -566,6 +568,7 @@ td button { margin: 0.5rem; }
 .above-waveform-buttons {
     width: 100%;
     display:inline-block;
+    margin-top: 1rem;
 }
 
 .playback-controls button {

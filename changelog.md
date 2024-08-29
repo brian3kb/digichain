@@ -7,6 +7,7 @@ latest
  - Added common configurations for Sonicware LoFi-12 XT (12/24 kHz target sample rate).
  - Added common configurations for Teenage Engineering EP-133 / EP-1320 mono/stereo.
  - Fixed some browser specific UI element positioning quirks.
+ - Added de-serialize from mono L/R back to a stereo sample selected action (halves a mono sample and puts the first half on the left channel, second half on the right).
 
 2024.05.28 1.4.15
  - Amplitude threshold condense selected action, enter an upper and lower amplitude value (between 0 and 1), the sample will be modified to only include amplitudes within the given range, gaps between the audio is removed condensing the sample size.

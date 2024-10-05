@@ -190,6 +190,9 @@
                 id="sliceByOtButton" onpointerdown="digichain.splitSizeAction(event, 'ot')"
                 class="button-outline check sel-7 sel-ot is-ot-file file-has-slice-data" data-sel="ot">OT
         </button>
+        <button title="Set a custom slice count" onpointerdown="digichain.splitSizeAction(event, 'custom')"
+                class="button-outline check sel-custom" data-sel="custom">C
+        </button>
         <button title="Slice by transient detection." id="sliceByTransientButton"
                 onpointerdown="digichain.splitSizeAction(event, 'transient', document.getElementById('transientThreshold').value)"
                 class="button-outline check sel-transient" data-sel="transient">T

@@ -2964,6 +2964,13 @@ const splitSizeAction = (event, slices, threshold) => {
 
     convertChainButtonEl.style.display = 'none';
 
+    if (slices === 'custom') {
+        const customSlices = prompt('Enter the number of slices to equally chop this sample');
+        if (typeof parseInt(customSlices) === 'number') {
+            slices = parseInt(customSlices);
+        }
+    }
+
     if (slices === 'ot' && sliceGroupEl.dataset.id) {
         file = getFileById(sliceGroupEl.dataset.id);
         otMeta = metaFiles.getByFile(file);

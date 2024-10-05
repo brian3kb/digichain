@@ -9,6 +9,7 @@ latest
  - Fixed some browser specific UI element positioning quirks.
  - Added de-serialize from mono L/R back to a stereo sample selected action (halves a mono sample and puts the first half on the left channel, second half on the right).
  - Prevent slicing by transient assigning an ot meta loop point flag.
+ - Added button to set a custom slice count on the slices panel.
 
 2024.05.28 1.4.15
  - Amplitude threshold condense selected action, enter an upper and lower amplitude value (between 0 and 1), the sample will be modified to only include amplitudes within the given range, gaps between the audio is removed condensing the sample size.

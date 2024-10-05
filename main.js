@@ -2924,7 +2924,7 @@ const splitByTransient = (file, threshold = .5) => {
         if (lastStart !== undefined && lastEnd !== undefined) {
             transientPositions.push({
                 startPoint: lastStart,
-                loopPoint: lastStart,
+                loopPoint: -1,
                 endPoint: lastEnd
             });
             lastStart = undefined;

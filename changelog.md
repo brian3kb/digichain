@@ -2,12 +2,13 @@ latest
  - Nudge Crossings selected action, nudges all zero crossings off from zero.
  - Pad with Zero selected action, adds a zero sample to the beginning and end of each file.
  - Shift selected action, moves the sample start position over 50%.
- - Fixed bug where resampling the list when changing the working samplerate caused the loop point to bet set on .ot slice metadata.
+ - Fixed bug where resampling the list when changing the working sample-rate caused the loop point to bet set on .ot slice metadata.
  - Support for reading slice data from the Sonicware LoFi-12 XT custom header data.
  - Added common configurations for Sonicware LoFi-12 XT (12/24 kHz target sample rate).
  - Added common configurations for Teenage Engineering EP-133 / EP-1320 mono/stereo.
  - Fixed some browser specific UI element positioning quirks.
  - Added de-serialize from mono L/R back to a stereo sample selected action (halves a mono sample and puts the first half on the left channel, second half on the right).
+ - Prevent slicing by transient assigning an ot meta loop point flag.
 
 2024.05.28 1.4.15
  - Amplitude threshold condense selected action, enter an upper and lower amplitude value (between 0 and 1), the sample will be modified to only include amplitudes within the given range, gaps between the audio is removed condensing the sample size.
@@ -212,7 +213,7 @@ latest
 - Normalize All Selected action.
 - Pitch Up by an Octave All Selected action.
 - Enabled 32bit float wav exports.
-- Allow importing of 16bit aif files (parser written to accomodate importing from TE devices, but should be ok on other exported aif files, testing with Ableton Live exports and worked as expected, ymmv).
+- Allow importing of 16bit aif files (parser written to accommodate importing from TE devices, but should be ok on other exported aif files, testing with Ableton Live exports and worked as expected, ymmv).
 - Split chained files at 12s (mono) or 20s (stereo) lengths mode. Sample order will loosely follow the list order, but it will try to fit smaller samples into the chain up to the max limit from further down the selected items in the list, so some samples may be out of order depending on their length and where they could be slotted into each chain to use up the time in the best way possible.
 - Removing arraybuffers before removal of files to help free memory usage sooner.
 - Ctrl+Click on the max length per chain in seconds to set a custom limit.

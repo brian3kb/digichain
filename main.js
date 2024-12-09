@@ -64,7 +64,7 @@ let playWithPopMarker = JSON.parse(
   localStorage.getItem('playWithPopMarker')) ?? 0;
 let zipDownloads = JSON.parse(localStorage.getItem('zipDownloads')) ?? true;
 let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData')) ??
-  true;
+  false;
 let embedCuePoints = JSON.parse(localStorage.getItem('embedCuePoints')) ??
   true;
 let embedOrslData = JSON.parse(localStorage.getItem('embedOrslData')) ??
@@ -2170,10 +2170,10 @@ async function joinAll(
             file: {
                 name: chainFileNamesAvailable() ? getNextChainFileName(
                   _files.length) : (_files.length === 1 ?
-                  `${path}chain_${pad ? 'spaced_' : ''}${getNiceFileName('',
-                    _files[0], true)}_${fileCount + 1}--[${_files.length}].wav` :
-                  `${path}chain_${pad ? 'spaced_' : ''}${fileCount +
-                  1}--[${_files.length}].wav`)
+                  `${path}chain-${pad ? 'spaced-' : ''}${getNiceFileName('',
+                    _files[0], true)}-${fileCount + 1}--${_files.length}.wav` :
+                  `${path}chain-${pad ? 'spaced-' : ''}${fileCount +
+                  1}--${_files.length}.wav`)
             }, buffer: audioArrayBuffer, meta: {slices}
         };
         if (toInternal) {

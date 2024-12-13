@@ -63,8 +63,9 @@ let reverseEvenSamplesInChains = JSON.parse(
 let playWithPopMarker = JSON.parse(
   localStorage.getItem('playWithPopMarker')) ?? 0;
 let zipDownloads = JSON.parse(localStorage.getItem('zipDownloads')) ?? true;
-let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData')) ??
-  false;
+let embedSliceData = false;
+/*let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData')) ??
+  false;*/
 let embedCuePoints = JSON.parse(localStorage.getItem('embedCuePoints')) ??
   true;
 let embedOrslData = JSON.parse(localStorage.getItem('embedOrslData')) ??
@@ -275,6 +276,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     const settingsPanelEl = document.getElementById('exportSettingsPanel');
     const configOptionsEl = document.getElementById('audioConfigOptions');
     const audioValuesFromCommonSelectEl = document.getElementById('audioValuesFromCommonSelect');
+    const commonSelectDevice = (audioValuesFromCommonSelectEl?.selectedOptions??[])[0]?.dataset?.device;
     const defaults = [48000, 'm', 16, 'w', ...DefaultSliceOptions];
     let configValues = configString ? configString.match(/^\d+|[ms]|\d+|[wa]/g) : defaults;
     configValues = configValues.length === 11 ? configValues : defaults;
@@ -294,7 +296,11 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 
     let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value || localStorage.getItem('workingSampleRate') || 48000);
 
+    /*toggleSetting('embedSliceData', false, true);*/
+    toggleSetting('embedCuePoints', true, true);
+
     if (audioValuesFromCommonSelectEl) {
+        toggleSetting('exportWithOtFile', 'ot' === commonSelectDevice, true);
         audioValuesFromCommonSelectEl.value = 'none';
     }
 
@@ -356,10 +362,15 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     if (!onloadRestore) {
         checkAndSetAudioContext();
     }
-    secondsPerFile = targetContainer === 'a' ? 20 : secondsPerFile;
+
+    secondsPerFile = 0;
+    secondsPerFile = 'opz' === commonSelectDevice ? 12 : secondsPerFile;
+    secondsPerFile = 'op1f' === commonSelectDevice ? 20 : secondsPerFile;
+    secondsPerFile = 'opxy' === commonSelectDevice ? 40 : secondsPerFile;
+
     toggleSecondsPerFile(false,
-      secondsPerFile === 0 ? 0 :
-        (masterChannels === 2 ? 20 : 12)
+      !secondsPerFile ? 0 :
+        secondsPerFile
     );
     setEditorConf({
         audioCtx,
@@ -1290,89 +1301,75 @@ function pitchExports(value, silent) {
     return value;
 }
 
-function toggleSetting(param, value) {
+function toggleSetting(param, value, suppressRerender) {
     if (param === 'zipDl') {
-        zipDownloads = !zipDownloads;
+        zipDownloads = value ?? !zipDownloads;
         localStorage.setItem('zipDownloads', zipDownloads);
-        showExportSettingsPanel();
     }
     if (param === 'treatDualMonoStereoAsMono') {
-        treatDualMonoStereoAsMono = !treatDualMonoStereoAsMono;
+        treatDualMonoStereoAsMono = value ?? !treatDualMonoStereoAsMono;
         localStorage.setItem('treatDualMonoStereoAsMono',
           treatDualMonoStereoAsMono);
-        showExportSettingsPanel();
     }
     if (param === 'shiftClickForFileDownload') {
-        shiftClickForFileDownload = !shiftClickForFileDownload;
+        shiftClickForFileDownload = value ?? !shiftClickForFileDownload;
         localStorage.setItem('shiftClickForFileDownload',
           shiftClickForFileDownload);
-        showExportSettingsPanel();
     }
     if (param === 'embedSliceData') {
-        embedSliceData = !embedSliceData;
+        embedSliceData = value ?? !embedSliceData;
         localStorage.setItem('embedSliceData', embedSliceData);
-        showExportSettingsPanel();
     }
     if (param === 'embedCuePoints') {
-        embedCuePoints = !embedCuePoints;
+        embedCuePoints = value ?? !embedCuePoints;
         localStorage.setItem('embedCuePoints', embedCuePoints);
-        showExportSettingsPanel();
     }
     if (param === 'embedOrslData') {
-        embedOrslData = !embedOrslData;
+        embedOrslData = value ?? !embedOrslData;
         localStorage.setItem('embedOrslData', embedOrslData);
-        showExportSettingsPanel();
     }
     if (param === 'exportWithOtFile') {
-        exportWithOtFile = !exportWithOtFile;
+        exportWithOtFile = value ?? !exportWithOtFile;
         localStorage.setItem('exportWithOtFile', exportWithOtFile);
-        showExportSettingsPanel();
     }
     if (param === 'importFileLimit') {
-        importFileLimit = !importFileLimit;
+        importFileLimit = value ?? !importFileLimit;
         localStorage.setItem('importFileLimit', importFileLimit);
-        showExportSettingsPanel();
     }
     if (param === 'skipMiniWaveformRender') {
-        skipMiniWaveformRender = !skipMiniWaveformRender;
+        skipMiniWaveformRender = value ?? !skipMiniWaveformRender;
         localStorage.setItem('skipMiniWaveformRender', skipMiniWaveformRender);
-        showExportSettingsPanel();
     }
     if (param === 'reverseEvenSamplesInChains') {
-        reverseEvenSamplesInChains = !reverseEvenSamplesInChains;
+        reverseEvenSamplesInChains = value ?? !reverseEvenSamplesInChains;
         localStorage.setItem('reverseEvenSamplesInChains', reverseEvenSamplesInChains);
-        showExportSettingsPanel();
     }
     if (param === 'attemptToFindCrossingPoint') {
-        attemptToFindCrossingPoint = !attemptToFindCrossingPoint;
+        attemptToFindCrossingPoint = value ?? !attemptToFindCrossingPoint;
         localStorage.setItem('attemptToFindCrossingPoint',
           attemptToFindCrossingPoint);
-        showExportSettingsPanel();
     }
     if (param === 'darkModeTheme') {
-        darkModeTheme = !darkModeTheme;
+        darkModeTheme = value ?? !darkModeTheme;
         localStorage.setItem('darkModeTheme', darkModeTheme);
         document.body.classList[
           darkModeTheme ? 'remove' : 'add'
           ]('light');
-        showExportSettingsPanel();
     }
     if (param === 'normalizeContrast') {
-        normalizeContrast = !normalizeContrast;
+        normalizeContrast = value ?? !normalizeContrast;
         localStorage.setItem('normalizeContrast', normalizeContrast);
         document.body.classList[
           normalizeContrast ? 'add' : 'remove'
           ]('normalize-contrast');
-        showExportSettingsPanel();
     }
     if (param === 'restoreLastUsedAudioConfig') {
-        restoreLastUsedAudioConfig = !restoreLastUsedAudioConfig;
+        restoreLastUsedAudioConfig = value ?? !restoreLastUsedAudioConfig;
         localStorage.setItem('restoreLastUsedAudioConfig',
           restoreLastUsedAudioConfig);
-        showExportSettingsPanel();
     }
     if (param === 'retainSessionState') {
-        retainSessionState = !retainSessionState;
+        retainSessionState = value ?? !retainSessionState;
         localStorage.setItem('retainSessionState',
             retainSessionState);
         if (retainSessionState) {
@@ -1380,27 +1377,25 @@ function toggleSetting(param, value) {
         } else {
             clearDbBuffers();
         }
-        showExportSettingsPanel();
     }
     if (param === 'showTouchModifierKeys') {
-        showTouchModifierKeys = !showTouchModifierKeys;
+        showTouchModifierKeys = value ?? !showTouchModifierKeys;
         localStorage.setItem('showTouchModifierKeys', showTouchModifierKeys);
         document.querySelector('.touch-buttons').classList[
           showTouchModifierKeys ? 'remove' : 'add'
           ]('hidden');
-        showExportSettingsPanel();
     }
     if (param === 'playWithPopMarker') {
         playWithPopMarker = value;
         files.forEach(f => f.meta.peak = undefined);
         localStorage.setItem('playWithPopMarker', playWithPopMarker);
-        showExportSettingsPanel();
     }
     if (param === 'deClick') {
         deClick = value;
         localStorage.setItem('deClick', deClick);
-        showExportSettingsPanel();
     }
+    if (suppressRerender) { return; }
+    showExportSettingsPanel();
 }
 
 function setCustomSecondsPerFileValue(targetEl, size, silent = false) {
@@ -1587,7 +1582,7 @@ function showExportSettingsPanel(page = 'settings') {
           ? 'button'
           : 'button-outline'}">${treatDualMonoStereoAsMono ? 'YES' : 'NO'}</button></td>
 </tr>
-<tr>
+<tr style="display: none;">
 <td><span>Embed slice information in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
 <td><button title="Embed the slice information into the wav file in DigiChain format, this includes start, end points and the source file name for the slice." onpointerdown="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData
           ? 'button'
@@ -1779,12 +1774,13 @@ function showExportSettingsPanel(page = 'settings') {
         <option value="none" disabled selected>Common Configurations</option>
         <option value="48000m16w0-4-8-16-32-64-128">Digitakt</option>
         <option value="48000s16w0-4-8-16-32-64-128">Digitakt II</option>
-        <option value="44100s16w0-4-8-16-32-64-128">Dirtywave M8</option>
+        <option value="44100s16w0-4-8-16-32-64-128" data-device="m8">Dirtywave M8</option>
         <option value="48000m16w0-8-10-12-15-30-60">Model:Samples</option>
-        <option value="44100s16w0-4-8-16-32-48-64">Octatrack (16bit)</option>
-        <option value="44100s24w0-4-8-16-32-48-64">Octatrack (24bit)</option>
-        <option value="44100s16a0-4-8-12-16-20-24">OP-1 Field</option>
-        <option value="44100m16a0-4-8-12-16-20-24">OP-1 / OP-Z</option>
+        <option value="44100s16w0-4-8-16-32-48-64" data-device="ot">Octatrack (16bit)</option>
+        <option value="44100s24w0-4-8-16-32-48-64" data-device="ot">Octatrack (24bit)</option>
+        <option value="44100s16a0-4-8-12-16-20-24" data-device="op1f">OP-1 Field</option>
+        <option value="44100m16a0-4-8-12-16-20-24" data-device="opz">OP-1 / OP-Z</option>
+        <option value="44100s16w0-4-8-12-16-20-24" data-device="opxy">OP-XY</option>
         <option value="44100m16w0-4-8-16-24-32-48">Polyend Tracker</option>
         <option value="44100s16w0-4-8-16-24-32-48">Polyend Tracker Mini</option>
         <option value="48000m16w0-8-10-12-15-30-60">Rytm</option>

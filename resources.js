@@ -269,7 +269,7 @@ function getResampleIfNeeded(meta, buffer, sampleRate) {
 export function audioBufferToWav(
   buffer, meta, sampleRate, bitDepth, masterNumChannels,
   deClickThreshold = false, renderAsAif = false, pitchModifier = 1,
-  embedSliceData = true, embedCuePoints = true, embedOrslData = false) {
+  embedSliceData = false, embedCuePoints = true, embedOrslData = false) {
     const treatDualMonoStereoAsMono = (JSON.parse(
         localStorage.getItem('treatDualMonoStereoAsMono')) ?? true) &&
       !meta.editing && !meta.bypassStereoAsDualMono;
@@ -337,7 +337,7 @@ DataView.prototype.setInt24 = function(pos, val, littleEndian) {
 
 export function encodeWAV(
   samples, format, sampleRate, numChannels, bitDepth, inputBufferLength, slices, pitchModifier = 1,
-  embedSliceData = true, embedCuePoints = true, embedOrslData = false) {
+  embedSliceData = false, embedCuePoints = true, embedOrslData = false) {
 
     const hasSlices = slices &&
       Array.isArray(slices) &&

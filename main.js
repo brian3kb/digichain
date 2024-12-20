@@ -993,7 +993,7 @@ function sanitizeNameSelected(event, restore = false) {
     const xyRxp = str =>
       str.replaceAll(/[\[\{<]/g, '(').
         replaceAll(/[\]\}>]/g, ')').
-        replaceAll(/[^a-zA-Z0-9\s#\-\(\)\.]/g, '-').
+        replaceAll(/[^a-zA-Z0-9\s#\-\(\)]/g, '-').
         replaceAll(/-{3,}/g, '-');
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     document.getElementById('loadingText').textContent = 'Processing';

@@ -15,6 +15,7 @@ latest
  - Use Cue markers as preferred slice data storage within the wav file data.
  - Turn on/off .ot file export options when choosing the ot common configuration on the audio config panel.
  - Add OP-XY to common configurations, as this uses wav files as the primary file type.
+ - Sanitize Names selected action to format file names to align with the guidelines for successful MTP transfer to Teenage Engineering OP-XY filesystem.
 
 2024.05.28 1.4.15
  - Amplitude threshold condense selected action, enter an upper and lower amplitude value (between 0 and 1), the sample will be modified to only include amplitudes within the given range, gaps between the audio is removed condensing the sample size.

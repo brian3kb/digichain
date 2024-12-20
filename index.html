@@ -350,6 +350,10 @@
                             onclick="digichain.crushSelected(event)"
                             class="button-outline has-shift-mod">Crush
                     </button>
+                    <button title="Remove audio amplitude values outside the given upper and lower limits." onclick="digichain.condenseSelected(event)"
+                            class="button-outline">
+                        Condense
+                    </button>
                     <button title="Stretch all selected samples to the same length as the shortest sample in the selection. Hold shift to set a custom length in seconds. Hold shift+ctrl/cmd to set a custom length in samples."
                             onclick="digichain.stretchSelected(event, true)"
                             class="button-outline has-shift-mod has-ctrl-mod">Stretch Shortest
@@ -357,6 +361,10 @@
                     <button title="Stretch all selected samples to the same length as the longest sample in the selection. Hold shift to set a custom length in seconds. Hold shift+ctrl/cmd to set a custom length in samples."
                             onclick="digichain.stretchSelected(event)"
                             class="button-outline has-shift-mod has-ctrl-mod">Stretch Longest
+                    </button>
+                    <button title="Roughly stretch all selected x2" onclick="digichain.roughStretchSelected(event)"
+                            class="button-outline">
+                        Rough Stretch
                     </button>
                     <button title="Serialize stereo samples to mono, left and right channels."
                             onclick="digichain.serializeSelected(event, 'LR')"
@@ -370,21 +378,9 @@
                             onclick="digichain.serializeSelected(event, 'LRSD')"
                             class="button-outline">Serialize L/R/S/M
                     </button>
-                    <button title="Shorten the file path and name of selected."
-                            onclick="digichain.shortenNameSelected(event)"
-                            class="button-outline">Shorten Names
-                    </button>
-                    <button title="Restore the original file path and name of selected."
-                            onclick="digichain.shortenNameSelected(event, true)"
-                            class="button-outline">Restore Names
-                    </button>
-                    <button title="Roughly stretch all selected x2" onclick="digichain.roughStretchSelected(event)"
-                            class="button-outline">
-                        Rough Stretch
-                    </button>
-                    <button title="Remove audio amplitude values outside the given upper and lower limits." onclick="digichain.condenseSelected(event)"
-                            class="button-outline">
-                        Condense
+                    <button title="De-serialize mono serialized L/R samples back to stereo."
+                            onclick="digichain.deserializeSelected(event, 'LR')"
+                            class="button-outline">De-serialize L/R
                     </button>
                     <button title="Nudges all zero crossings off from zero." onclick="digichain.nudgeCrossingsSelected(event)"
                             class="button-outline">
@@ -398,11 +394,20 @@
                             class="button-outline">
                         Shift
                     </button>
-                    <button title="De-serialize mono serialized L/R samples back to stereo."
-                            onclick="digichain.deserializeSelected(event, 'LR')"
-                            class="button-outline">De-serialize L/R
+                    <button title="Shorten the file path and name of selected."
+                            onclick="digichain.shortenNameSelected(event)"
+                            class="button-outline">Shorten Names
                     </button>
-<!--                    <div class="button-clear"></div>-->
+                    <button title="Sanitize the file name of selected to be compatible with OP-XY MTP file transfer."
+                            onclick="digichain.sanitizeNameSelected(event)"
+                            class="button-outline">Sanitize Names
+                    </button>
+                    <button title="Restore the original file path and name of selected."
+                            onclick="digichain.shortenNameSelected(event, true)"
+                            class="button-outline">Restore Names
+                    </button>
+                    <div class="button-clear"></div>
+                    <div class="button-clear"></div>
                 </div>
                 <button title="Merge/mix-down all selected" onpointerdown="digichain.showMergePanel(event)"
                         class="button button-outline" style="width: 23%;">Merge

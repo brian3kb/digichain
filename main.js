@@ -4159,22 +4159,41 @@ const parseWav = (
                     continue;
                 }
             }
-            if (code === 'DCSD') {
+            if (code === 'DCSD' || code === 'LIST') {
                 const size = dv.getUint32(i + 4, true);
                 const utf8Decoder = new TextDecoder('utf-8');
-                let jsonString = utf8Decoder.decode(
-                  arrayBuffer.slice(i + 8, i + 8 + size));
-                const json = JSON.parse(jsonString.trimEnd());
-                if (json.sr !== masterSR) {
-                    slices = json.dcs.map(slice => ({
-                        s: Math.round((slice.s / json.sr) * masterSR),
-                        e: Math.round((slice.e / json.sr) * masterSR),
-                        l: Math.round(((slice.l || -1) / json.sr) * masterSR),
-                        n: slice.n
-                    }));
-                } else {
-                    slices = json.dcs;
+
+                let jsonString = '';
+                if (code === 'LIST') {
+                    const listType = String.fromCharCode(
+                      dv.getUint8(i + 8), dv.getUint8(i + 9),
+                      dv.getUint8(i + 10), dv.getUint8(i + 11)
+                    );
+                    if (listType === 'ISBJ'){
+                      jsonString = atob(utf8Decoder.decode(
+                        arrayBuffer.slice(i + 12, i + 8 + size)
+                      ));
+                    }
                 }
+                /*else*/
+                jsonString = jsonString || utf8Decoder.decode(
+                  arrayBuffer.slice(i + 8, i + 8 + size)
+                );
+
+                try {
+                    const json = JSON.parse(jsonString.trimEnd());
+                    if (json.sr !== masterSR) {
+                        slices = json.dcs.map(slice => ({
+                            s: Math.round((slice.s / json.sr) * masterSR),
+                            e: Math.round((slice.e / json.sr) * masterSR),
+                            l: Math.round(
+                              ((slice.l || -1) / json.sr) * masterSR),
+                            n: slice.n
+                        }));
+                    } else {
+                        slices = json.dcs;
+                    }
+                } catch (jsonParseErrored) {}
             }
             if (code === 'cue ') {
                 const size = dv.getUint32(i + 4, true);

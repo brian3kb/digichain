@@ -368,10 +368,11 @@ export function encodeWAV(
         if (embedSliceData) {
             sliceData = `{"sr": ${sampleRate}, "dcs":` +
               JSON.stringify(_slices) + '}';
+            sliceData = btoa(sliceData);
             sliceData = sliceData.padEnd(
               sliceData.length + sliceData.length % 4, ' ');
-            bufferLength += (sliceData.length + 8);
-            riffSize += (sliceData.length + 8);
+            bufferLength += (sliceData.length + 12);
+            riffSize += (sliceData.length + 12);
         }
         if (embedCuePoints) {
             sliceCueLength = (12 + (24 * slices.length));
@@ -425,14 +426,19 @@ export function encodeWAV(
     }
     if (hasSlices) {
         if (embedSliceData) {
-            /*DCSD custom chunk header*/
+            /*Store DCSD as LIST chunk header to keep wav format valid*/
             writeString(view,
-              view.byteLength - (sliceData.length + 8) - sliceCueLength,
-              'DCSD');
-            /*DCSD custom chunk size*/
+              view.byteLength - (sliceData.length + 12) - sliceCueLength,
+              'LIST');
+            /*LIST DCSD custom chunk size*/
             view.setUint32(
+              view.byteLength - (sliceData.length + 8) - sliceCueLength,
+              sliceData.length + 4,
+              true);
+            /*Using ISBJ as the LIST type ID : Description of the contents of the file (subject)*/
+            writeString(view,
               view.byteLength - (sliceData.length + 4) - sliceCueLength,
-              sliceData.length, true);
+              'ISBJ');
             /*DCSD custom chunk data*/
             writeString(view,
               view.byteLength - sliceData.length - sliceCueLength,
@@ -441,7 +447,7 @@ export function encodeWAV(
         if (embedCuePoints) {
             writeString(view, view.byteLength - sliceCueLength, 'cue ');
             view.setUint32(view.byteLength - sliceCueLength + 4,
-              sliceCueLength - 4,
+              sliceCueLength - 8,
               true);
             view.setUint32(view.byteLength - sliceCueLength + 8, slices.length,
               true);

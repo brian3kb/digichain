@@ -1,4 +1,4 @@
-latest
+2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.
  - Pad with Zero selected action, adds a zero sample to the beginning and end of each file.
  - Shift selected action, moves the sample start position over 50%.

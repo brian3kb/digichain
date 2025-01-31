@@ -1419,3 +1419,10 @@ img {
 .float-right {
     float: right;
 }
+
+body.is-itch-io .container {
+    max-width: 95vw;
+}
+body.is-itch-io #allOptionsPanel .column.left-buttons {
+    max-width: 48rem;
+}

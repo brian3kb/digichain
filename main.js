@@ -855,7 +855,7 @@ function toggleSelectedActionsList() {
 
 function removeSelected() {
     metaFiles.removeSelected();
-    files.filter(f => f.meta.checked).forEach(f => remove(f.meta.id));
+    files.filter(f => f.meta.checked).forEach(f => remove(f.meta.id, true));
     files = files.filter(f => !f.meta.checked);
     unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
     importOrder = importOrder.filter(id => unsorted.includes(id));
@@ -866,8 +866,8 @@ function removeSelected() {
         unsorted = [];
         importOrder = [];
     }
-    storeState();
     renderList();
+    return storeState();
 }
 
 function normalizeSelected(event) {
@@ -3053,7 +3053,7 @@ const splitSizeAction = (event, slices, threshold) => {
     }
 };
 
-const remove = (id) => {
+const remove = (id, skipStateStore) => {
     stopPlayFile(false, id);
     const rowEl = getRowElementById(id);
     const fileIdx = getFileIndexById(id);
@@ -3066,7 +3066,7 @@ const remove = (id) => {
     }
     rowEl.classList.add('hide');
     rowEl.remove();
-    storeState();
+    return skipStateStore ? true : storeState();
 };
 
 const move = (event, id, direction) => {
@@ -5052,7 +5052,7 @@ function configDb(skipLoad = false) {
         db.createObjectStore('state');
     };
 }
-function storeState() {
+async function storeState() {
     if (!retainSessionState) {return new Promise(resolve => resolve(true));}
     const transaction = db.transaction(['state'], 'readwrite', {durability: 'relaxed'});
     const objectStore = transaction.objectStore('state');

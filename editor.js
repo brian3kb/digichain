@@ -367,7 +367,6 @@ function renderEditPanelWaveform(multiplier = 1) {
 }
 
 export function drawWaveform(file, el, channel, dimensions) {
-
     let drawResolution = Math.floor(file.buffer.length / 32);
     let drawBuffer;
     if (file.buffer.length > 512) {
@@ -454,8 +453,9 @@ function draw(data, id, canvas, dimensions) {
 
         ctx.lineTo(x, min * drawHeight/2);
         ctx.lineTo(x, max * drawHeight/2);
-        ctx.stroke();
     }
+
+    ctx.stroke();
 }
 
 function updateFile(event) {

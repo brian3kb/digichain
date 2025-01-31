@@ -1,3 +1,8 @@
+latest
+ - Fix delayed list rendering bug when removing all selected samples.
+ - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.
+ - Style tweaks to support rendering within itch.io windows.
+
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.
  - Pad with Zero selected action, adds a zero sample to the beginning and end of each file.

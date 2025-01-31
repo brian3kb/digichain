@@ -1,5 +1,5 @@
 /*!
-DigiChain v1.4.15-latest [ https://digichain.brianbar.net/ ]
+DigiChain v1.4.17-latest [ https://digichain.brianbar.net/ ]
 <https://github.com/brian3kb/digichain>
 
 (c) 2023 Brian Barnett <me [at] brianbar.net>
@@ -3627,11 +3627,11 @@ const renderList = (fromIdb = false) => {
     if (files.length === 0) {
         listEl.innerHTML = '';
     }
-    document.body.classList.remove('loading');
     drawEmptyWaveforms(files);
     if (files.length && !fromIdb) {
         storeState();
     }
+    document.body.classList.remove('loading');
 };
 const bytesToInt = (bh, bm, bl) => {
     return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
@@ -4518,17 +4518,14 @@ const consumeFileInput = (event, inputFiles) => {
         return renderList();
     }
 
-    const checkCount = (idx, filesLength) => {
-        //count = count.filter(c => c !== false);
-        //if (idx === _files.length - 1) {
-        if (count.every(c => unsorted.includes(c))) {
-            setTimeout(() => renderListWhenReady(count), 1000);
-        } else {
-            // setTimeout(() => renderListWhenReady(count), 1000);
-        }
-        //}
-    };
     let count = [];
+    let processedCount = 0;
+
+    const checkCount = (idx, filesLength) => {
+        if (count.every(c => unsorted.includes(c)) && processedCount >= _files.length - 1) {
+            setTimeout(() => renderListWhenReady(count), 1000);
+        }
+    };
     let error = {
         encountered: false,
         text: '',
@@ -4643,6 +4640,7 @@ const consumeFileInput = (event, inputFiles) => {
                     alert(error.text + ` (failed: ${error.count})`);
                 }
             }
+            processedCount++;
         };
         reader.readAsArrayBuffer(file);
     });

@@ -367,7 +367,6 @@ function renderEditPanelWaveform(multiplier = 1) {
 }
 
 export function drawWaveform(file, el, channel, dimensions) {
-    let drawData = [];
     let drawResolution = Math.floor(file.buffer.length / 32);
     let drawBuffer;
     if (file.buffer.length > 512) {
@@ -389,18 +388,13 @@ export function drawWaveform(file, el, channel, dimensions) {
         let dualMonoCheck = [];
         for (let y = 0; y < file.buffer.length; y += Math.floor(
           file.buffer.length / drawResolution)) {
-            drawData.push(drawBuffer[y]);
             dualMonoCheck.push((file.buffer.getChannelData(0)[y] -
               file.buffer.getChannelData(1)[y]) / 2);
         }
         file.meta.dualMono = dualMonoCheck.every(x => x === 0);
-    } else {
-        for (let y = 0; y < file.buffer.length; y += Math.floor(
-          file.buffer.length / drawResolution)) {
-            drawData.push(drawBuffer[y]);
-        }
     }
-    draw(drawData, file.meta.id, el, dimensions);
+
+    draw(drawBuffer, file.meta.id, el, dimensions);
 }
 
 export function getNiceFileName(name, file, excludeExtension, includePath) {
@@ -423,17 +417,7 @@ export function getUniqueName(files, name) {
     return count > 0 ? `${fname}-${count + 1}.${ext}` : name;
 }
 
-function draw(normalizedData, id, canvas, dimensions) {
-    const drawLineSegment = (ctx, x, height, width, isEven) => {
-        ctx.lineWidth = 1; // how thick the line is
-        ctx.strokeStyle = '#a8a8a8'; // what color our line is
-        ctx.beginPath();
-        height = isEven ? height : -height;
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.lineTo(x + width, 0);
-        ctx.stroke();
-    };
+function draw(data, id, canvas, dimensions) {
     // set up the canvas
     const dpr = window.devicePixelRatio || 1;
     const padding = 0;
@@ -444,17 +428,34 @@ function draw(normalizedData, id, canvas, dimensions) {
     ctx.translate(0, canvas.offsetHeight / 2 + padding); // set Y = 0 to be in the middle of the canvas
 
     // draw the line segments
-    const width = canvas.offsetWidth / normalizedData.length;
-    for (let i = 0; i < normalizedData.length; i++) {
-        const x = width * i;
-        let height = (normalizedData[i] / 2) * canvas.offsetHeight - padding;
-        if (height < 0) {
-            height = 0;
-        } else if (height > canvas.offsetHeight / 2) {
-            height = height > canvas.offsetHeight / 2;
+    const width = canvas.offsetWidth;
+    const drawHeight = Math.floor(canvas.offsetHeight * 0.85);
+
+    const samplesPerLine = data.length / width;
+
+    ctx.lineWidth = 1; // how thick the line is
+    ctx.strokeStyle = '#a8a8a8'; // what color our line is
+    ctx.beginPath();
+
+    ctx.moveTo(0, data[0] * drawHeight/2);
+
+    for (let x = 0; x < width; x++) {
+        const startingIndex = Math.floor(x * samplesPerLine);
+        const endingIndex = Math.floor(((x+1) * samplesPerLine) - 1);
+
+        let min = data[startingIndex];
+        let max = data[startingIndex];
+
+        for (let j = startingIndex; j<endingIndex; j++) {
+            min = (data[j] < min) ? data[j] : min;
+            max = (data[j] > max) ? data[j] : max;
         }
-        drawLineSegment(ctx, x, height, width, (i + 1) % 2);
+
+        ctx.lineTo(x, min * drawHeight/2);
+        ctx.lineTo(x, max * drawHeight/2);
     }
+
+    ctx.stroke();
 }
 
 function updateFile(event) {

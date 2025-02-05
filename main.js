@@ -109,6 +109,7 @@ let sliceOptions = Array.from(DefaultSliceOptions);
 let lastSliceOptions = Array.from(sliceOptions);
 let keyboardShortcutsDisabled = false;
 let showSamplesList = true;
+let processedCount = 0;
 let modifierKeys = {
     shiftKey: false,
     ctrlKey: false
@@ -3329,6 +3330,16 @@ const clearModifiers = () => {
     document.body.classList.remove('ctrlKey-down');
 };
 
+const setFileNumTicker = () => {
+    const filesSelected = files.filter(f => f.meta.checked);
+    const selectionCount = filesSelected.length;
+    const isProcessing = processedCount !== 0;
+    const fileNumEl = document.getElementById(
+      'fileNum');
+    fileNumEl.textContent = `${isProcessing ? '   ' : files.length}/${selectionCount}`;
+    fileNumEl.classList[isProcessing ? 'add' : 'remove']('gg-spinner');
+};
+
 const setCountValues = () => {
     const filesSelected = files.filter(f => f.meta.checked);
     const selectionCount = filesSelected.length;
@@ -4357,6 +4368,8 @@ const renderListWhenReady = (count, fileCount) => {
     } else {
         setTimeout(() => renderListWhenReady(count), 1000);
     }
+    processedCount = 0;
+    setFileNumTicker();
 };
 
 const setLoadingProgress = (count, total) => {
@@ -4519,7 +4532,6 @@ const consumeFileInput = (event, inputFiles) => {
     }
 
     let count = [];
-    let processedCount = 0;
 
     const checkCount = (idx, filesLength) => {
         if (count.every(c => unsorted.includes(c)) && processedCount >= _files.length - 1) {
@@ -4641,6 +4653,7 @@ const consumeFileInput = (event, inputFiles) => {
                 }
             }
             processedCount++;
+            setFileNumTicker();
         };
         reader.readAsArrayBuffer(file);
     });

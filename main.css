@@ -136,6 +136,9 @@ input, .btn-audio-config { color: #a8a8a8; }
 }
 #getJoined, #uploadInput, #uploadSliceFile { display: none; }
 #fileNum { padding-left: 1rem; }
+#fileNum.gg-spinner {padding-left: 3rem; }
+#fileNum.gg-spinner::before {margin-left: -2.5rem; }
+#fileNum.gg-spinner::after {display: none; }
 table#masterList { padding-bottom: 12rem; padding-top: 1rem; }
 #fileList {
     content-visibility: auto;

@@ -4,6 +4,7 @@ latest
  - Style tweaks to support rendering within itch.io windows.
  - Improved waveform rendering accuracy and performance (thanks to github.com/boourns for the pull request).
  - Improved user feedback on sample load processing, and responsiveness of list with large numbers of samples loaded, reduced file processing load times.
+ - Add a welcome screen with some usage guidance, tips, and link out to documentation page.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

@@ -601,7 +601,8 @@ dialog {
     color: #606c76;
     font-family: 'Roboto', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
     /*width: 512px;*/
-    max-width: 75vw;
+    width: 75vw;
+    max-width: 768px;
     background-color: #202124;
     border: 1px solid orange;
     padding: 2rem;
@@ -611,6 +612,15 @@ dialog {
     transition: opacity .33s ease-in;
     max-height: 89vh;
     outline: none;
+}
+
+#welcomePanelMd .tip-header {
+    margin-left: 1rem;
+}
+#tipElement .tip {
+    border: 1px solid #40392e;
+    border-radius: 5px;
+    padding: 1.5rem;
 }
 
 .op-export-panel-options { top: 1vh;}
@@ -1437,7 +1447,7 @@ body.grid-view .path-exceeds-127 {
         max-width: 1030px;
     }
     .op-export-panel-options { top: 1vh;}
-    #exportSettingsPanel {
+    #exportSettingsPanel, #welcomePanelMd {
         width: 768px;
         /*margin: 0 -384px;*/
         max-width: 768px;

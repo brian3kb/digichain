@@ -90,6 +90,8 @@ let treatDualMonoStereoAsMono = JSON.parse(
   localStorage.getItem('treatDualMonoStereoAsMono')) ?? true;
 let shiftClickForFileDownload = JSON.parse(
   localStorage.getItem('shiftClickForFileDownload')) ?? false;
+let showWelcomeModalOnLaunchIfListEmpty = JSON.parse(
+  localStorage.getItem('showWelcomeModalOnLaunchIfListEmpty')) ?? true;
 let secondsPerFile = 0;
 let audioCtx;
 let files = [];
@@ -1332,6 +1334,19 @@ function showInfo() {
     document.querySelector('#infoPanelMd').showModal();
 }
 
+function showWelcome() {
+    if (showWelcomeModalOnLaunchIfListEmpty && unsorted.length === 0) {
+        const welcomeModalEl = document.querySelector('#welcomePanelMd');
+        const tipEl = document.querySelector('#tipElement');
+        const showTipNumber = Math.floor(Math.random() * tipEl.children.length + 1);
+        [...tipEl.children].forEach((tip, tipId) => tip.style.display = tipId + 1 === showTipNumber ? 'block' : 'none');
+        if (!welcomeModalEl.open) {
+            welcomeModalEl.showModal();
+        }
+
+    }
+}
+
 function pitchExports(value, silent) {
     const octaves = {
         2: 1,
@@ -1366,6 +1381,11 @@ function toggleSetting(param, value, suppressRerender) {
         shiftClickForFileDownload = value ?? !shiftClickForFileDownload;
         localStorage.setItem('shiftClickForFileDownload',
           shiftClickForFileDownload);
+    }
+    if (param === 'showWelcomeModalOnLaunchIfListEmpty') {
+        showWelcomeModalOnLaunchIfListEmpty = value ?? !showWelcomeModalOnLaunchIfListEmpty;
+        localStorage.setItem('showWelcomeModalOnLaunchIfListEmpty',
+          showWelcomeModalOnLaunchIfListEmpty);
     }
     if (param === 'embedSliceData') {
         embedSliceData = value ?? !embedSliceData;
@@ -1539,6 +1559,7 @@ function showExportSettingsPanel(page = 'settings') {
     const panelEl = document.querySelector('#exportSettingsPanel');
     const panelContentEl = document.querySelector(
       '#exportSettingsPanel .content');
+    panelEl.dataset.page = page;
     if (page === 'settings') {
         panelContentEl.innerHTML = `
   <div class="export-options">
@@ -1692,6 +1713,13 @@ function showExportSettingsPanel(page = 'settings') {
 <td><button onpointerdown="digichain.toggleSetting('normalizeContrast')" class="check ${normalizeContrast
           ? 'button'
           : 'button-outline'}">${normalizeContrast ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<td><span>Show the welcome panel at launch? &nbsp;&nbsp;&nbsp;</span></td>
+<td><button title="The welcome panel will show at launch if the list is empty."
+          onpointerdown="digichain.toggleSetting('showWelcomeModalOnLaunchIfListEmpty')" class="check ${showWelcomeModalOnLaunchIfListEmpty
+          ? 'button'
+          : 'button-outline'}">${showWelcomeModalOnLaunchIfListEmpty ? 'YES' : 'NO'}</button></td>
 </tr>
 </tbody>
 </table>
@@ -5092,7 +5120,9 @@ async function storeState() {
 
 }
 function loadState(skipConfirm = false) {
-    if (!retainSessionState) {return;}
+    if (!retainSessionState) {
+        return showWelcome();
+    }
     const transaction = db.transaction(['state'], 'readonly');
     const objectStore = transaction.objectStore('state');
     let requestUnsorted = objectStore.get('unsorted');
@@ -5101,6 +5131,7 @@ function loadState(skipConfirm = false) {
         if (requestUnsorted.result) {
             unsorted = requestUnsorted.result;
         }
+        showWelcome();
     }
     requestImportOrder.onsuccess = () => {
         if (requestImportOrder.result) {
@@ -5283,5 +5314,6 @@ window.digichain = {
     getSlicesFromMetaFile,
     setAudioOptionsFromCommonConfig,
     bufferRateResampler,
+    showWelcome,
     editor
 };

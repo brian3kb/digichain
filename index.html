@@ -43,6 +43,26 @@
     <div class="content"></div>
 </dialog>
 
+<dialog id="welcomePanelMd" class="dialog-pop-up">
+    <a class="float-right" onclick="document.getElementById('welcomePanelMd').close();"><i class="gg-close"></i></a>
+    <div class="content">
+        <h3>Welcome to DigiChain</h3>
+        <p>Before importing samples, open the <a onclick="digichain.showExportSettingsPanel('audio');">Audio Config Panel</a> and configure the export and chain settings, try using the 'Common Configurations' drop-down options in the bottom right!</p>
+        <span class="tip-header">Tip</span>
+        <div id="tipElement">
+            <p class="tip">Drag and drop supports dropping single files, multiple files, folders, nested folders, and zip files (with folders).</p>
+            <p class="tip">Hold down the <code>Shift</code> key while dropping files/folders to take a random selection up to the currently set chain length.</p>
+            <p class="tip">For samples that already have slice data, use the <code>New Spaced Chain</code> and <code>New Chain</code> buttons on the Slice Panel to create a new version of the sample in the list.
+            Double-click a slice to toggle it on or off to be included/excluded in the new chain.</p>
+            <p class="tip">Holding <code>Shift</code> / <code>Ctrl / Cmd</code> will show which buttons / icons have alternate actions with the modifier key held down, hover over to see tooltip descriptions.</p>
+        </div>
+        <p>For documentation, see <a style="outline: none;" href="https://brianbar.net/docs/digichain/" target="_blank">https://brianbar.net/docs/digichain/</a></p>
+        <br>
+        <button class="button" onclick="document.getElementById('welcomePanelMd').close();">Close</button>
+        <button class="button button-outline float-right" onclick="digichain.toggleSetting('showWelcomeModalOnLaunchIfListEmpty', false, true);document.getElementById('welcomePanelMd').close();">Don't show this again</button>
+    </div>
+</dialog>
+
 <dialog id="keyboardShortcuts" class="dialog-pop-up">
     <a class="float-right" onclick="document.getElementById('keyboardShortcuts').close();"><i
             class="gg-close"></i></a>
@@ -141,8 +161,9 @@
         </div>
     </div>
 </dialog>
+</dialog>
 
-<dialog id="exportSettingsPanel" class="dialog-pop-up">
+<dialog id="exportSettingsPanel" data-page="export-options" class="dialog-pop-up">
     <a class="float-right" onpointerdown="document.getElementById('exportSettingsPanel').close();"><i
             class="gg-close"></i></a>
     <div class="content"></div>

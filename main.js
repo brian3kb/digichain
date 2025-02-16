@@ -4,7 +4,7 @@ DigiChain v1.4.17-latest [ https://digichain.brianbar.net/ ]
 
 (c) 2023 Brian Barnett <me [at] brianbar.net>
 [ @brian3kb ]
-Licenced under GPLv3 <https://github.com/brian3kb/digichain/blob/main/LICENSE>
+Licensed under AGPLv3 <https://github.com/brian3kb/digichain/blob/main/LICENSE>
 
 DigiChain bundled resources:
 [MIT license] JSZip  : <https://github.com/Stuk/jszip/blob/main/LICENSE.markdown>
@@ -687,6 +687,9 @@ const closeEditPanel = () => {
     };
     files.forEach(f => delete f.meta.editing);
     digichain.stopPlayFile(false, digichain.editor.getLastItem());
+    if (document.querySelector('#opExportPanel.show')) {
+        return digichain.showEditPanel(event, false, 'opExport');
+    }
     digichain.renderList();
 };
 
@@ -993,51 +996,13 @@ function shortenNameSelected(event, restore = false) {
 }
 
 function sanitizeNameSelected(event, restore = false) {
-    const xyRxp = str =>
-      str.replaceAll(/[\[\{<]/g, '(').
-        replaceAll(/[\]\}>]/g, ')').
-        replaceAll(/[^a-zA-Z0-9\s#\-\(\)]/g, '-').
-        replaceAll(/-{3,}/g, '-');
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     document.getElementById('loadingText').textContent = 'Processing';
     document.body.classList.add('loading');
+
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
-        let nameList = {};
-        let nameListArr = [];
-        if (!restore) {
-            nameList = {};
-            nameListArr = files.map(f => {
-                nameList[f.meta.id] = {
-                    path: f.file.path.split('/').
-                      map(p => xyRxp(p)).
-                      join('/'),
-                    name: xyRxp(f.file.name) +
-                      (f.meta.note ? `-${f.meta.note}` : '')
-                };
-                nameList[f.meta.id].joined = `${nameList[f.meta.id].path}${nameList[f.meta.id].name}`;
-                return {name: nameList[f.meta.id].joined, available: true};
-            });
-        }
-        selected.forEach((f, idx) => {
-            f.file.origPath = f.file.origPath || f.file.path;
-            f.file.origName = f.file.origName || f.file.name;
-            if (restore) {
-                f.file.path = f.file.origPath;
-                f.file.name = f.file.origName;
-            } else {
-                const sn = nameList[f.meta.id];
-                const names = nameListArr.filter(
-                  n => n.name === sn.joined && n.available);
-                f.file.path = sn.path;
-                f.file.name = names.length === 1 ? sn.name : sn.name +
-                  `-${names.length}`;
-                names[0].available = false;
-            }
-            if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
-            }
-        });
+        editor.sanitizeName(event, files, selected, restore);
         renderList();
     }, 250);
 }
@@ -4254,7 +4219,7 @@ const parseWav = (
                       1].cuePos : -1)
                       / wavSr) * masterSR),
                     l: -1,
-                    n: `Cue ${cue.cueId + 1}`
+                    n: `Slice ${cue.cueId + 1}`
                 }));
             }
             if (code === 'ORSL') {
@@ -5239,6 +5204,7 @@ try {
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {
     sliceOptions: () => sliceOptions,
+    lastSelectedFile: () => getFileById(lastSelectedRow?.dataset?.id),
     saveSession,
     changeAudioConfig,
     removeSelected,

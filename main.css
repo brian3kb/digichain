@@ -1000,39 +1000,64 @@ body.grid-view .path-exceeds-127 {
     margin: 3px;
     float: left;
     background-color: #202124b5;
+    display: flex;
+    align-content: stretch;
+    justify-content: space-between;
+    align-items: stretch;
 }
+
+.op-key.white.selected::before,
+.op-key.black.selected::before {
+    content: ' ';
+    background-color: #d79c4e !important;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 100%;
+    position: absolute;
+    margin-top: 2rem;
+    opacity: 1;
+    margin-left: -2rem;
+}
+.op-key.black.selected::before {
+    margin-left: 22.5rem;
+}
+
 .op-key.black:nth-of-type(1) { margin-top: 3rem; }
 .op-key.black:nth-of-type(4), .op-key.black:nth-of-type(6), .op-key.black:nth-of-type(9) { margin-top: 6rem; }
 
-.op-key .left-a{
-    position: absolute;
-    width: 7rem;
-    display: block;
-    height: 5rem;
+.op-key .left-a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: 5rem;
-    text-align: center;
-    /*background: #cb9d5b26;*/
     background: #3c2b1366;
     border-bottom-left-radius: 7px;
     border-top-left-radius: 7px;
     padding: 1px;
     opacity: 0;
     transition: opacity .15s ease;
+    min-width: 33%;
 }
 .op-key .right-b {
-    position: absolute;
-    width: 7rem;
-    display: block;
-    height: 5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: 5rem;
     text-align: center;
     background: #3c2b1366;
     border-bottom-right-radius: 7px;
     border-top-right-radius: 7px;
     padding: 1px;
-    margin-left: 15rem;
     opacity: 0;
     transition: opacity .15s ease;
+    min-width: 33%;
+}
+
+.op-key .center-c {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 33%;
 }
 
 .op-key.drag-over .left-a,
@@ -1046,7 +1071,15 @@ body.grid-view .path-exceeds-127 {
 .op-key.drag-over .left-a.drag-over,
 .op-key.drag-over .right-b.drag-over,
 .op-key .left-a.drag-over,
-.op-key .right-b.drag-over {
+.op-key .right-b.drag-over,
+.op-key .left-a[title$='.'],
+.op-key .right-b[title$='.'] {
+    box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.1);
+    visibility: visible;
+    opacity: 1;
+}
+
+.op-key .center-c[title$='.'] {
     box-shadow: inset 0 0 100px 100px rgba(255, 255, 255, 0.1);
     visibility: visible;
     opacity: 1;
@@ -1056,7 +1089,8 @@ body.grid-view .path-exceeds-127 {
     position: absolute;
     line-height: 5rem;
     padding-left: 1rem;
-    opacity: .35;
+    opacity: .95;
+    z-index: -1;
 }
 .op-key.key-0::after { content: 'kick'; }
 .op-key.key-1::after { content: 'kick alt'; }
@@ -1070,6 +1104,10 @@ body.grid-view .path-exceeds-127 {
 .op-key.key-10::after { content: 'open hat'; }
 .op-key.key-13::after { content: 'ride'; }
 .op-key.key-15::after { content: 'crash'; }
+
+.op-key[data-has-data='1']::after {
+    content: '';
+}
 
 .sample-list {
     width: 40%;
@@ -1085,6 +1123,69 @@ body.grid-view .path-exceeds-127 {
 /*}*/
 .white-keys .op-key {
     float: right;
+}
+
+.op-key-details {
+    display: none;
+    width: 45%;
+    min-height: 78rem;
+    border: 1px solid #606c76;
+    border-radius: 7px;
+    position: absolute;
+    background-color: #202124;
+    z-index: 1;
+    margin-top: .5rem;
+    margin-left: -.4rem;
+    padding: .5rem;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+
+.op-key-details-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+
+#opExportPanelContent:has(.op-key.white.selected) .op-key-details {
+    margin-left: 45%;
+}
+
+#opExportPanelContent:has(.op-key.selected) .op-key-details {
+    display: flex;
+}
+
+#opExportPanelContent:has(.op-key.selected) .op-key:not(.selected) {
+    opacity: .4;
+}
+
+.op-samples-length-bar {
+    display: flex;
+    width: 100%;
+    height: 1rem;
+    border: 1px solid #43392d;
+    border-radius: 7px;
+    margin-top: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.op-samples-length-bar .fill {
+    display: flex;
+    background-color: #7f8081;
+    border-radius: 7px;
+}
+.op-samples-length-bar::after {
+    content: attr(data-caption);
+    width: 100%;
+    font-size: 1.25rem;
+    position: absolute;
+    margin-top: -2rem;
+    text-align: right;
+    margin-left: -7rem;
+}
+
+.op-buttons button {
+    margin-right: 1rem;
 }
 
 @media (min-width: 430px) {
@@ -1422,6 +1523,21 @@ body.grid-view .path-exceeds-127 {
     }
     .zoom-level {
         clear: right;
+    }
+}
+
+@media (max-width: 980px) {
+    #opExportPanelContent {
+        display: none;
+    }
+    #opExportPanel::before {
+        content: 'OP Kit Builder requires a wider screen width, please expand the window or zoom out.';
+        position: absolute;
+        margin-top: 5rem;
+        padding: 2rem;
+        font-size: 1.85rem;
+        text-align: center;
+        opacity: .85;
     }
 }
 

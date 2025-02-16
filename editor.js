@@ -2,7 +2,8 @@ import {
     audioBufferToWav, bufferToFloat32Array,
     buildOpData, deClick, detectTempo,
     encodeAif,
-    Resampler
+    Resampler,
+    getResampleIfNeeded
 } from './resources.js';
 
 const editPanelEl = document.getElementById('editPanel');
@@ -53,8 +54,6 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
         return;
     }
     if (view === 'opExport') {
-        samples = data;
-        createOpData();
         renderOpExport();
         opExportPanelEl.classList.add('show');
         rightButtonsEl.classList.add('fade');
@@ -71,28 +70,133 @@ function render() {
 }
 
 function createOpData() {
-    samples.json = samples.json || buildOpData([], conf.masterChannels, true);
+
+    //samples.json = samples.json || buildOpData([], conf.masterChannels, true);
+}
+
+function getOpKeyData(keyId) {
+    const center = samples.find(f => f.meta.opKeyId === keyId && f.meta.opKeyPosition === -1);
+    const left = samples.find(f => f.meta.opKeyId === keyId && f.meta.opKeyPosition === 0);
+    const right = samples.find(f => f.meta.opKeyId === keyId && f.meta.opKeyPosition === 1);
+    return {
+        center, left, right
+    };
+}
+
+function removeOpKeyData(keyId, zones = []) {
+    samples = samples.filter(i => i.meta.opKeyId === keyId && zones.includes(i.meta.opKeyPosition));
+}
+
+function calculateSamplesLengths() {
+    const lengths = samples.reduce((acc, val) => {
+        acc[val.meta.opKeyId] = acc[val.meta.opKeyId] || 0;
+        acc[val.meta.opKeyId] = acc[val.meta.opKeyId] > val.buffer.length ? acc[val.meta.opKeyId] : val.buffer.length;
+        return acc;
+    }, {});
+
+    samples.buffersLength = Object.keys(lengths).reduce((acc, val) => acc + lengths[val], 0);
+    samples.maxBuffersLength = samples.buffersLength < (20 * 44100) ? (20 * 44100) : (24 * 20 * 44100);
+    samples.isXyOnly = samples.buffersLength > (20 * 44100);
+}
+
+function addOpKeyData(keyId, zone, opData) {
+    const fIdx = samples.findIndex(i => i.meta.opKeyId === keyId && i.meta.opKeyPosition === zone);
+    if (fIdx !== -1) {
+        samples[fIdx] = opData;
+    } else {
+        samples.push(opData);
+    }
+    calculateSamplesLengths();
+}
+
+function dropOpKey(event, keyId, zone = -1) {
+    event?.target?.classList?.remove('drag-over');
+    if (zone !== -1) {
+        event?.stopPropagation();
+    }
+    const lastSelectedFile = digichain.lastSelectedFile();
+    if (!lastSelectedFile) { return; }
+
+    if (lastSelectedFile.meta.duration > 20) {
+        if(!confirm(`The sample '${lastSelectedFile.file.filename} is ${lastSelectedFile.meta.duration} seconds in length, samples must be less than 20 seconds. The sample will be re-pitched to fit within the limit.`)) {
+            return ;
+        }
+        //TODO: resample pitched up and flag files meta data with pitch change.
+    }
+
+    const file = {...lastSelectedFile, file: {...lastSelectedFile.file}, meta: {...lastSelectedFile.meta}};
+    const rsFile = getResampleIfNeeded(file.meta, lastSelectedFile.buffer, 44100);
+
+    rsFile.file = {...file.file, ...rsFile.file};
+    rsFile.meta.opKeyId = keyId;
+    rsFile.meta.opKeyPosition = zone;
+    addOpKeyData(keyId, zone, rsFile);
+    sanitizeName(event, samples, [rsFile]);
+    renderOpExport();
+}
+
+function opKeySelected(event, keyId) {
+    samples.selected = samples.selected === keyId ? false : keyId;
+    renderOpExport();
 }
 
 function renderKey(color, index) {
+    const keyData = getOpKeyData(index);
+    const hasData = keyData.center || keyData.left || keyData.right;
     return `
-    <div class="op-key ${color} key-${index}"
+    <div class="op-key ${color} key-${index} ${samples.selected === index ? 'selected' : ''}"
          ondragenter="this.classList.add('drag-over')"
          ondragleave="this.classList.remove('drag-over')"
-         ondrop="this.classList.remove('drag-over')"
+         data-has-data="${hasData ? '1' : '0'}"
+         onclick="digichain.editor.opKeySelected(event, ${index})"
          >
         <div class="left-a"
            ondragenter="this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
-           ondrop="this.classList.remove('drag-over')"
+           ondrop="digichain.editor.dropOpKey(event, ${index}, 0)"
+           title="${keyData?.left?.file?.filename ? keyData?.left?.file?.filename + '.' : ''}"
         >L</div>
+        <div class="center-c"
+           ondrop="digichain.editor.dropOpKey(event, ${index})"
+           title="${keyData?.center?.file?.filename ? keyData?.center?.file?.filename + '.' : ''}"
+        ></div>
         <div class="right-b"
            ondragenter="this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
-           ondrop="this.classList.remove('drag-over')"
+           ondrop="digichain.editor.dropOpKey(event, ${index}, 1)"
+           title="${keyData?.right?.file?.filename ? keyData?.right?.file?.filename + '.' : ''}"
         >R</div>
     </div>
   `;
+}
+
+function editOpSlice(zone) {
+    const opData = getOpKeyData(samples.selected);
+    showEditor(opData[zone], conf);
+}
+
+function renderOpKeyDetails() {
+    if (samples.selected === false) {
+        return '';
+    }
+    const opData = getOpKeyData(samples.selected);
+
+    //TODO: Expand options here for all slice parameter editing
+
+    return `
+    <div style="display: flex; justify-content: space-between;">
+        <h5>${samples.selected + 1} / 24</h5>
+        <div style="padding-right: .25rem; margin-top: -.5rem; opacity: .7;">
+            <button class="button-clear move-up" onclick="digichain.editor.opKeySelected(event, ${samples.selected === 0 ? 23 : (samples.selected - 1)})"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
+            <button class="button-clear move-down" onclick="digichain.editor.opKeySelected(event, ${samples.selected === 23 ? 0 : (samples.selected + 1)})"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
+        </div>
+    </div>
+    <div class="op-key-details-buttons">
+        <button class="button button-outline" onclick="digichain.editor.editOpSlice('center')" ${opData.center ? '' : 'disabled="disabled"'}>Edit Main</button>
+        <button class="button button-outline" onclick="digichain.editor.editOpSlice('left')" ${opData.left ? '' : 'disabled="disabled"'}>Edit Left</button>
+        <button class="button button-outline" onclick="digichain.editor.editOpSlice('right')" ${opData.right ? '' : 'disabled="disabled"'}>Edit Right</button>
+    </div>
+    `;
 }
 
 function renderOpExport() {
@@ -100,25 +204,37 @@ function renderOpExport() {
         black: [1, 3, 5, 8, 10, 13, 15, 17, 20, 22],
         white: [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23]
     };
-    //    <div className="sample-list float-left">${renderOpSampleList()}</div>
+    if (samples.length === 0) {
+        samples.buffersLength = 0;
+        samples.maxBuffersLength = 20 * 44100;
+    } else {
+        calculateSamplesLengths();
+    }
     opExportEl.innerHTML = `
     <div>
-    <div class="op-keys row">
-            <div class="white-keys float-right">${keys.white.reduce(
-      (a, i) => a += renderKey('white', i), '')}</div>
-        <div class="black-keys float-right">${keys.black.reduce(
-      (a, i) => a += renderKey('black', i), '')}</div>
-    </div><br>
-      <div class="op-buttons row">
-        <button class="button float-right" onclick="digichain.editor.buildOpKit()">Build Kit</button>
-      </div>
+        <div class="op-key-details">${renderOpKeyDetails()}</div>
+        <div class="op-keys row">
+                <div class="white-keys float-right">${keys.white.reduce(
+          (a, i) => a += renderKey('white', i), '')}</div>
+            <div class="black-keys float-right">${keys.black.reduce(
+          (a, i) => a += renderKey('black', i), '')}</div>
+        </div>
+        <div class="op-samples-length-bar" data-caption="${Math.floor((samples.buffersLength / samples.maxBuffersLength) * 100)}% (${Number(samples.buffersLength / 44100).toFixed(3)}s)">
+            <div class="fill" style="width: ${Math.floor((samples.buffersLength / samples.maxBuffersLength) * 100)}%;"></div>
+        </div>
+        <div class="op-buttons row">
+            <button class="button float-right" onclick="digichain.editor.buildOpKit()">Build XY Kit</button>
+            <button class="button float-right" onclick="digichain.editor.buildOpKit()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>Build Field Kit</button>
+        </div>
     </div>
   `;
 }
 
 function buildOpKit() {
+    //TODO: Go from debug kit build to xy/field kit export.
+
     const linkEl = document.querySelector('.aif-link-hidden');
-    const dataView = encodeAif(samples[0].buffer, samples.json);
+    const dataView = encodeAif(samples[0].buffer, '44100',2, samples.json);
     let blob = new window.Blob([dataView], {
         type: 'audio/aiff'
     });
@@ -304,7 +420,7 @@ export function renderEditor(item) {
     Normalize, Silence, Louder, Quieter, Fade In, Fade Out, Crop, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo. Pitch adjustments are done via sample-rate, cumulative changes will affect sample quality.
   </span>
-  <div class="file-nav-buttons">
+  <div class="file-nav-buttons" style="visibility: ${document.querySelector('#opExportPanel.show') ? 'hidden' : 'visible'};">
     <button title="Edit previous file" class="prev-file button button-clear check" onpointerdown="digichain.editor.changeSelectedFile(event, -1)">Prev</button>
     <button title="Edit next file" class="next-file button button-clear check" onpointerdown="digichain.editor.changeSelectedFile(event, 1)">Next</button>
   </div>
@@ -1534,6 +1650,50 @@ function changeSelectedFile(event, direction = 1) {
     }
 }
 
+function sanitizeName(event, files = [], selected = [], restore = false) {
+    const xyRxp = str =>
+      str.replaceAll(/[\[\{<]/g, '(').
+        replaceAll(/[\]\}>]/g, ')').
+        replaceAll(/[^a-zA-Z0-9\s#\-\(\)]/g, '-').
+        replaceAll(/-{3,}/g, '-');
+
+    let nameList = {};
+    let nameListArr = [];
+    if (!restore) {
+        nameList = {};
+        nameListArr = files.map(f => {
+            nameList[f.meta.id] = {
+                path: f.file.path.split('/').
+                  map(p => xyRxp(p)).
+                  join('/'),
+                name: xyRxp(f.file.name) +
+                  (f.meta.note ? `-${f.meta.note}` : '')
+            };
+            nameList[f.meta.id].joined = `${nameList[f.meta.id].path}${nameList[f.meta.id].name}`;
+            return {name: nameList[f.meta.id].joined, available: true};
+        });
+    }
+    selected.forEach((f, idx) => {
+        f.file.origPath = f.file.origPath || f.file.path;
+        f.file.origName = f.file.origName || f.file.name;
+        if (restore) {
+            f.file.path = f.file.origPath;
+            f.file.name = f.file.origName;
+        } else {
+            const sn = nameList[f.meta.id];
+            const names = nameListArr.filter(
+              n => n.name === sn.joined && n.available);
+            f.file.path = sn.path;
+            f.file.name = names.length === 1 ? sn.name : sn.name +
+              `-${names.length}`;
+            names[0].available = false;
+        }
+        if (idx === selected.length - 1) {
+            document.body.classList.remove('loading');
+        }
+    });
+}
+
 export const editor = {
     updateFile,
     changeSelectedFile,
@@ -1558,6 +1718,9 @@ export const editor = {
     nudgeCrossings,
     padWithZero,
     buildOpKit,
+    dropOpKey,
+    opKeySelected,
+    editOpSlice,
     sliceUpdate,
     sliceCreate,
     sliceRemove,
@@ -1569,5 +1732,6 @@ export const editor = {
     reverse,
     shift,
     serialize,
-    deserialize
+    deserialize,
+    sanitizeName
 };

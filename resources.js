@@ -70,6 +70,81 @@ export function buildOpData(slices = [], numChannels, returnTemplate = false) {
     return opData;
 }
 
+export function buildXyRegionFromSlice(slice, index) {
+    return {
+        'fade.in': 0,
+        'fade.out': 0,
+        'framecount': slice.length,
+        'gain': 0,
+        'hikey': 53 + index,
+        'lokey': 53 + index,
+        'pan': 0,
+        'pitch.keycenter': 60,
+        'playmode': 'oneshot',
+        'reverse': false,
+        'sample': `${slice.name || 'slice_' + (index + 1)}.wav`,
+        'sample.end': slice.end || slice.length,
+        'sample.start': slice.start || 0,
+        'transpose': 0,
+        'tune': 0
+    };
+}
+
+export function buildXyDrumPatchData(file, slices = []) {
+    const modulationDefault = () => ({'amount': 16383, 'target': 0});
+    const template = {
+        'engine': {
+            'bendrange': 8191,
+            'highpass': 0,
+            'modulation': {
+                'aftertouch': modulationDefault(),
+                'modwheel': modulationDefault(),
+                'pitchbend': modulationDefault(),
+                'velocity': modulationDefault()
+            },
+            'params': Array.from({length: 8}).fill(16384),
+            'playmode': 'poly',
+            'portamento.amount': 0,
+            'portamento.type': 32767,
+            'transpose': 0,
+            'tuning.root': 0,
+            'tuning.scale': 0,
+            'velocity.sensitivity': 19660,
+            'volume': 28505,
+            'width': 0
+        },
+        'envelope': {
+            'amp': {
+                'attack': 0,
+                'decay': 0,
+                'release': 32767,
+                'sustain': 32604
+            },
+            'filter': {
+                'attack': 0,
+                'decay': 0,
+                'release': 32767,
+                'sustain': 32767
+            }
+        },
+        'fx': {
+            'active': false,
+            'params': [22014, 0, 4423, 0, 0, 32767, 0, 0],
+            'type': 'z lowpass'
+        },
+        'lfo': {
+            'active': false,
+            'params': [14848, 16384, 19000, 16384, 0, 0, 0, 0],
+            'type': 'tremolo'
+        },
+        'octave': 0,
+        'platform': 'OP-XY',
+        'regions': slices.map(buildXyRegionFromSlice),
+        "type": "drum",
+        "version": 4
+    };
+}
+
 export function bufferToFloat32Array(
   buffer, channel, getAudioBuffer = false, audioCtx, masterChannels, masterSR) {
     let result = getAudioBuffer ?
@@ -255,7 +330,7 @@ export function deClick(audioArray, threshold) {
     return audioArray;
 }
 
-function getResampleIfNeeded(meta, buffer, sampleRate) {
+export function getResampleIfNeeded(meta, buffer, sampleRate) {
     const targetSR = meta.renderAt || sampleRate;
     const targetAudioCtx = new AudioContext(
       {sampleRate: targetSR, latencyHint: 'interactive'});

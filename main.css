@@ -366,6 +366,13 @@ td button { margin: 0.5rem; }
     padding-bottom: 1rem;
     text-align: center;
 }
+.sample-op-buttons::before {
+    content: attr(data-sample-duration);
+    position: absolute;
+    left: 2.5rem;
+    margin-top: -2rem;
+    font-size: 1.2rem;
+}
 .edit-btn-group {
     max-width: 35%;
     display: flex;

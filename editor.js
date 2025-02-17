@@ -333,12 +333,14 @@ export function renderEditor(item) {
 <div class="slice-options input-set">
   <label for="sliceSelection" class="before-input">Slice</label>
   <select title="Choose a slice marker to edit." name="sliceSelection" id="sliceSelection" onchange="digichain.editor.sliceSelect(event);"></select>
-<div style="display: inline-block; margin-top: .2rem; padding-left: .5rem;">
+<div style="display: ${editing.meta.opKey ? 'none' : 'inline-block'}; margin-top: .2rem; padding-left: .5rem;">
   <button title="Update the slice marker start/end points." onpointerdown="digichain.editor.sliceUpdate(event);" class="button-outline">Update Slice</button>
   <button title="Remove the current slice marker." onpointerdown="digichain.editor.sliceRemove(event);" class="button-outline">Remove Slice</button>
   <button title="Add the current range as a new slice marker." onpointerdown="digichain.editor.sliceCreate(event);" class="button-outline">New Slice</button>
+</div>
+<div style="display:inline-block; margin-top: .2rem; padding-left: .5rem;">
   <button title="Snap selections to zero crossings?" onpointerdown="digichain.editor.toggleSnapToZero(event);" class="button ${shouldSnapToZeroCrossing ? '' : 'button-outline'}">Snap to Zero</button>
-    <button title="Detect BPM from selection." onpointerdown="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
+  <button title="Detect BPM from selection." onpointerdown="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
 </div>
 </div>
 <div class="above-waveform-buttons">
@@ -347,8 +349,8 @@ export function renderEditor(item) {
     <button title="Clicking on the waveform will set the selection end point." onpointerdown="digichain.editor.setSelStart(false);" class="button-outline check btn-select-end">End</button>
       <button title="Reset the waveform selection to the whole sample." onpointerdown="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
   </div>
-  <div class="channel-options editor-channel-options float-right" style="border: 0.1rem solid #d79c4e; display: ${editing.buffer.numberOfChannels >
-    1 && conf.masterChannels === 1 ? 'inline-block' : 'none'}">
+  <div class="channel-options editor-channel-options float-right" style="border: 0.1rem solid #d79c4e; display: ${(editing.buffer.numberOfChannels >
+    1 && conf.masterChannels === 1) || (editing.meta.opKey && editing.meta.opKeyPosition !== -1) ? 'inline-block' : 'none'}">
             <a title="Left channel" onpointerdown="digichain.editor.changeChannel(event, 'L')" class="${editing.meta.channel ===
     'L' ? 'selected' : ''} channel-option-L">L</a>
             <a title="Sum to mono" onpointerdown="digichain.editor.changeChannel(event, 'S')" class="${editing.meta.channel ===
@@ -375,7 +377,13 @@ export function renderEditor(item) {
   <div class="waveform-container">
     <div>
     ${Array.from('.'.repeat(
-      Math.floor((conf.masterChannels + editing.buffer.numberOfChannels) / 2))).
+        (
+          (editing.meta.opKey && editing.meta.opKeyPosition !== -1) ? 1 :
+            (Math.floor(
+              (conf.masterChannels + editing.buffer.numberOfChannels) / 2))
+        )
+      )
+    ).
       reduce((a, v) => a += canvasMarkup, '')}
       <div id="editLines">
         <div class="edit-line"></div>
@@ -383,7 +391,7 @@ export function renderEditor(item) {
     </div>
   </div>
 
-  <div class="sample-op-buttons">
+  <div class="sample-op-buttons" data-sample-duration="${editing.meta.duration}s">
   <div class="edit-btn-group float-left">
 
   <button title="Normalize the volume of the sample." class="normalize button button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
@@ -436,7 +444,7 @@ function renderEditableItems() {
       '', editing, true)}" readonly>
       <button class="button-clear" onpointerdown="digichain.editor.toggleReadOnlyInput('editFileName')"><i class="gg-pen"></i></button>
     </div><br>
-    <div class="input-set" style="visibility: ${editing.meta.opKey ? 'hidden' : 'visible'};">
+    <div class="input-set" style="display: ${editing.meta.opKey ? 'none' : 'flex'};">
     <label for="editFilePath" class="before-input">File Path</label>
       <input type="text" onkeyup="digichain.editor.updateFile(event)" placeholder="File path of the sample (if known)" id="editFilePath" value="${editing.file.path}" id="editFilePath" list="folderOptions" readonly>
       <datalist id="folderOptions">
@@ -467,7 +475,10 @@ function renderEditPanelWaveform(multiplier = 1) {
     const editPanelWaveformEl = document.querySelector(`.edit-panel-waveform`);
     const editPanelWaveformEls = document.querySelectorAll(
       `.edit-panel-waveform`);
-    if (showStereoWaveform) {
+    if (
+      (showStereoWaveform && (editing.meta.opKey && editing.meta.opKeyPosition === -1)) ||
+      (showStereoWaveform && !editing.meta.opKey)
+    ) {
         editPanelWaveformEls.forEach((editPanelWaveformEl, idx) => {
             drawWaveform(editing, editPanelWaveformEl, idx, {
                 width: waveformWidth,

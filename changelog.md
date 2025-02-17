@@ -5,6 +5,8 @@ latest
  - Improved waveform rendering accuracy and performance (thanks to github.com/boourns for the pull request).
  - Improved user feedback on sample load processing, and responsiveness of list with large numbers of samples loaded, reduced file processing load times.
  - Add a welcome screen with some usage guidance, tips, and link out to documentation page.
+ - Fixed bug in sanitize name selected action.
+ - Show the length in seconds of the sample being edited on the editor.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

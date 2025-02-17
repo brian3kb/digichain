@@ -84,7 +84,9 @@ function getOpKeyData(keyId) {
 }
 
 function removeOpKeyData(keyId, zones = []) {
-    samples = samples.filter(i => i.meta.opKeyId === keyId && zones.includes(i.meta.opKeyPosition));
+    const toRemove = samples.map((s, i) => s.meta.opKeyId === keyId && zones.includes(s.meta.opKeyPosition) ? i : false).filter(i => i !== false);
+    toRemove.forEach(i => samples.splice(i, 1));
+    renderOpExport();
 }
 
 function calculateSamplesLengths() {
@@ -182,6 +184,16 @@ function renderOpKeyDetails() {
     }
     const opData = getOpKeyData(samples.selected);
 
+    const opKeyDetailMarkup = (zone, zoneId, caption) => {
+        return `
+        <div class="op-key-detail op-key-details-${zone}" data-op-key-title="${caption}">
+            <span class="op-key-detail-name">${opData[zone]?.file?.name??'< no sample >'}</span>
+            <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Edit" onclick="digichain.editor.editOpSlice('${zone}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
+            <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Remove sample (double-click)." ondblclick="digichain.editor.removeOpKeyData(${samples.selected}, [${-1}])" class="button-clear remove"><i class="gg-trash"></i></button>
+        </div>
+        <div class="op-key-spacer"></div>
+        `;
+    };
     //TODO: Expand options here for all slice parameter editing
 
     return `
@@ -193,9 +205,9 @@ function renderOpKeyDetails() {
         </div>
     </div>
     <div class="op-key-details-buttons">
-        <button class="button button-outline" onclick="digichain.editor.editOpSlice('center')" ${opData.center ? '' : 'disabled="disabled"'}>Edit Main</button>
-        <button class="button button-outline" onclick="digichain.editor.editOpSlice('left')" ${opData.left ? '' : 'disabled="disabled"'}>Edit Left</button>
-        <button class="button button-outline" onclick="digichain.editor.editOpSlice('right')" ${opData.right ? '' : 'disabled="disabled"'}>Edit Right</button>
+        ${opKeyDetailMarkup('center', -1, 'Main')}
+        ${opKeyDetailMarkup('left', 0, 'Left')}
+        ${opKeyDetailMarkup('right', 1, 'Right')}
     </div>
     `;
 }
@@ -218,7 +230,7 @@ function renderOpExport() {
         <div class="op-keys row" style="display: flex; flex-direction: ${isBlackKeySelected ? 'row-reverse' : 'row'};">
                 <div class="white-keys float-right">${keys.white.reduce(
           (a, i) => a += renderKey('white', i), '')}</div>
-            <div class="black-keys float-right">${keys.black.reduce(
+            <div class="black-keys float-right" style="${isBlackKeySelected ? 'margin-left: .75rem;' : ''}">${keys.black.reduce(
           (a, i) => a += renderKey('black', i), '')}</div>
         </div>
         <div class="op-samples-length-bar" data-caption="${Math.floor((samples.buffersLength / samples.maxBuffersLength) * 100)}% (${Number(samples.buffersLength / 44100).toFixed(3)}s)">
@@ -1734,6 +1746,7 @@ export const editor = {
     dropOpKey,
     opKeySelected,
     editOpSlice,
+    removeOpKeyData,
     sliceUpdate,
     sliceCreate,
     sliceRemove,

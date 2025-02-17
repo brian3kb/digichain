@@ -1152,6 +1152,33 @@ body.grid-view .path-exceeds-127 {
     flex-direction: column;
 }
 
+.op-key-detail {
+    display: flex;
+    justify-content: space-around;
+    align-content: center;
+    align-items: center;
+}
+.op-key-detail::before {
+    content: attr(data-op-key-title);
+    position: absolute;
+    margin-top: -6rem;
+    border-bottom: 1px solid #43392d;
+}
+.op-key-spacer {
+    border-top: 1px solid #43392d;
+    margin-bottom: 1rem;
+    height: 2rem;
+    display: block;
+}
+
+.op-key-detail-name {
+    width: 75%;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
 #opExportPanelContent:has(.op-key.selected) .op-key-details {
     display: flex;
 }
@@ -1593,6 +1620,7 @@ body.light #allOptionsPanel,
 body.light .slice-group,
 body.light .pop-up,
 body.light .dialog-pop-up,
+body.light #opExportPanel,
 body.light select,
 body.light #toggleOptionsButton i,
 body.light .selected-actions-button-list,
@@ -1680,6 +1708,19 @@ body.light.show-help .help-text {
 
 body.light .slice-options #sliceSelection {
     background-color: #ede5d8;
+}
+
+body.light .op-key {
+    background-color: transparent;
+}
+body.light .op-key-details {
+    background-color: #f5f5f5;
+}
+body.light .op-key-spacer {
+    border-top: 1px solid #f0e5d6;
+}
+body.light .op-key .center-c[title$='.'] {
+    background-color: #7f8081;
 }
 
 html.scaled {

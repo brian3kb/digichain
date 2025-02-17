@@ -128,6 +128,7 @@ function dropOpKey(event, keyId, zone = -1) {
     const rsFile = getResampleIfNeeded(file.meta, lastSelectedFile.buffer, 44100);
 
     rsFile.file = {...file.file, ...rsFile.file};
+    rsFile.meta.opKey = {};
     rsFile.meta.opKeyId = keyId;
     rsFile.meta.opKeyPosition = zone;
     addOpKeyData(keyId, zone, rsFile);
@@ -420,7 +421,7 @@ export function renderEditor(item) {
     Normalize, Silence, Louder, Quieter, Fade In, Fade Out, Crop, and Reverse affect the selected part of the sample; Trim Right and Pitch Adjustments affect the whole sample.<br>
     Note: sample operations are destructive, applied immediately, no undo. Pitch adjustments are done via sample-rate, cumulative changes will affect sample quality.
   </span>
-  <div class="file-nav-buttons" style="visibility: ${document.querySelector('#opExportPanel.show') ? 'hidden' : 'visible'};">
+  <div class="file-nav-buttons" style="visibility: ${editing.meta.opKey ? 'hidden' : 'visible'};">
     <button title="Edit previous file" class="prev-file button button-clear check" onpointerdown="digichain.editor.changeSelectedFile(event, -1)">Prev</button>
     <button title="Edit next file" class="next-file button button-clear check" onpointerdown="digichain.editor.changeSelectedFile(event, 1)">Next</button>
   </div>
@@ -435,7 +436,7 @@ function renderEditableItems() {
       '', editing, true)}" readonly>
       <button class="button-clear" onpointerdown="digichain.editor.toggleReadOnlyInput('editFileName')"><i class="gg-pen"></i></button>
     </div><br>
-    <div class="input-set">
+    <div class="input-set" style="visibility: ${editing.meta.opKey ? 'hidden' : 'visible'};">
     <label for="editFilePath" class="before-input">File Path</label>
       <input type="text" onkeyup="digichain.editor.updateFile(event)" placeholder="File path of the sample (if known)" id="editFilePath" value="${editing.file.path}" id="editFilePath" list="folderOptions" readonly>
       <datalist id="folderOptions">
@@ -1666,7 +1667,7 @@ function sanitizeName(event, files = [], selected = [], restore = false) {
                 path: f.file.path.split('/').
                   map(p => xyRxp(p)).
                   join('/'),
-                name: xyRxp(f.file.name) +
+                name: xyRxp(f.file.name.replace(/\.[^.]*$/, '')) +
                   (f.meta.note ? `-${f.meta.note}` : '')
             };
             nameList[f.meta.id].joined = `${nameList[f.meta.id].path}${nameList[f.meta.id].name}`;

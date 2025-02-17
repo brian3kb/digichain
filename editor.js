@@ -225,6 +225,7 @@ function renderOpExport() {
     } else {
         calculateSamplesLengths();
     }
+    const xyMultiOut = samples.buffersLength > (20 * 44100) ? true : samples.xyMultiOut;
     opExportEl.innerHTML = `
     <div>
         <div class="op-key-details">${renderOpKeyDetails()}</div>
@@ -241,8 +242,17 @@ function renderOpExport() {
             <button class="button float-right" onclick="digichain.editor.buildOpKit()">Build XY Kit</button>
             <button class="button float-right" onclick="digichain.editor.buildOpKit()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>Build Field Kit</button>
         </div>
+        <div class="op-buttons row">
+            <button style="padding: 0 .75rem;"
+            title="Toggle building the kit as a single audio sample or as multiple audio sample files in the created XY preset. \n\nNote: If the combined samples length is greater than 20 seconds, Field export will be disabled and XY multi file ouput enabled by default."
+            class="button float-right button-outline" onclick="digichain.editor.toggleXYOutputStyle()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>${xyMultiOut ? 'Multi File' : 'Single File'}</button>
+        </div>
     </div>
   `;
+}
+function toggleXYOutputStyle() {
+    samples.xyMultiOut = !samples.xyMultiOut;
+    renderOpExport();
 }
 
 function buildOpKit() {
@@ -1748,6 +1758,7 @@ export const editor = {
     opKeySelected,
     editOpSlice,
     removeOpKeyData,
+    toggleXYOutputStyle,
     sliceUpdate,
     sliceCreate,
     sliceRemove,

@@ -1156,18 +1156,15 @@ body.grid-view .path-exceeds-127 {
     display: flex;
     justify-content: space-around;
     align-content: center;
-    align-items: center;
+    align-items: stretch;
 }
-.op-key-detail::before {
-    content: attr(data-op-key-title);
-    position: absolute;
-    margin-top: -6rem;
+.op-key-detail-title {
     border-bottom: 1px solid #43392d;
 }
 .op-key-spacer {
     border-top: 1px solid #43392d;
     margin-bottom: 1rem;
-    height: 2rem;
+    height: 1rem;
     display: block;
 }
 
@@ -1177,6 +1174,10 @@ body.grid-view .path-exceeds-127 {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+}
+.op-key-detail-name:empty::before {
+    content: 'no sample';
+    opacity: .35;
 }
 
 #opExportPanelContent:has(.op-key.selected) .op-key-details {

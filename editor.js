@@ -186,8 +186,9 @@ function renderOpKeyDetails() {
 
     const opKeyDetailMarkup = (zone, zoneId, caption) => {
         return `
-        <div class="op-key-detail op-key-details-${zone}" data-op-key-title="${caption}">
-            <span class="op-key-detail-name">${opData[zone]?.file?.name??'< no sample >'}</span>
+        <div class="op-key-detail-title">${caption}</div>
+        <div class="op-key-detail op-key-details-${zone}"> 
+            <span class="op-key-detail-name">${opData[zone]?.file?.name??''}</span>
             <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Edit" onclick="digichain.editor.editOpSlice('${zone}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
             <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Remove sample (double-click)." ondblclick="digichain.editor.removeOpKeyData(${samples.selected}, [${-1}])" class="button-clear remove"><i class="gg-trash"></i></button>
         </div>

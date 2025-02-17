@@ -369,7 +369,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     secondsPerFile = 0;
     secondsPerFile = 'opz' === commonSelectDevice ? 12 : secondsPerFile;
     secondsPerFile = 'op1f' === commonSelectDevice ? 20 : secondsPerFile;
-    secondsPerFile = 'opxy' === commonSelectDevice ? 40 : secondsPerFile;
+    secondsPerFile = 'opxy' === commonSelectDevice ? 20 : secondsPerFile;
 
     toggleSecondsPerFile(false,
       !secondsPerFile ? 0 :

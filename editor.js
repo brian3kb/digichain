@@ -205,6 +205,7 @@ function renderOpExport() {
         black: [1, 3, 5, 8, 10, 13, 15, 17, 20, 22],
         white: [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23]
     };
+    const isBlackKeySelected = keys.black.find(k => k === samples.selected);
     if (samples.length === 0) {
         samples.buffersLength = 0;
         samples.maxBuffersLength = 20 * 44100;
@@ -214,7 +215,7 @@ function renderOpExport() {
     opExportEl.innerHTML = `
     <div>
         <div class="op-key-details">${renderOpKeyDetails()}</div>
-        <div class="op-keys row">
+        <div class="op-keys row" style="display: flex; flex-direction: ${isBlackKeySelected ? 'row-reverse' : 'row'};">
                 <div class="white-keys float-right">${keys.white.reduce(
           (a, i) => a += renderKey('white', i), '')}</div>
             <div class="black-keys float-right">${keys.black.reduce(

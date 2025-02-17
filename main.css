@@ -1025,9 +1025,6 @@ body.grid-view .path-exceeds-127 {
     opacity: 1;
     margin-left: -2rem;
 }
-.op-key.black.selected::before {
-    margin-left: 22.5rem;
-}
 
 .op-key.black:nth-of-type(1) { margin-top: 3rem; }
 .op-key.black:nth-of-type(4), .op-key.black:nth-of-type(6), .op-key.black:nth-of-type(9) { margin-top: 6rem; }
@@ -1146,16 +1143,13 @@ body.grid-view .path-exceeds-127 {
     padding: .5rem;
     flex-wrap: wrap;
     flex-direction: column;
+    margin-left: 45%;
 }
 
 .op-key-details-buttons {
     display: flex;
     flex-wrap: wrap;
     flex-direction: column;
-}
-
-#opExportPanelContent:has(.op-key.white.selected) .op-key-details {
-    margin-left: 45%;
 }
 
 #opExportPanelContent:has(.op-key.selected) .op-key-details {

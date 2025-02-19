@@ -30,6 +30,7 @@ let shouldSnapToZeroCrossing = false;
 
 let samples = [];
 let folders = [];
+let opDataConfig = Array.from({ length: 24 }).map(i => ({}));
 
 export function setEditorConf(options) {
     conf = options;
@@ -54,6 +55,7 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
         return;
     }
     if (view === 'opExport') {
+        samples.selected = false;
         renderOpExport();
         opExportPanelEl.classList.add('show');
         rightButtonsEl.classList.add('fade');
@@ -135,11 +137,17 @@ function dropOpKey(event, keyId, zone = -1) {
     rsFile.meta.opKeyPosition = zone;
     addOpKeyData(keyId, zone, rsFile);
     sanitizeName(event, samples, [rsFile]);
+    opDataConfig[keyId].linkedTo = false;
     renderOpExport();
 }
 
 function opKeySelected(event, keyId) {
-    samples.selected = samples.selected === keyId ? false : keyId;
+    if (samples.linkMode) {
+        if (keyId === samples.selected) { return ;}
+        opDataConfig[keyId].linkedTo = opDataConfig[keyId].linkedTo === `${samples.selected}` ? false : `${samples.selected}`;
+    } else {
+        samples.selected = samples.selected === keyId ? false : keyId;
+    }
     renderOpExport();
 }
 
@@ -162,7 +170,7 @@ function renderKey(color, index) {
         <div class="center-c"
            ondrop="digichain.editor.dropOpKey(event, ${index})"
            title="${keyData?.center?.file?.filename ? keyData?.center?.file?.filename + '.' : ''}"
-        ></div>
+        >${opDataConfig[index].linkedTo ? '<div class="op-key-linked"><i class="gg-link"></i> ' + (+opDataConfig[index].linkedTo + 1) + '</div>': ''}</div>
         <div class="right-b"
            ondragenter="this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
@@ -179,10 +187,12 @@ function editOpSlice(zone) {
 }
 
 function renderOpKeyDetails() {
-    if (samples.selected === false) {
+    if (samples.selected === false || samples.linkMode) {
         return '';
     }
+
     const opData = getOpKeyData(samples.selected);
+    const opKeyConfig = opDataConfig[samples.selected];
 
     const opKeyDetailMarkup = (zone, zoneId, caption) => {
         return `
@@ -205,12 +215,16 @@ function renderOpKeyDetails() {
             <button class="button-clear move-down" onclick="digichain.editor.opKeySelected(event, ${samples.selected === 23 ? 0 : (samples.selected + 1)})"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
         </div>
     </div>
-    <div class="op-key-details-buttons">
+    ` + (opKeyConfig.linkedTo ?
+      `<div class="op-key-details-buttons">
+        <div class="op-key-detail-title">Samples Linked to Key ${+opKeyConfig.linkedTo + 1}</div>
+    </div>`:
+    `<div class="op-key-details-buttons">
         ${opKeyDetailMarkup('center', -1, 'Main')}
         ${opKeyDetailMarkup('left', 0, 'Left')}
         ${opKeyDetailMarkup('right', 1, 'Right')}
-    </div>
-    `;
+    </div>`
+    );
 }
 
 function renderOpExport() {
@@ -229,29 +243,30 @@ function renderOpExport() {
     opExportEl.innerHTML = `
     <div>
         <div class="op-key-details">${renderOpKeyDetails()}</div>
-        <div class="op-keys row" style="display: flex; flex-direction: ${isBlackKeySelected ? 'row-reverse' : 'row'};">
+        <div class="op-keys row ${samples.selected !== false && samples.linkMode ? 'in-link-mode' : ''}" style="display: flex; flex-direction: ${isBlackKeySelected && !samples.linkMode ? 'row-reverse' : 'row'};">
                 <div class="white-keys float-right">${keys.white.reduce(
           (a, i) => a += renderKey('white', i), '')}</div>
-            <div class="black-keys float-right" style="${isBlackKeySelected ? 'margin-left: .75rem;' : ''}">${keys.black.reduce(
+            <div class="black-keys float-right" style="${isBlackKeySelected && !samples.linkMode ? 'margin-left: .75rem;' : ''}">${keys.black.reduce(
           (a, i) => a += renderKey('black', i), '')}</div>
         </div>
         <div class="op-samples-length-bar" data-caption="${Math.floor((samples.buffersLength / samples.maxBuffersLength) * 100)}% (${Number(samples.buffersLength / 44100).toFixed(3)}s)">
             <div class="fill" style="width: ${Math.floor((samples.buffersLength / samples.maxBuffersLength) * 100)}%;"></div>
         </div>
+        <div class="op-buttons row" style="justify-content: space-between;">
+            <button style="padding: 0 .75rem;"
+            title="Toggle building the kit as a single audio sample or as multiple audio sample files in the created XY preset. \n\nNote: If the combined samples length is greater than 20 seconds, Field export will be disabled and XY multi file ouput enabled by default."
+            class="button float-right button-outline" onclick="digichain.editor.toggleOpExportSetting('xyMultiOut')" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>${xyMultiOut ? 'Multi File' : 'Single File'}</button>
+            <button title="Toggle Link Selection Mode" onclick="digichain.editor.toggleOpExportSetting('linkMode')" class="button-clear toggle-link" style="opacity: ${samples.linkMode ? 1 : .2}; visibility: ${samples.selected !== false ? 'visible' : 'hidden'};"><i class="gg-link"></i></button>
+        </div>
         <div class="op-buttons row">
             <button class="button float-right" onclick="digichain.editor.buildOpKit()">Build XY Kit</button>
             <button class="button float-right" onclick="digichain.editor.buildOpKit()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>Build Field Kit</button>
         </div>
-        <div class="op-buttons row">
-            <button style="padding: 0 .75rem;"
-            title="Toggle building the kit as a single audio sample or as multiple audio sample files in the created XY preset. \n\nNote: If the combined samples length is greater than 20 seconds, Field export will be disabled and XY multi file ouput enabled by default."
-            class="button float-right button-outline" onclick="digichain.editor.toggleXYOutputStyle()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>${xyMultiOut ? 'Multi File' : 'Single File'}</button>
-        </div>
     </div>
   `;
 }
-function toggleXYOutputStyle() {
-    samples.xyMultiOut = !samples.xyMultiOut;
+function toggleOpExportSetting(setting) {
+    samples[setting] = !samples[setting];
     renderOpExport();
 }
 
@@ -1758,7 +1773,7 @@ export const editor = {
     opKeySelected,
     editOpSlice,
     removeOpKeyData,
-    toggleXYOutputStyle,
+    toggleOpExportSetting,
     sliceUpdate,
     sliceCreate,
     sliceRemove,

@@ -1096,7 +1096,7 @@ body.grid-view .path-exceeds-127 {
     position: absolute;
     line-height: 5rem;
     padding-left: 1rem;
-    opacity: .55;
+    opacity: .85;
     z-index: -1;
 }
 .op-key.key-0::after { content: '1 kick'; }

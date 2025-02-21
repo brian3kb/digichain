@@ -7,6 +7,7 @@ latest
  - Add a welcome screen with some usage guidance, tips, and link out to documentation page.
  - Fixed bug in sanitize name selected action.
  - Show the length in seconds of the sample being edited on the editor.
+ - Support importing samples and slices from Renoise Instrument files (.xrni) in addition to sample data from Renoise Project files (.xrnx).
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

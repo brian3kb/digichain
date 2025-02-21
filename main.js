@@ -3690,8 +3690,8 @@ const parseXml = (xml, fullPath) => {
         const doc = parser.parseFromString(xml, 'application/xml');
         const docType = doc.childNodes[0].tagName;
 
-        if (docType === 'RenoiseSong') {
-            const path = fullPath.replace('Song.xml', '');
+        if (docType === 'RenoiseSong' || docType === 'RenoiseInstrument') {
+            const path = fullPath.replace('Song.xml', '').replace('Instrument.xml', '');
             const samples = [...doc.getElementsByTagName('Sample')];
             const sampleSlices = samples.map(sample => ({
                 uuid: crypto.randomUUID(),
@@ -4434,7 +4434,7 @@ const consumeFileInput = (event, inputFiles) => {
     inputFiles = [...inputFiles];
 
     let _zips = [...inputFiles].filter(
-      f => ['zip', 'dtprj', 'xrns'].includes(
+      f => ['zip', 'dtprj', 'xrns', 'xrni'].includes(
         f?.name?.split('.')?.reverse()[0].toLowerCase())
     );
 

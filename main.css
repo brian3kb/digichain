@@ -644,9 +644,16 @@ dialog {
     padding: 1rem;
     /*background: #202124c7;*/
     background-color: #202124;
+    overflow-y: auto;
 }
 .op-export-side-panel-options.show {
     right: 0;
+}
+.op-chain-drop-zone {
+    border-style: dashed;
+    color: #483f33 !important;
+    margin-left: 2rem;
+    padding: 0 1rem;
 }
 /*#masterList { padding-right: 25rem; }*/
 /*td.move-up-td, td.move-down-td {display:none;}*/

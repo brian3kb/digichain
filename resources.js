@@ -13,7 +13,7 @@ export function buildOpData(slices = [], numChannels, returnTemplate = false) {
         mtime: 1682173750,
         name: 'DigiChain Kit',
         octave: 0,
-        original_folder: 'digichain',
+        original_folder: 'DigiChain',
         pan: new Array(24).fill(16384),
         pan_ab: new Array(24).fill(false),
         pitch: new Array(24).fill(0),

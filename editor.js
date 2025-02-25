@@ -255,8 +255,12 @@ function renderOpExport() {
         <div class="op-buttons row" style="justify-content: space-between;">
             <button style="padding: 0 .75rem;"
             title="Toggle building the kit as a single audio sample or as multiple audio sample files in the created XY preset. \n\nNote: If the combined samples length is greater than 20 seconds, Field export will be disabled and XY multi file ouput enabled by default."
-            class="button float-right button-outline" onclick="digichain.editor.toggleOpExportSetting('xyMultiOut')" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>${xyMultiOut ? 'Multi File' : 'Single File'}</button>
-            <button title="Toggle Link Selection Mode" onclick="digichain.editor.toggleOpExportSetting('linkMode')" class="button-clear toggle-link" style="opacity: ${samples.linkMode ? 1 : .2}; visibility: ${samples.selected !== false ? 'visible' : 'hidden'};"><i class="gg-link"></i></button>
+            class="button float-right button-outline" onclick="digichain.editor.toggleOpExportSetting(event, 'xyMultiOut')" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>${xyMultiOut ? 'Multi File' : 'Single File'}</button>
+            <button title="Toggle Link Selection Mode" onclick="digichain.editor.toggleOpExportSetting(event, 'linkMode')" class="button-clear toggle-link" style="opacity: ${samples.linkMode ? 1 : .2}; visibility: ${samples.selected !== false ? 'visible' : 'hidden'};"><i class="gg-link"></i></button>
+        </div>
+        <div class="op-buttons row">
+            <input type="text" placeholder="Kit Name" onblur="digichain.editor.toggleOpExportSetting(event, 'kitName')" value="${samples.kitName??''}">
+            <button class="button-outline op-chain-drop-zone">Drop Chain</button>
         </div>
         <div class="op-buttons row">
             <button class="button float-right" onclick="digichain.editor.buildOpKit()">Build XY Kit</button>
@@ -265,9 +269,17 @@ function renderOpExport() {
     </div>
   `;
 }
-function toggleOpExportSetting(setting) {
-    samples[setting] = !samples[setting];
-    renderOpExport();
+function toggleOpExportSetting(event, setting) {
+    if (setting === 'kitName') {
+        samples[setting] = event?.target?.value || '';
+        const temp = {file: {path: '', name: samples[setting]}, meta: {id: crypto.randomUUID()}};
+        sanitizeName(event, [temp], [temp]);
+        samples[setting] = temp.file.name;
+        event.target.value = samples[setting];
+    } else {
+        samples[setting] = !samples[setting];
+        renderOpExport();
+    }
 }
 
 function buildOpKit() {

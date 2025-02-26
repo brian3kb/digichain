@@ -81,7 +81,8 @@ function getOpKeyData(keyId) {
     const left = samples.find(f => f.meta.opKeyId === keyId && f.meta.opKeyPosition === 0);
     const right = samples.find(f => f.meta.opKeyId === keyId && f.meta.opKeyPosition === 1);
     return {
-        center, left, right
+        center, left, right,
+        hasData:  center || left || right
     };
 }
 
@@ -118,7 +119,7 @@ function dropOpKey(event, keyId, zone = -1) {
     if (zone !== -1) {
         event?.stopPropagation();
     }
-    const lastSelectedFile = digichain.lastSelectedFile();
+    const lastSelectedFile = event.buffer ? event : digichain.lastSelectedFile();
     if (!lastSelectedFile) { return; }
 
     if (lastSelectedFile.meta.duration > 20) {
@@ -143,8 +144,9 @@ function dropOpKey(event, keyId, zone = -1) {
 
 function opKeySelected(event, keyId) {
     if (samples.linkMode) {
-        if (keyId === samples.selected) { return ;}
+        if (keyId === samples.selected || opDataConfig.some(c => c.linkedTo === `${keyId}`)) { return ;}
         opDataConfig[keyId].linkedTo = opDataConfig[keyId].linkedTo === `${samples.selected}` ? false : `${samples.selected}`;
+        removeOpKeyData(keyId, [-1, 0, 1]);
     } else {
         samples.selected = samples.selected === keyId ? false : keyId;
     }
@@ -153,29 +155,33 @@ function opKeySelected(event, keyId) {
 
 function renderKey(color, index) {
     const keyData = getOpKeyData(index);
-    const hasData = keyData.center || keyData.left || keyData.right;
+    const fileNames = {
+        center: getNiceFileName('', keyData?.center, true),
+        left: getNiceFileName('', keyData?.left, true),
+        right: getNiceFileName('', keyData?.right, true)
+    }
     return `
     <div class="op-key ${color} key-${index} ${samples.selected === index ? 'selected' : ''}"
          ondragenter="this.classList.add('drag-over')"
          ondragleave="this.classList.remove('drag-over')"
-         data-has-data="${hasData ? '1' : '0'}"
+         data-has-data="${keyData.hasData ? '1' : '0'}"
          onclick="digichain.editor.opKeySelected(event, ${index})"
          >
         <div class="left-a"
            ondragenter="this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
            ondrop="digichain.editor.dropOpKey(event, ${index}, 0)"
-           title="${keyData?.left?.file?.filename ? keyData?.left?.file?.filename + '.' : ''}"
+           title="${fileNames.left ? (fileNames.left + '.') : ''}"
         >L</div>
         <div class="center-c"
            ondrop="digichain.editor.dropOpKey(event, ${index})"
-           title="${keyData?.center?.file?.filename ? keyData?.center?.file?.filename + '.' : ''}"
+           title="${fileNames.center ? (fileNames.center + '.') : ''}"
         >${opDataConfig[index].linkedTo ? '<div class="op-key-linked"><i class="gg-link"></i> ' + (+opDataConfig[index].linkedTo + 1) + '</div>': ''}</div>
         <div class="right-b"
            ondragenter="this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
            ondrop="digichain.editor.dropOpKey(event, ${index}, 1)"
-           title="${keyData?.right?.file?.filename ? keyData?.right?.file?.filename + '.' : ''}"
+           title="${fileNames.right ? (fileNames.right + '.') : ''}"
         >R</div>
     </div>
   `;
@@ -198,7 +204,7 @@ function renderOpKeyDetails() {
         return `
         <div class="op-key-detail-title">${caption}</div>
         <div class="op-key-detail op-key-details-${zone}"> 
-            <span class="op-key-detail-name">${opData[zone]?.file?.name??''}</span>
+            <span class="op-key-detail-name">${getNiceFileName('', opData[zone], true)??''}</span>
             <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Edit" onclick="digichain.editor.editOpSlice('${zone}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
             <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Remove sample (double-click)." ondblclick="digichain.editor.removeOpKeyData(${samples.selected}, [${-1}])" class="button-clear remove"><i class="gg-trash"></i></button>
         </div>
@@ -227,7 +233,15 @@ function renderOpKeyDetails() {
     );
 }
 
-function renderOpExport() {
+function renderOpExport(reset = false) {
+    if (reset) {
+        const confirmReset = confirm('Reset OP Export kit config?');
+        if (confirmReset) {
+            samples = [];
+            samples.selected = false;
+        }
+    }
+
     const keys = {
         black: [1, 3, 5, 8, 10, 13, 15, 17, 20, 22],
         white: [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23]
@@ -260,11 +274,14 @@ function renderOpExport() {
         </div>
         <div class="op-buttons row">
             <input type="text" placeholder="Kit Name" onblur="digichain.editor.toggleOpExportSetting(event, 'kitName')" value="${samples.kitName??''}">
-            <button class="button-outline op-chain-drop-zone">Drop Chain</button>
+            <button ondrop="digichain.splitAction(event, false, true, false, true)" title="Spreads a chain across the kit, this will replace any existing samples in the kit." class="button-outline op-chain-drop-zone">Drop Chain</button>
         </div>
-        <div class="op-buttons row">
+        <div class="op-buttons row" style="justify-content: space-between;">
             <button class="button float-right" onclick="digichain.editor.buildOpKit()">Build XY Kit</button>
             <button class="button float-right" onclick="digichain.editor.buildOpKit()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>Build Field Kit</button>
+            <span>&nbsp;</span>
+            <span>&nbsp;</span>
+            <button title="Clear Kit" class="float-right button-clear" style="opacity:.7;" onpointerdown="digichain.editor.renderOpExport(true)"><i class="gg-remove"></i></button>
         </div>
     </div>
   `;
@@ -277,9 +294,26 @@ function toggleOpExportSetting(event, setting) {
         samples[setting] = temp.file.name;
         event.target.value = samples[setting];
     } else {
+        if (setting === 'linkMode' && !getOpKeyData(samples.selected)?.hasData) {
+            return ;
+        }
         samples[setting] = !samples[setting];
         renderOpExport();
     }
+}
+
+function acceptDroppedChainItems(droppedFiles = []) {
+    droppedFiles.forEach((f, idx) => {
+        const idxAsString = `0${idx + 1}`.slice(-2);
+        f.file.name = `Chain Slice ${idxAsString}.wav`;
+    });
+    if (droppedFiles?.length && droppedFiles.length > 24) {
+        let startFrom = Math.abs(parseInt(prompt(`The dropped chain contains ${droppedFiles.length} slices, please specify the slice number to start from to populate the kit`)));
+        startFrom = startFrom > droppedFiles.length ? droppedFiles.length : startFrom;
+        droppedFiles = droppedFiles.slice(startFrom);
+    }
+    droppedFiles.slice(0, 24).forEach((f, idx) => dropOpKey(f, idx));
+    renderOpExport();
 }
 
 function buildOpKit() {
@@ -1698,7 +1732,7 @@ function editorPlayFile(event, loop = false, stop = false) {
         digichain.stopPlayFile(event, editing.meta.id);
         return;
     }
-    digichain.playFile({editor: true}, editing.meta.id, false, start, end);
+    digichain.playFile({editor: true, file: editing}, editing.meta.id, false, start, end);
     if (loop) {
         editorPlayFile.nextLoop = setTimeout(() => editorPlayFile(event, loop),
           end * 1000);
@@ -1785,7 +1819,9 @@ export const editor = {
     opKeySelected,
     editOpSlice,
     removeOpKeyData,
+    renderOpExport,
     toggleOpExportSetting,
+    acceptDroppedChainItems,
     sliceUpdate,
     sliceCreate,
     sliceRemove,

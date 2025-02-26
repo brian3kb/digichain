@@ -693,6 +693,10 @@ const closeEditPanel = () => {
     digichain.renderList();
 };
 
+function isOpExportPanelOpen() {
+    return document.querySelector('#opExportPanel.show');
+}
+
 function checkShouldExportOtFile(skipExportWithCheck = false) {
     return (exportWithOtFile || skipExportWithCheck) && targetSR === 44100 &&
       targetContainer === 'w';
@@ -2416,7 +2420,7 @@ const stopPlayFile = (event, id) => {
 };
 
 const playFile = (event, id, loop, start, end) => {
-    const file = getFileById(id || lastSelectedRow.dataset.id);
+    const file = getFileById(id || lastSelectedRow.dataset.id) || (event.editor && event.file ? event.file : false);
     let playHead;
     loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
 
@@ -2868,7 +2872,11 @@ const splitByOtSlices = (
         unsorted.push(uuid);
     }
     if (pushInPlaceItems.length) {
-        files.splice(getFileIndexById(id) + 1, 0, ...pushInPlaceItems);
+        if (isOpExportPanelOpen()) {
+            editor.acceptDroppedChainItems(pushInPlaceItems);
+        } else {
+            files.splice(getFileIndexById(id) + 1, 0, ...pushInPlaceItems);
+        }
     }
     renderList();
 };
@@ -2933,7 +2941,11 @@ const splitEvenly = (
         unsorted.push(uuid);
     }
     if (pushInPlaceItems.length) {
-        files.splice(getFileIndexById(id) + 1, 0, ...pushInPlaceItems);
+        if (isOpExportPanelOpen()) {
+            editor.acceptDroppedChainItems(pushInPlaceItems);
+        } else {
+            files.splice(getFileIndexById(id) + 1, 0, ...pushInPlaceItems);
+        }
     }
     renderList();
 };
@@ -3231,7 +3243,7 @@ const drawSliceLines = (slices, file, otMeta) => {
     sliceLinesEl.innerHTML = lines.join('');
 };
 
-const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
+const splitAction = (event, id, slices, saveSlicesMetaOnly, fromOpExport) => {
     const el = document.getElementById('splitOptions');
     const fileNameEl = document.getElementById('splitFileName');
     const sliceGroupEl = document.querySelector(
@@ -3248,7 +3260,7 @@ const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
       s => +s.dataset.idx);
     let item;
     let otMeta;
-    let pushInPlace = (event.shiftKey || modifierKeys.shiftKey);
+    let pushInPlace = (event.shiftKey || modifierKeys.shiftKey || fromOpExport);
     if ((event.target.className.includes('is-') ||
         event.target.parentElement.className.includes('is-')) &&
       (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey)) {
@@ -3274,7 +3286,7 @@ const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
         id = id || item.meta.id;
         if (slices === 'ot' ||
           !sliceByTransientButtonEl.classList.contains('button-outline') ||
-          !sliceByOtButtonEl.classList.contains('button-outline')) {
+          !sliceByOtButtonEl.classList.contains('button-outline') || (fromOpExport && item.meta.slices?.length)) {
             const sliceSource = sliceByTransientButtonEl.classList.contains(
               'button-outline') ? 'ot' : 'transient';
             splitByOtSlices(event, id, pushInPlace, sliceSource, excludeSlices,
@@ -3299,6 +3311,7 @@ const splitAction = (event, id, slices, saveSlicesMetaOnly) => {
     sliceByOtButtonEl.style.display = otMeta ? 'inline-block' : 'none';
     sliceByOtButtonEl.textContent = otMeta ? `${otMeta.sliceCount}` : 'OT';
     splitSizeAction(false, 0);
+    isOpExportPanelOpen()?.classList?.remove('show');
     if (!el.open) { el.showModal(); }
     drawWaveform(item, splitPanelWaveformEl, item.meta?.channel ?? 0, {
         width: +splitPanelWaveformContainerEl.dataset.waveformWidth, height: 128

@@ -8,8 +8,8 @@
   },
   "scripts": {
     "packjs": "rollup -c rollup.config.mjs",
-    "mincss": "csso main.css --output latest/main.css",
-    "mincsslib": "csso lib.css --output latest/lib.css"
+    "mincss": "csso src/main.css --output latest/main.css",
+    "mincsslib": "csso src/lib.css --output latest/lib.css"
   },
   "devDependencies": {
     "csso": "^5.0.5",

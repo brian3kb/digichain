@@ -803,13 +803,25 @@ async function downloadAll(event) {
                 }
             }
         }
-        zip.generateAsync({type: 'blob'}).then(blob => {
-            const el = document.getElementById('getJoined');
-            el.href = URL.createObjectURL(blob);
-            el.setAttribute('download', 'digichain_files.zip');
-            el.click();
-            document.body.classList.remove('loading');
-        });
+        const zipName = `digichain_${Date.now()}.zip`;
+        if (window.__TAURI__) {
+            zip.generateAsync({type: 'uint8array'}).then(async _data => {
+                await window.__TAURI__.fs.writeFile(zipName, _data, {
+                    baseDir: window.__TAURI__.fs.BaseDirectory.Download,
+                    create: true
+                });
+                document.body.classList.remove('loading');
+                window.__TAURI__.dialog.message(`Saved to the Downloads folder as '${zipName}'.`);
+            });
+        } else {
+            zip.generateAsync({type: 'blob'}).then(blob => {
+                const el = document.getElementById('getJoined');
+                el.href = URL.createObjectURL(blob);
+                el.setAttribute('download', zipName);
+                el.click();
+                document.body.classList.remove('loading');
+            });
+        }
         return;
     }
 
@@ -4831,6 +4843,10 @@ function init() {
       false
     );
 
+    if (window.__TAURI__) {
+        window.__TAURI__.event.listen('tauri://drag-drop', dropHandler);
+    }
+
     document.body.addEventListener('keyup', (event) => {
         clearModifiers();
     });
@@ -5117,11 +5133,16 @@ function loadState(skipConfirm = false) {
         }
     }
     let requestFiles = objectStore.get('files');
-    requestFiles.onsuccess = () => {
+    requestFiles.onsuccess = async () => {
         if (requestFiles.result && requestFiles.result.length > 0) {
 
             if (!skipConfirm) {
-                const proceed = confirm(`There are ${requestFiles.result.length} files from your last session, would you like to restore them?`);
+                let proceed;
+                if (window.__TAURI__) {
+                    proceed = await window.__TAURI__.dialog.confirm(`There are ${requestFiles.result.length} files from your last session, would you like to restore them?`, {kind: 'info'});
+                } else {
+                    proceed = confirm(`There are ${requestFiles.result.length} files from your last session, would you like to restore them?`);
+                }
                 if (!proceed) {
                     clearDbBuffers();
                     document.body.classList.remove('loading');

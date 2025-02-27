@@ -1454,9 +1454,13 @@ img {
     float: right;
 }
 
+body .container {
+    max-width: 1280px;
+}
 body.is-itch-io .container {
     max-width: 95vw;
 }
 body.is-itch-io #allOptionsPanel .column.left-buttons {
     max-width: 48rem;
 }
+

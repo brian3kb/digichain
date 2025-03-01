@@ -476,7 +476,7 @@ export function renderEditor(item) {
     </div>
   </div>
 
-  <div class="sample-op-buttons" data-sample-duration="${editing.meta.duration}s">
+  <div class="sample-op-buttons show-sample-duration" data-sample-duration="${editing.meta.duration}s">
   <div class="edit-btn-group float-left">
 
   <button title="Normalize the volume of the sample." class="normalize button button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
@@ -560,6 +560,7 @@ function renderEditPanelWaveform(multiplier = 1) {
     const editPanelWaveformEl = document.querySelector(`.edit-panel-waveform`);
     const editPanelWaveformEls = document.querySelectorAll(
       `.edit-panel-waveform`);
+    const durationIndicatorEl = document.querySelector(`.show-sample-duration`);
     if (
       (showStereoWaveform && (editing.meta.opKey && editing.meta.opKeyPosition === -1)) ||
       (showStereoWaveform && !editing.meta.opKey)
@@ -575,6 +576,9 @@ function renderEditPanelWaveform(multiplier = 1) {
         drawWaveform(editing, editPanelWaveformEl, -1, {
             width: waveformWidth, height: 128, multiplier
         });
+    }
+    if (durationIndicatorEl) {
+        durationIndicatorEl.dataset.sampleDuration = `${editing.meta.duration}s`;
     }
 
 }
@@ -1081,6 +1085,11 @@ function reverse(event, item, renderEditPanel = true) {
         selection.end = item.buffer.length;
     }
     item = item || editing;
+
+    if (event.shiftKey && (event.ctrlKey || event.metaKey)) {
+        return paulStretch(event, item, renderEditPanel);
+    }
+
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
         let data = item.buffer.getChannelData(channel).
           slice(selection.start, selection.end).
@@ -1272,33 +1281,103 @@ function thresholdCondense(event, item, renderEditPanel = true, lower = 0.003, u
     trimRight(event, item, renderEditPanel, 0, false);
 }
 
-function paulStretchNot(event, item, renderEditPanel = true, stretchFactor = 2) {
+async function paulStretch(
+  event, item, renderEditPanel = true, stretchFactor = 16, grainSize = .1, overlap = .5
+) {
     if (!renderEditPanel && item) {
         selection.start = 0;
         selection.end = item.buffer.length;
     }
     item = item || editing;
 
-    const newLength = Math.round(item.buffer.length * stretchFactor);
+    const numberOfChannels = item.buffer.numberOfChannels;
+    const sampleRate = item.buffer.sampleRate;
+    const bufferDuration = item.buffer.duration;
+    const grainSpacing = (grainSize * overlap) / stretchFactor;
+
+    const newLength = Math.ceil(bufferDuration * stretchFactor);
+    const newSamples = Math.ceil(newLength * sampleRate);
+
     const audioArrayBuffer = conf.audioCtx.createBuffer(
-      item.buffer.numberOfChannels,
-      newLength,
+      numberOfChannels,
+      newSamples,
       conf.masterSR
     );
 
-    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-        const inputData = item.buffer.getChannelData(channel);
-        const outputData = audioArrayBuffer.getChannelData(channel);
+    let sourceOffset = 0;
+    let targetOffset = 0;
 
-        for (let i = 0; i < newLength; i++) {
-            const index = i / stretchFactor;
-            const leftIndex = Math.floor(index);
-            const rightIndex = Math.ceil(index);
-            const fraction = index - leftIndex;
+    while (sourceOffset < bufferDuration) {
+        const grainSamples = Math.floor(grainSize * sampleRate);
+        const targetSamples = Math.min(grainSamples,
+          (newSamples - targetOffset));
 
-            outputData[i] = (1 - fraction) * inputData[leftIndex] + fraction * inputData[rightIndex];
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+            const inputData = item.buffer.getChannelData(channel);
+            const outputData = audioArrayBuffer.getChannelData(channel);
+
+            for (let i = 0; i < targetSamples; i++) {
+                const sampleIndex = Math.floor((sourceOffset * sampleRate) + i);
+                if (sampleIndex < inputData.length && (targetOffset + i) < newSamples) {
+                    outputData[targetOffset + i] += inputData[sampleIndex] * 0.5;
+                }
+            }
         }
+
+        sourceOffset += grainSpacing;
+        targetOffset += targetSamples;
     }
+
+    function applyEffects(buffer) {
+        const offlineCtx = new OfflineAudioContext(
+          buffer.numberOfChannels,
+          buffer.length,
+          buffer.sampleRate
+        );
+
+        const source = offlineCtx.createBufferSource();
+        source.buffer = buffer;
+
+        // Reverb Effect
+        const convolver = offlineCtx.createConvolver();
+        convolver.buffer = createReverbImpulse(offlineCtx);
+
+        // Delay Effect
+        const delay = offlineCtx.createDelay();
+        delay.delayTime.value = 0.3; // 300ms delay
+
+        const feedback = offlineCtx.createGain();
+        feedback.gain.value = 0.4;
+        delay.connect(feedback);
+        feedback.connect(delay);
+
+        // Gain (to balance levels)
+        const gain = offlineCtx.createGain();
+        gain.gain.value = 0.8;
+
+        // Audio Routing
+        source.connect(convolver);
+        convolver.connect(delay);
+        delay.connect(gain);
+        gain.connect(offlineCtx.destination);
+
+        source.start();
+        return offlineCtx.startRendering();
+    }
+
+    function createReverbImpulse(audioCtx) {
+        const length = audioCtx.sampleRate * 3;
+        const impulse = audioCtx.createBuffer(2, length, audioCtx.sampleRate);
+        for (let channel = 0; channel < 2; channel++) {
+            let impulseData = impulse.getChannelData(channel);
+            for (let i = 0; i < length; i++) {
+                impulseData[i] = (Math.random() * 2 - 1) * (1 - i / length); // Exponential decay
+            }
+        }
+        return impulse;
+    }
+
+    await applyEffects(audioArrayBuffer);
 
     item.buffer = audioArrayBuffer;
 
@@ -1811,6 +1890,7 @@ export const editor = {
     perSamplePitch,
     double,
     stretch,
+    paulStretch,
     roughStretch,
     nudgeCrossings,
     padWithZero,

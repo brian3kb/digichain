@@ -145,6 +145,16 @@ export function buildXyDrumPatchData(file, slices = []) {
     };
 }
 
+// TODO Tauri dialogs plug prompt/ask does not provide a way to return text input from Rust dialog to JS - need to create HTML Dialog to handle text input events from Rust for the 'prompt' dialog type.
+// type [message, ask, confirm, prompt]
+export async function dcDialog(type = 'message', messageString = '', config = {}) {
+    const msgTypes = {message: 'alert', ask: 'prompt', confirm: 'confirm', prompt: 'prompt'};
+    if (window.__TAURI__) {
+        return await window.__TAURI__.dialog[type](messageString, config);
+    }
+    return await window[msgTypes[type]](messageString);
+}
+
 export function bufferToFloat32Array(
   buffer, channel, getAudioBuffer = false, audioCtx, masterChannels, masterSR) {
     let result = getAudioBuffer ?

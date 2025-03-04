@@ -26,7 +26,7 @@ import {
     joinToMono,
     joinToStereo,
     bufferToFloat32Array,
-    getSupportedSampleRates, detectTempo
+    getSupportedSampleRates, detectTempo, dcDialog
 } from './resources.js';
 import {
     editor,
@@ -324,8 +324,13 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     }
 
     if (files.length > 0 && workingSR !== masterSR) {
-        let conf = confirm(
-          `Frequently changing audio working sample rate can degrade the audio quality, particularly in the transients and higher frequencies.\n\n Do you want to continue?`);
+        let conf = await dcDialog('confirm',
+          `Frequently changing audio working sample rate can degrade the audio quality, particularly in the transients and higher frequencies.\n\n Do you want to continue?`,
+          {
+              kind: 'warning',
+              okLabel: 'Continue'
+          }
+        );
         if (!conf) {
             return false;
         }
@@ -548,12 +553,12 @@ function generateChainNames() {
     renderChainNamePanelContent();
 }
 
-function changeChainName(event, index, action) {
+async function changeChainName(event, index, action) {
     let item;
     if (action === 'remove-all') {
         event.preventDefault();
-        let confirmRemove = confirm(
-          `Are you sure you want to remove all the chain names below?`);
+        let confirmRemove = await dcDialog('confirm',
+          `Are you sure you want to remove all the chain names below?`, { kind: 'warning', okLabel: 'Remove All' });
         if (confirmRemove) {
             chainFileNames = [];
         }
@@ -566,8 +571,8 @@ function changeChainName(event, index, action) {
     }
     if ((index > -1) && action === 'remove') {
         event.preventDefault();
-        let confirmRemove = confirm(
-          `Are you sure you want to remove the chain name '${item.name}'?`);
+        let confirmRemove = await dcDialog('confirm',
+          `Are you sure you want to remove the chain name '${item.name}'?`, { kind: 'warning', okLabel: 'Remove' });
         if (confirmRemove) {
             chainFileNames.splice(index, 1);
         }
@@ -761,8 +766,10 @@ async function downloadAll(event) {
     const renderAsAif = targetContainer === 'a';
     if (_files.length === 0) { return; }
     if (_files.length > 5 && !zipDownloads) {
-        const userReadyForTheCommitment = confirm(
-          `You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`);
+        const userReadyForTheCommitment = await dcDialog('confirm',
+          `You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`, {
+            kind: 'info', okLabel: 'Absolutely'
+          });
         if (!userReadyForTheCommitment) { return; }
     }
     document.getElementById('loadingText').textContent = 'Processing';
@@ -2604,7 +2611,7 @@ const toggleCheck = (event, id, silent = false, ignoreShiftKey = false) => {
     }
 };
 
-const changeChannel = (
+const changeChannel = async (
   event, id, channel, allowModKey = true, tableId = '#masterList') => {
     const el = getRowElementById(id, tableId).
       querySelector('.channel-option-' + channel);
@@ -2616,7 +2623,7 @@ const changeChannel = (
             S: 'Sum both channels of audio to mono',
             D: 'Difference between Left and Right channels'
         };
-        const confirmSetAllSelected = confirm(
+        const confirmSetAllSelected = await dcDialog('confirm',
           `Confirm setting all selected samples that are stereo to ${opts[channel]}?`);
         if (confirmSetAllSelected) {
             files.filter(f => f.meta.checked && f.buffer.numberOfChannels > 1).
@@ -3255,7 +3262,7 @@ const drawSliceLines = (slices, file, otMeta) => {
     sliceLinesEl.innerHTML = lines.join('');
 };
 
-const splitAction = (event, id, slices, saveSlicesMetaOnly, fromOpExport) => {
+const splitAction = async (event, id, slices, saveSlicesMetaOnly, fromOpExport) => {
     const el = document.getElementById('splitOptions');
     const fileNameEl = document.getElementById('splitFileName');
     const sliceGroupEl = document.querySelector(
@@ -3277,7 +3284,7 @@ const splitAction = (event, id, slices, saveSlicesMetaOnly, fromOpExport) => {
         event.target.parentElement.className.includes('is-')) &&
       (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey)) {
         item = getFileById(id || lastSelectedRow.dataset.id);
-        const confirmClear = confirm(`Clear slice data for ${item.file.name}?`);
+        const confirmClear = await dcDialog('confirm', `Clear slice data for ${item.file.name}?`);
         if (confirmClear) {
             item.meta.slices = false;
             if (item.meta.op1Json) {
@@ -5137,12 +5144,15 @@ function loadState(skipConfirm = false) {
         if (requestFiles.result && requestFiles.result.length > 0) {
 
             if (!skipConfirm) {
-                let proceed;
-                if (window.__TAURI__) {
-                    proceed = await window.__TAURI__.dialog.confirm(`There are ${requestFiles.result.length} files from your last session, would you like to restore them?`, {kind: 'info'});
-                } else {
-                    proceed = confirm(`There are ${requestFiles.result.length} files from your last session, would you like to restore them?`);
-                }
+                const proceed = await dcDialog(
+                  'confirm',
+                  `There are ${requestFiles.result.length} files from your last session, would you like to restore them?`,
+                  {
+                      kind: 'info',
+                      okLabel: 'Restore',
+                      cancelLabel: 'Discard',
+                  }
+                );
                 if (!proceed) {
                     clearDbBuffers();
                     document.body.classList.remove('loading');

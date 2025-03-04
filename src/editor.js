@@ -3,7 +3,7 @@ import {
     buildOpData, deClick, detectTempo,
     encodeAif,
     Resampler,
-    getResampleIfNeeded
+    getResampleIfNeeded, dcDialog
 } from './resources.js';
 
 const editPanelEl = document.getElementById('editPanel');
@@ -233,9 +233,9 @@ function renderOpKeyDetails() {
     );
 }
 
-function renderOpExport(reset = false) {
+async function renderOpExport(reset = false) {
     if (reset) {
-        const confirmReset = confirm('Reset OP Export kit config?');
+        const confirmReset = await dcDialog('confirm', 'Reset OP Export kit config?', {kind: 'warning', okLabel: 'Reset'});
         if (confirmReset) {
             samples = [];
             samples.selected = false;
@@ -302,13 +302,14 @@ function toggleOpExportSetting(event, setting) {
     }
 }
 
-function acceptDroppedChainItems(droppedFiles = []) {
+async function acceptDroppedChainItems(droppedFiles = []) {
     droppedFiles.forEach((f, idx) => {
         const idxAsString = `0${idx + 1}`.slice(-2);
         f.file.name = `Chain Slice ${idxAsString}.wav`;
     });
     if (droppedFiles?.length && droppedFiles.length > 24) {
-        let startFrom = Math.abs(parseInt(prompt(`The dropped chain contains ${droppedFiles.length} slices, please specify the slice number to start from to populate the kit`)));
+        const userValue = await dcDialog('prompt', `The dropped chain contains ${droppedFiles.length} slices, please specify the slice number to start from to populate the kit`);
+        let startFrom = Math.abs(parseInt(userValue));
         startFrom = startFrom > droppedFiles.length ? droppedFiles.length : startFrom;
         droppedFiles = droppedFiles.slice(startFrom);
     }

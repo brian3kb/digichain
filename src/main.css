@@ -1774,3 +1774,12 @@ html.scaled {
 body:not(.light) #dcDialog .prompt {
     color: #98a4ae;
 }
+
+body.latest .header-menu::after {
+    content: 'This is the active development build, things here may be broken!';
+    float: right;
+    padding-right: 1rem;
+    font-size: 1.25rem;
+    color: #ff1c1c;
+    margin-top: -.05rem;
+}

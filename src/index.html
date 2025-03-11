@@ -585,6 +585,10 @@
         document.documentElement.classList.add('scaled');
     }
 
+    if (location.pathname.includes('latest') || location.origin.includes('latest')) {
+        document.body.classList.add('latest');
+    }
+
     if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.origin.includes('127.0.0.1') &&
       !location.pathname.includes('latest') && !location.origin.includes('latest') &&
       window.location === window.parent.location) {

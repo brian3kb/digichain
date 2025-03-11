@@ -1754,3 +1754,23 @@ html.scaled {
     font-size: 54%;
     overflow-x: hidden;
 }
+
+#dcDialog {
+    max-width: 50rem;
+    padding: 2rem 4.2rem 1.25rem 2rem;
+    max-height: fit-content;
+}
+#dcDialog .prompt {
+    padding-bottom: 2rem;
+}
+#dcDialog .buttons-group {
+    display: flex;
+    justify-content: space-around;
+    flex-direction: row-reverse;
+}
+#dcDialog .buttons-group button {
+    min-width: 5rem;
+}
+body:not(.light) #dcDialog .prompt {
+    color: #98a4ae;
+}

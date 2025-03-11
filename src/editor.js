@@ -308,7 +308,11 @@ async function acceptDroppedChainItems(droppedFiles = []) {
         f.file.name = `Chain Slice ${idxAsString}.wav`;
     });
     if (droppedFiles?.length && droppedFiles.length > 24) {
-        const userValue = await dcDialog('prompt', `The dropped chain contains ${droppedFiles.length} slices, please specify the slice number to start from to populate the kit`);
+        const userValue = await dcDialog(
+          'prompt',
+          `The dropped chain contains ${droppedFiles.length} slices, please specify the slice number to start from to populate the kit`,
+          { inputType: 'number' });
+        if (userValue === false) { return; }
         let startFrom = Math.abs(parseInt(userValue));
         startFrom = startFrom > droppedFiles.length ? droppedFiles.length : startFrom;
         droppedFiles = droppedFiles.slice(startFrom);

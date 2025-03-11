@@ -18,6 +18,7 @@ Brian referenced the following during development:
 Tips and Tricks on drawing array buffers to the canvas element: <https://css-tricks.com/making-an-audio-waveform-visualizer-with-vanilla-javascript/>
 [MIT License] Basic beat detection : https://github.com/JMPerez/beats-audio-api/blob/gh-pages/script.js / http://joesul.li/van/beat-detection-using-web-audio/
 */
+import './jszip.js';
 import {
     Resampler,
     audioBufferToWav,
@@ -2677,11 +2678,17 @@ const invertFileSelection = () => {
     renderList();
 };
 
-const changeSliceOption = (targetEl, size, silent = false) => {
+const changeSliceOption = async (targetEl, size, silent = false) => {
     let newValue = size;
     if (!silent) {
-        newValue = prompt(`Temporarily change slice value "${size}" to what new value?`,
-          size);
+        newValue = await dcDialog(
+          'prompt',
+          `Temporarily change slice value "${size}" to what new value?`,
+          {
+              inputType: 'number',
+              defaultValue: size
+          }
+        );
     }
     if (newValue && !isNaN(newValue)) {
         newValue = Math.abs(Math.ceil(+newValue));
@@ -4897,6 +4904,10 @@ function init() {
             if (files.length && !(event.shiftKey || modifierKeys.shiftKey)) {
                 files.filter(f => f.meta.playing && f.meta.id).
                   forEach(f => stopPlayFile(false, f.meta.id));
+            }
+            if (document.querySelector('#dcDialog').open) {
+                event.preventDefault();
+                return;
             }
             return closePopUps();
         }

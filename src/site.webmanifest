@@ -25,7 +25,8 @@
     "/main.css",
     "/main.js",
     "/editor.js",
-    "/resources.js"
+    "/resources.js",
+    "/jszip.js"
   ],
   "dir": "auto",
   "lang": "en",

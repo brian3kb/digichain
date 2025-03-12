@@ -2,7 +2,10 @@
 body {
     background-color: #202124;
 }
-* { user-select: none; }
+*:not(input) {
+    user-select: none;
+    -webkit-user-select: none;
+}
 .show { display: block !important; }
 .no-display { display: none !important; }
 .disabled {
@@ -1523,7 +1526,7 @@ body.grid-view .path-exceeds-127 {
     }
     dialog {
         max-width: 98vw;
-        height: 89vh;
+        height: fit-content;
         width: 88vw;
         max-height: 89vh;
     }

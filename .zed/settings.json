@@ -1,0 +1,41 @@
+// Folder-specific settings
+//
+// For a full list of overridable settings, and general information on folder-specific settings,
+// see the documentation: https://zed.dev/docs/configuring-zed#settings-files
+{
+  "features": {
+    "edit_prediction_provider": "zed",
+    "copilot": false
+  },
+  "theme": "Nordic",
+  "telemetry": {
+    "metrics": false
+  },
+  "hour_format": "hour24",
+  "ui_font_size": 15,
+  "buffer_font_size": 15,
+  "soft_wrap": "editor_width",
+  "buffer_font_family": "Fira Code",
+  "format_on_save": "off",
+
+  "languages": {
+    "JavaScript": {
+      "tab_size": 4
+    },
+    "HTML": {
+      "tab_size": 4
+    },
+    "CSS": {
+      "tab_size": 4
+    },
+    "TypeScript": {
+      "tab_size": 4
+    },
+    "Go": {
+      "format_on_save": "on"
+    },
+    "Rust": {
+      "format_on_save": "on"
+    }
+  }
+}

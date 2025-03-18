@@ -3,7 +3,8 @@ import {
     buildOpData, deClick, detectTempo,
     encodeAif,
     Resampler,
-    getResampleIfNeeded, dcDialog
+    getResampleIfNeeded, dcDialog,
+    joinToStereo
 } from './resources.js';
 
 const editPanelEl = document.getElementById('editPanel');
@@ -80,9 +81,11 @@ function getOpKeyData(keyId) {
     const center = samples.find(f => f.meta.opKeyId === keyId && f.meta.opKeyPosition === -1);
     const left = samples.find(f => f.meta.opKeyId === keyId && f.meta.opKeyPosition === 0);
     const right = samples.find(f => f.meta.opKeyId === keyId && f.meta.opKeyPosition === 1);
+
     return {
         center, left, right,
-        hasData:  center || left || right
+        hasData:  center || left || right,
+        length: Math.max(center?.buffer?.length??0, left?.buffer?.length??0, right?.buffer?.length??0)
     };
 }
 
@@ -203,7 +206,7 @@ function renderOpKeyDetails() {
     const opKeyDetailMarkup = (zone, zoneId, caption) => {
         return `
         <div class="op-key-detail-title">${caption}</div>
-        <div class="op-key-detail op-key-details-${zone}"> 
+        <div class="op-key-detail op-key-details-${zone}">
             <span class="op-key-detail-name">${getNiceFileName('', opData[zone], true)??''}</span>
             <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Edit" onclick="digichain.editor.editOpSlice('${zone}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
             <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Remove sample (double-click)." ondblclick="digichain.editor.removeOpKeyData(${samples.selected}, [${-1}])" class="button-clear remove"><i class="gg-trash"></i></button>
@@ -277,7 +280,7 @@ async function renderOpExport(reset = false) {
             <button ondrop="digichain.splitAction(event, false, true, false, true)" title="Spreads a chain across the kit, this will replace any existing samples in the kit." class="button-outline op-chain-drop-zone">Drop Chain</button>
         </div>
         <div class="op-buttons row" style="justify-content: space-between;">
-            <button class="button float-right" onclick="digichain.editor.buildOpKit()">Build XY Kit</button>
+            <button class="button float-right" onclick="digichain.editor.buildXyKit()">Build XY Kit</button>
             <button class="button float-right" onclick="digichain.editor.buildOpKit()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>Build Field Kit</button>
             <span>&nbsp;</span>
             <span>&nbsp;</span>
@@ -321,16 +324,76 @@ async function acceptDroppedChainItems(droppedFiles = []) {
     renderOpExport();
 }
 
+function buildXyKit() { }
+
 function buildOpKit() {
-    //TODO: Go from debug kit build to xy/field kit export.
+  //TODO: Add parameters from UI to embedded JSON
+    const kit = opDataConfig.map((key, keyId) => {
+        const keySamples = getOpKeyData(key.linkedTo || keyId);
+        keySamples.left = keySamples.left ?
+          bufferToFloat32Array(keySamples.left.buffer, keySamples.left.meta.channel, true, conf.audioCtx, 1, 44100) :
+          false;
+        keySamples.right = keySamples.right ?
+          bufferToFloat32Array(keySamples.right.buffer, keySamples.right.meta.channel, true, conf.audioCtx, 1, 44100) :
+          false;
+
+        let combinedBuffer = conf.audioCtx.createBuffer(
+          2,
+          keySamples.length,
+          44100
+        );
+
+        for (let i = 0; i < keySamples.length; i++) {
+            const centerValLeft = keySamples.center ? keySamples.center.buffer.getChannelData(0)[i] : 0;
+            const centerValRight = keySamples.center ?  keySamples.center.buffer.getChannelData(keySamples.center.buffer.numberOfChannels - 1)[i] : 0;
+            const leftVal = keySamples.left ? keySamples.left.getChannelData(0)[i] : 0;
+            const rightVal = keySamples.right ? keySamples.right.getChannelData(0)[i] : 0;
+
+            let combLeft = 0;
+            let combRight = 0;
+
+            if (keySamples.center && keySamples.left) {
+                combLeft = (centerValLeft + leftVal) / 2;
+            } else {
+                combLeft = keySamples.center ? centerValLeft : leftVal;
+            }
+
+            if (keySamples.center && keySamples.right) {
+                combRight = (centerValRight + rightVal) / 2;
+            } else {
+                combRight = keySamples.center ? centerValRight : rightVal;
+            }
+
+            combinedBuffer.getChannelData(0)[i] = combLeft;
+            combinedBuffer.getChannelData(1)[i] = combRight;
+        }
+
+        return {
+          samples: keySamples,
+          buffer: combinedBuffer,
+          length: combinedBuffer.length,
+          ...key
+        };
+    });
+    kit.totalLength = kit.reduce((acc, val) => acc + val.length, 0);
+    for (let s = 0; s < kit.length; s++) {
+        kit[s].s = s === 0 ? 0 : kit[s - 1].e;
+        kit[s].e = kit[s].s + kit[s].length;
+    }
+    const kitAudio = conf.audioCtx.createBuffer(
+      2,
+      kit.totalLength,
+      44100
+    );
+    joinToStereo(kitAudio, kit);
 
     const linkEl = document.querySelector('.aif-link-hidden');
-    const dataView = encodeAif(samples[0].buffer, '44100',2, samples.json);
+    const dataView = encodeAif(kitAudio, '44100', 2, buildOpData(kit, 2));
     let blob = new window.Blob([dataView], {
         type: 'audio/aiff'
     });
     linkEl.href = URL.createObjectURL(blob);
-    linkEl.setAttribute('download', 'test-kit.aif');
+    linkEl.setAttribute('download', samples.kitName || 'field-kit.aif');
     linkEl.click();
 }
 
@@ -1900,6 +1963,7 @@ export const editor = {
     nudgeCrossings,
     padWithZero,
     buildOpKit,
+    buildXyKit,
     dropOpKey,
     opKeySelected,
     editOpSlice,

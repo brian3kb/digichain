@@ -764,7 +764,7 @@ export function encodeAif(audioData, sampleRate, numberOfChannels, opJsonData) {
     }
 
     return audioData.numberOfChannels ?
-      new DataView(audioBufferToAiff(audioData)) :
+      new DataView(audioBufferToAiff(audioData).buffer) :
       encodeAIFF(audioData, sampleRate, numberOfChannels);
 }
 

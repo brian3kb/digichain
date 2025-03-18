@@ -1,5 +1,5 @@
 {
-  "name": "DigiChain",
+  "name": "digichain",
   "description": "",
   "version": "1.4.16",
   "author": {
@@ -9,7 +9,8 @@
   "scripts": {
     "packjs": "rollup -c rollup.config.mjs",
     "mincss": "csso src/main.css --output latest/main.css",
-    "mincsslib": "csso src/lib.css --output latest/lib.css"
+    "mincsslib": "csso src/lib.css --output latest/lib.css",
+    "serve": "go run serve.go"
   },
   "devDependencies": {
     "csso": "^5.0.5",

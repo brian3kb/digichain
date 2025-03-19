@@ -357,6 +357,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     sliceOptions = configData.go.map(g => +g);
 
     document.body.dataset.targetSr = targetSR;
+    document.body.dataset.workingSr = workingSR;
 
     sliceOptions.forEach((option, index) => changeSliceOption(
       document.querySelector(`.master-slices .sel-${index}`), option,
@@ -664,6 +665,9 @@ function closeSplitOptions(event) {
 const showEditPanel = (event, id, view = 'sample') => {
     let data, folderOptions;
     if (view === 'opExport') {
+        if (document.body.dataset.workingSr !== '44100') {
+            return alert('The Working Sample Rate must be set to 44100 in the audio configuration to use OP-Export.');
+        }
         lastOpKit = files.filter(f => f.meta.checked);
         data = lastOpKit;
     } else {

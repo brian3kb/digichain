@@ -393,7 +393,7 @@ function buildOpKit() {
         type: 'audio/aiff'
     });
     linkEl.href = URL.createObjectURL(blob);
-    linkEl.setAttribute('download', samples.kitName || 'field-kit.aif');
+    linkEl.setAttribute('download', `${samples.kitName}.aif` || 'field-kit.aif');
     linkEl.click();
 }
 

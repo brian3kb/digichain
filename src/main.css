@@ -702,6 +702,11 @@ button:has(.join-count[data-join-count="0"]) {
     float: right;
     transform: translateY(-0.75rem);
 }
+body:not([data-working-sr="44100"]) .op-export-toggle {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    opacity: .05;
+}
 .toggle-seconds-per-file {
     margin: 0.7rem 0 0 0;
     color: #d79c4e;

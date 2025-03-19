@@ -30,7 +30,7 @@
     <script type="module" src="./main.js"></script>
 </head>
 
-<body data-target-sr="48000" ontouchstart="">
+<body data-target-sr="48000" data-working-sr="48000" ontouchstart="">
 
 <div id="alertNotServed" class="not-served-md pop-up">
     <div class="content" style="text-align: center;">
@@ -462,7 +462,7 @@
                         class="button-clear toggle-help-panel fade">?
                 </button>
 
-                <button title="OP-x Export" onclick="digichain.showEditPanel(event, false, 'opExport')" class="button-clear toggle-export-settings" style="line-height: 5rem;">OP</button>
+                <button title="OP-x Export" onclick="digichain.showEditPanel(event, false, 'opExport')" class="button-clear toggle-export-settings op-export-toggle" style="line-height: 5rem;">OP</button>
 
                 <button title="Seconds per file. Enabling will disable the slice grid options. Samples longer than seconds per file will not be included in the output chains."
                         onpointerdown="digichain.toggleSecondsPerFile(event)" class="button-clear toggle-seconds-per-file"><i

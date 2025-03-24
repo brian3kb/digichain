@@ -2,3 +2,6 @@
 .idea
 .idea/
 node_modules/
+digichain-go/
+digichain-executable/
+.editorconfig

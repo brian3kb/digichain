@@ -1,24 +1,3 @@
-/*!
-DigiChain v1.4.17-latest [ https://digichain.brianbar.net/ ]
-<https://github.com/brian3kb/digichain>
-
-(c) 2023 Brian Barnett <me [at] brianbar.net>
-[ @brian3kb ]
-Licensed under AGPLv3 <https://github.com/brian3kb/digichain/blob/main/LICENSE>
-
-DigiChain bundled resources:
-[MIT license] JSZip  : <https://github.com/Stuk/jszip/blob/main/LICENSE.markdown>
-[MIT license] Pako : <https://github.com/nodeca/pako/blob/main/LICENSE>
-[MIT license] Modified version of Audiobuffer-to-wav : <https://github.com/Experience-Monks/audiobuffer-to-wav/blob/master/LICENSE.md>
-[MIT license] Modified version of Audiobuffer-to-aiff : <https://github.com/hunjunior/audiobuffer-to-aiff/blob/master/LICENSE>
-
-Brian referenced the following during development:
-[BSD-3] MIDI-SDS, for how the Machine Drum stores audio data in syx files : <https://github.com/eh2k/uwedit/blob/master/core/MidiSDS.cpp> / <https://github.com/eh2k/uwedit/blob/master/LICENSE.txt>
-[Unlicense] OctaChainer, how to read/write .ot binary files correctly : <https://github.com/KaiDrange/OctaChainer/blob/master/otwriter.cpp> / <https://github.com/KaiDrange/OctaChainer/blob/master/License.txt>
-Tips and Tricks on drawing array buffers to the canvas element: <https://css-tricks.com/making-an-audio-waveform-visualizer-with-vanilla-javascript/>
-[MIT License] Basic beat detection : https://github.com/JMPerez/beats-audio-api/blob/gh-pages/script.js / http://joesul.li/van/beat-detection-using-web-audio/
-*/
-import './jszip.js';
 import {
     Resampler,
     audioBufferToWav,
@@ -37,6 +16,7 @@ import {
     setEditorConf,
     getUniqueName
 } from './editor.js';
+import './jszip.js';
 
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');

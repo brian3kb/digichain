@@ -86,10 +86,8 @@ let lastSelectedRow;
 let lastLastSelectedRow;
 let lastSliceFileImport = []; // [].enabledTracks = {t[x]: boolean}
 let lastOpKit = [];
-let workBuffer;
 let sliceGrid = 0;
 let sliceOptions = Array.from(DefaultSliceOptions);
-let lastSliceOptions = Array.from(sliceOptions);
 let keyboardShortcutsDisabled = false;
 let showSamplesList = true;
 let processedCount = 0;
@@ -128,7 +126,7 @@ metaFiles.getByFile = function(file) {
               p: file.meta.op1Json.pan[i],
               pab: file.meta.op1Json.pan_ab[i],
               st: file.meta.op1Json.pitch[i]
-          })).reduce((acc, curr, idx) => {
+          })).reduce((acc, curr) => {
             if (acc?.pos && acc.pos > -1) {
                 if (curr.endPoint > acc.pos) {
                     acc.result.push(curr);
@@ -674,7 +672,7 @@ const closeEditPanel = () => {
     const editPanelEl = document.getElementById('editPanel');
     if (editPanelEl.open) {
         editPanelEl.close();
-    };
+    }
     files.forEach(f => delete f.meta.editing);
     digichain.stopPlayFile(false, digichain.editor.getLastItem());
     if (document.querySelector('#opExportPanel.show')) {
@@ -1454,7 +1452,7 @@ function setCustomSecondsPerFileValue(targetEl, size, silent = false) {
         targetEl.textContent = newValue;
     }
     return +newValue;
-};
+}
 
 function toggleSecondsPerFile(event, value) {
     const toggleEl = document.querySelector('.toggle-seconds-per-file');
@@ -2541,7 +2539,7 @@ function sliceAction(event, id, params) {
             file.meta.otLoopStart = 0;
         } else {
             [...document.getElementById('splitOptions').querySelectorAll(`div.line`)].slice(+lineEl.dataset.idx).forEach(
-              (line, idx) => line.classList.add(file.meta.otLoop === 1 ? 'file-loop-on' : 'file-loop-pp')
+              line => line.classList.add(file.meta.otLoop === 1 ? 'file-loop-on' : 'file-loop-pp')
             );
             file.meta.otLoopStart = +params.startPoint;
         }
@@ -3053,7 +3051,7 @@ const splitSizeAction = (event, slices, threshold) => {
     sliceGroupEl.dataset.sliceCount = typeof slices === 'number'
       ? slices ?? 0
       : otMeta?.sliceCount ?? 0;
-    optionsEl.forEach((option, index) => {
+    optionsEl.forEach(option => {
         (+option.dataset.sel === +sliceGroupEl.dataset.sliceCount && !otMeta) ||
         (option.dataset.sel === 'ot' && otMeta && otMeta.name !==
           '---sliceToTransientCached---') ||
@@ -3184,7 +3182,7 @@ const sort = (event, by, prop = 'meta') => {
     renderList();
 };
 
-const selectedHeaderClick = (event, id) => {
+const selectedHeaderClick = event => {
     if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
         const allChecked = files.every(f => f.meta.checked);
         files.forEach(f => f.meta.checked = !allChecked);
@@ -4849,6 +4847,29 @@ function init() {
         clearModifiers();
     });
 
+    /* clear the indexedDb store completely on unload if there are no files,
+    this is more a Safari/WebKit issue where removed data hangs around even
+    after removal from the object store, this ensures it's fully removed on exit.
+
+    Close the active audio context.
+    */
+    addEventListener(
+      navigator.vendor.startsWith('Apple') ? 'unload' : 'beforeunload',
+      (event) => {
+          if (!files.length) {
+              clearIndexedDb();
+          }
+          audioCtx?.close();
+      }
+    );
+
+    /* disable the right-click context menu unless the shift-key is pressed.*/
+    window.addEventListener('contextmenu', (event) => {
+        if (!event.shiftKey) {
+            event.preventDefault();
+        }
+    });
+
     document.body.addEventListener('keydown', (event) => {
         const numberKeys = [
             'Digit1',
@@ -5031,10 +5052,6 @@ function init() {
         }
     });
 
-    window.addEventListener('beforeunload', (event) => {
-        audioCtx?.close();
-    });
-
     /*Actions based on restored local storage states*/
     pitchExports(pitchModifier, true);
     document.querySelector('.touch-buttons').classList[
@@ -5070,8 +5087,18 @@ function init() {
     document.getElementById('modifierKeyctrlKey').textContent= navigator.userAgent.indexOf('Mac') !== -1 ? 'CMD' : 'CTRL';
 }
 
-function configDb(skipLoad = false) {
-    if (!retainSessionState) {return;}
+async function clearIndexedDb() {
+    await db.close();
+    await indexedDB.deleteDatabase('digichain');
+    if (retainSessionState) {
+        configDb(true);
+    }
+}
+
+function configDb(skipLoad = false, callback) {
+    if (!retainSessionState) {
+        return clearIndexedDb();
+    }
     dbReq = indexedDB.open('digichain', 1);
     dbReq.onsuccess = () => {
         db = dbReq.result;
@@ -5079,6 +5106,9 @@ function configDb(skipLoad = false) {
         if (!skipLoad) {
             document.body.classList.add('loading');
             loadState();
+        }
+        if (callback) {
+            callback();
         }
     };
 
@@ -5088,7 +5118,13 @@ function configDb(skipLoad = false) {
     };
 }
 async function storeState() {
-    if (!retainSessionState) {return new Promise(resolve => resolve(true));}
+    if (!retainSessionState) {
+        return new Promise(resolve => resolve(true));
+    }
+    if (!db || !dbReq || dbReq.readyState !== 'done') {
+        configDb(true, () => storeState());
+        return new Promise(resolve => resolve(true));
+    }
     const transaction = db.transaction(['state'], 'readwrite', {durability: 'relaxed'});
     const objectStore = transaction.objectStore('state');
     importOrder = importOrder.filter(id => unsorted.includes(id));
@@ -5164,6 +5200,7 @@ function loadState(skipConfirm = false) {
 }
 function clearDbBuffers() {
     db.transaction(['state'], 'readwrite', {durability: 'relaxed'}).objectStore('state').clear();
+    clearIndexedDb();
 }
 
 function saveSession() {

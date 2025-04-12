@@ -590,7 +590,7 @@
     }
 
     if ('serviceWorker' in navigator && !location.origin.includes('localhost') && !location.origin.includes('127.0.0.1') &&
-      !location.pathname.includes('latest') && !location.origin.includes('latest') &&
+      !location.pathname.includes('latest') && !location.origin.includes('latest') && !window.__TAURI__ && !window.wails &&
       window.location === window.parent.location) {
         window.addEventListener('load', async () => {
             try {

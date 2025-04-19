@@ -21,7 +21,6 @@
   "display": "standalone",
   "cache": [
     "/index.html",
-    "/lib.css",
     "/main.css",
     "/main.js",
     "/editor.js",

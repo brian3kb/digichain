@@ -9,7 +9,6 @@
   "scripts": {
     "packjs": "rollup -c rollup.config.mjs",
     "mincss": "csso src/main.css --output latest/main.css",
-    "mincsslib": "csso src/lib.css --output latest/lib.css",
     "serve": "go run serve.go"
   },
   "devDependencies": {

@@ -3619,8 +3619,8 @@ const drawEmptyWaveforms = (_files) => {
         return setCountValues();
     }
     canvasElements.forEach((el, i) => {
-        if (!_files[i]) { return; }
-        if (_files[i].waveform) {
+        if (!_files[i] || skipMiniWaveformRender) { return; }
+        if (_files[i].waveform && _files[i].waveform.nodeName === 'CANVAS' && el.nodeName === 'CANVAS') {
             el.replaceWith(_files[i].waveform);
             if (_files[i].playHead && !_files[i].waveform.nextElementSibling) {
                 _files[i].waveform.parentElement.appendChild(
@@ -4914,6 +4914,7 @@ function init() {
                 event.preventDefault();
                 return;
             }
+            event.preventDefault();
             return closePopUps();
         }
 
@@ -4927,6 +4928,7 @@ function init() {
         if (event.shiftKey && (event.code === 'KeyK' || event.code === 'Slash')) {
             const shortcutsPanel = document.getElementById('keyboardShortcuts');
             shortcutsPanel.open ? shortcutsPanel.close() : shortcutsPanel.showModal();
+            event.preventDefault();
             return;
         }
 
@@ -4952,6 +4954,7 @@ function init() {
                     digichain.editor.sliceRemove(event);
                 }
             }
+            event.preventDefault();
             return;
         }
 
@@ -4959,6 +4962,7 @@ function init() {
             let id = +event.code.charAt(event.code.length - 1);
             const selected = files.filter(f => f.meta.checked);
             id = id === 0 ? 9 : (id - 1);
+            event.preventDefault();
             if (selected[id]) {
                 event.altKey ?
                   stopPlayFile(false, selected[id].meta.id) :
@@ -4970,9 +4974,11 @@ function init() {
         if (event.code === 'ArrowDown' &&
           (!lastSelectedRow || !lastSelectedRow.isConnected)) {
             lastSelectedRow = document.querySelector('#fileList tr');
+            event.preventDefault();
             return;
         }
         if (files.length && (event.code === 'KeyI')) {
+            event.preventDefault();
             return invertFileSelection();
         }
         if (files.length && (event.code === 'KeyE')) {
@@ -4990,20 +4996,24 @@ function init() {
                     }
                 }, 100);
             }
+            event.preventDefault();
             return lastSelectedRow
               ? showEditPanel(lastSelectedRow.dataset.id)
               : false;
         }
         if (event.code === 'KeyH' &&
           (event.shiftKey || modifierKeys.shiftKey)) {
+            event.preventDefault();
             toggleOptionsPanel();
         }
         if (event.code === 'KeyL' &&
           (event.shiftKey || modifierKeys.shiftKey)) {
+            event.preventDefault();
             toggleListVisibility();
         }
         if (event.code === 'KeyG' &&
           (event.shiftKey || modifierKeys.shiftKey)) {
+            event.preventDefault();
             document.body.classList.contains('grid-view')
               ? document.body.classList.remove('grid-view')
               : document.body.classList.add('grid-view');
@@ -5013,9 +5023,11 @@ function init() {
             if (event.code === 'ArrowDown' &&
               lastSelectedRow.nextElementSibling) {
                 if (!(event.shiftKey || modifierKeys.shiftKey)) {
+                    event.preventDefault();
                     return handleRowClick(event,
                       lastSelectedRow.nextElementSibling.dataset.id);
                 }
+                event.preventDefault();
                 let idx = getFileIndexById(lastSelectedRow.dataset.id);
                 let item = files.splice(idx, 1)[0];
                 files.splice(idx + 1, 0, item);
@@ -5028,6 +5040,7 @@ function init() {
                     return handleRowClick(event,
                       lastSelectedRow.previousElementSibling.dataset.id);
                 }
+                event.preventDefault();
                 let idx = getFileIndexById(lastSelectedRow.dataset.id);
                 let item = files.splice(idx, 1)[0];
                 files.splice(idx - 1, 0, item);
@@ -5035,16 +5048,20 @@ function init() {
                 lastSelectedRow.scrollIntoViewIfNeeded(true);
                 setCountValues();
             } else if (event.code === 'Enter') {
+                event.preventDefault();
                 toggleCheck(event, lastSelectedRow.dataset.id);
             } else if (event.code === 'KeyP') {
+                event.preventDefault();
                 event.altKey
                   ? stopPlayFile(false, lastSelectedRow.dataset.id)
                   : playFile(event, lastSelectedRow.dataset.id);
             } else if (masterChannels === 1 &&
               (event.code === 'KeyL' || event.code === 'KeyR' || event.code ===
                 'KeyS' || event.code === 'KeyD')) {
+                event.preventDefault();
                 const item = getFileById(lastSelectedRow.dataset.id);
                 if (item.meta.channel) {
+                    event.preventDefault();
                     changeChannel(event, lastSelectedRow.dataset.id,
                       event.code.replace('Key', ''));
                 }

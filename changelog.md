@@ -10,6 +10,9 @@ latest
  - Fixed bug in sanitize name selected action.
  - Show the length in seconds of the sample being edited on the editor.
  - Support importing samples and slices from Renoise Instrument files (.xrni) in addition to sample data from Renoise Project files (.xrnx).
+ - Prevent mini-waveform render caching when skip render is enabled.
+ - Prevent default event bubbling on keydown events for handled keyboard shortcuts, stops 'funk' noise on macOS for valid shortcuts.
+ - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

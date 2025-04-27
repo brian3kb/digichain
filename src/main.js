@@ -1,3 +1,4 @@
+import {settings} from './settings.js';
 import {
     Resampler,
     audioBufferToWav,
@@ -6,7 +7,7 @@ import {
     joinToMono,
     joinToStereo,
     bufferToFloat32Array,
-    getSupportedSampleRates, detectTempo, dcDialog
+    detectTempo, dcDialog
 } from './resources.js';
 import {
     editor,
@@ -30,49 +31,7 @@ let targetSR = 48000; /*The target sample rate, what rendered files will output 
 let masterBitDepth = 16;
 let masterChannels = 1;
 let targetContainer = 'w';
-let supportedSampleRates = JSON.parse(localStorage.getItem('supportedSampleRates')) ??
-  getSupportedSampleRates();
-let lastUsedAudioConfig = localStorage.getItem('lastUsedAudioConfig') ??
-  '48000m16w';
-let restoreLastUsedAudioConfig = JSON.parse(
-  localStorage.getItem('restoreLastUsedAudioConfig')) ?? true;
-let retainSessionState = JSON.parse(
-    localStorage.getItem('retainSessionState')) ?? true;
-let pitchModifier = JSON.parse(localStorage.getItem('pitchModifier')) ?? 1;
-let reverseEvenSamplesInChains = JSON.parse(
-  localStorage.getItem('reverseEvenSamplesInChains')) ?? false;
-let playWithPopMarker = JSON.parse(
-  localStorage.getItem('playWithPopMarker')) ?? 0;
-let zipDownloads = JSON.parse(localStorage.getItem('zipDownloads')) ?? true;
 let embedSliceData = false;
-/*let embedSliceData = JSON.parse(localStorage.getItem('embedSliceData')) ??
-  false;*/
-let embedCuePoints = JSON.parse(localStorage.getItem('embedCuePoints')) ??
-  true;
-let embedOrslData = JSON.parse(localStorage.getItem('embedOrslData')) ??
-  false;
-let showTouchModifierKeys = JSON.parse(
-  localStorage.getItem('showTouchModifierKeys')) ?? false;
-let exportWithOtFile = JSON.parse(
-  localStorage.getItem('exportWithOtFile')) ?? false;
-let darkModeTheme = JSON.parse(
-  localStorage.getItem('darkModeTheme')) ?? true;
-let normalizeContrast = JSON.parse(
-  localStorage.getItem('normalizeContrast')) ?? false;
-let importFileLimit = JSON.parse(
-  localStorage.getItem('importFileLimit')) ?? true;
-let skipMiniWaveformRender = JSON.parse(
-  localStorage.getItem('skipMiniWaveformRender')) ?? false;
-let attemptToFindCrossingPoint = JSON.parse(
-  localStorage.getItem('attemptToFindCrossingPoint')) ?? false;
-let deClick = JSON.parse(
-  localStorage.getItem('deClick')) ?? 0.4;
-let treatDualMonoStereoAsMono = JSON.parse(
-  localStorage.getItem('treatDualMonoStereoAsMono')) ?? true;
-let shiftClickForFileDownload = JSON.parse(
-  localStorage.getItem('shiftClickForFileDownload')) ?? false;
-let showWelcomeModalOnLaunchIfListEmpty = JSON.parse(
-  localStorage.getItem('showWelcomeModalOnLaunchIfListEmpty')) ?? true;
 let secondsPerFile = 0;
 let audioCtx;
 let files = [];
@@ -278,8 +237,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 
     let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value || localStorage.getItem('workingSampleRate') || 48000);
 
-    /*toggleSetting('embedSliceData', false, true);*/
-    toggleSetting('embedCuePoints', true, true);
+    /*toggleSetting('embedCuePoints', true, true);*/
 
     if (audioValuesFromCommonSelectEl) {
         toggleSetting('exportWithOtFile', 'ot' === commonSelectDevice, true);
@@ -291,14 +249,14 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
         configData.bd = 16;
     }
 
-    if (configData.sr < supportedSampleRates[0] || configData.sr > supportedSampleRates[1]) {
+    if (configData.sr < settings.supportedSampleRates[0] || configData.sr > settings.supportedSampleRates[1]) {
         alert(
-          `ERROR: The sample rate ${configData.sr}Hz is not supported by your browser.\n\nPlease select a sample rate between ${supportedSampleRates[0]}Hz and ${supportedSampleRates[1]}Hz`);
+          `ERROR: The sample rate ${configData.sr}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`);
         return false;
     }
-    if (workingSR < supportedSampleRates[0] || workingSR > supportedSampleRates[1]) {
+    if (workingSR < settings.supportedSampleRates[0] || workingSR > settings.supportedSampleRates[1]) {
         alert(
-          `ERROR: The sample rate ${workingSR}Hz is not supported by your browser.\n\nPlease select a sample rate between ${supportedSampleRates[0]}Hz and ${supportedSampleRates[1]}Hz`);
+          `ERROR: The sample rate ${workingSR}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`);
         return false;
     }
 
@@ -317,10 +275,8 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     document.body.classList.add('loading');
     const selectionString = `${configData.f === 'a' ? 'AIF ' : ''}${configData.sr/1000}kHz/${configData.bd}BIT ${configData.c === 'm' ? 'MONO' : 'STEREO'}`;
     configOptionsEl.value = selectionString;
-
     const selection = `${configData.sr}${configData.c}${configData.bd}${configData.f}${configData.go.join('-')}`;
-    lastUsedAudioConfig = selection;
-    localStorage.setItem('lastUsedAudioConfig', selection);
+    settings.lastUsedAudioConfig = selection;
     localStorage.setItem('workingSampleRate', `${workingSR}`);
 
     let resampleState = false;
@@ -686,7 +642,7 @@ function isOpExportPanelOpen() {
 }
 
 function checkShouldExportOtFile(skipExportWithCheck = false) {
-    return (exportWithOtFile || skipExportWithCheck) && targetSR === 44100 &&
+    return (settings.exportWithOtFile || skipExportWithCheck) && targetSR === 44100 &&
       targetContainer === 'w';
 }
 
@@ -702,31 +658,31 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
 
     wav = audioBufferToWav(
       file.buffer, {...file.meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
-      masterChannels, deClick,
-      (renderAsAif && pitchModifier === 1), pitchModifier, embedSliceData,
-      embedCuePoints, embedOrslData
+      masterChannels, settings.deClick,
+      (renderAsAif && settings.pitchModifier === 1), settings.pitchModifier, embedSliceData,
+      settings.embedCuePoints, settings.embedOrslData
     );
     wavSR = wav.sampleRate;
     wav = wav.buffer;
     blob = new window.Blob([new DataView(wav)], {
-        type: renderAsAif && pitchModifier === 1 ? 'audio/aiff' : 'audio/wav'
+        type: renderAsAif && settings.pitchModifier === 1 ? 'audio/aiff' : 'audio/wav'
     });
-    if (pitchModifier !== 1) {
+    if (settings.pitchModifier !== 1) {
         let linkedFile = await fetch(URL.createObjectURL(blob));
         let arrBuffer = await linkedFile.arrayBuffer();
         let pitchedBuffer = await audioCtx.decodeAudioData(arrBuffer);
         let meta = {...file.meta};
         meta.slices = meta.slices.map(slice => ({
             ...slice,
-            n: slice.n, s: Math.round(slice.s / pitchModifier),
-            e: Math.round(slice.e / pitchModifier),
+            n: slice.n, s: Math.round(slice.s / settings.pitchModifier),
+            e: Math.round(slice.e / settings.pitchModifier),
             l: (!slice.l || slice.l) === -1 ? -1 : Math.round(
-              slice.l / pitchModifier)
+              slice.l / settings.pitchModifier)
         }));
         wav = audioBufferToWav(
           pitchedBuffer, {...meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
-          masterChannels, deClick,
-          renderAsAif, 1, embedSliceData, embedCuePoints, embedOrslData
+          masterChannels, settings.deClick,
+          renderAsAif, 1, embedSliceData, settings.embedCuePoints, settings.embedOrslData
         );
         wavSR = wav.sampleRate;
         wav = wav.buffer;
@@ -748,7 +704,7 @@ async function downloadAll(event) {
     const el = document.getElementById('getJoined');
     const renderAsAif = targetContainer === 'a';
     if (_files.length === 0) { return; }
-    if (_files.length > 5 && !zipDownloads) {
+    if (_files.length > 5 && !settings.zipDownloads) {
         const userReadyForTheCommitment = await dcDialog('confirm',
           `You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`, {
             kind: 'info', okLabel: 'Absolutely'
@@ -758,7 +714,7 @@ async function downloadAll(event) {
     document.getElementById('loadingText').textContent = 'Processing';
     document.body.classList.add('loading');
 
-    if (zipDownloads && _files.length > 1) {
+    if (settings.zipDownloads && _files.length > 1) {
         const zip = new JSZip();
         for (const file of _files) {
             const wav = await setWavLink(file, el, renderAsAif, true);
@@ -839,7 +795,7 @@ async function downloadFile(id, fireLink = false, event = {}) {
     await setWavLink(file, el, renderAsAif, true);
     let otFile = await createAndSetOtFileLink(
         file.meta.slices ?? [], file, file.file.name, metaEl);
-    if (fireLink && (!shiftClickForFileDownload || (shiftClickForFileDownload && event.shiftKey))) {
+    if (fireLink && (!settings.shiftClickForFileDownload || (settings.shiftClickForFileDownload && event.shiftKey))) {
         el.click();
         if (otFile) {metaEl.click(); }
     }
@@ -1306,7 +1262,7 @@ function showInfo() {
 }
 
 function showWelcome() {
-    if (showWelcomeModalOnLaunchIfListEmpty && unsorted.length === 0) {
+    if (settings.showWelcomeModalOnLaunchIfListEmpty && unsorted.length === 0) {
         const welcomeModalEl = document.querySelector('#welcomePanelMd');
         const tipEl = document.querySelector('#tipElement');
         const showTipNumber = Math.floor(Math.random() * tipEl.children.length + 1);
@@ -1325,11 +1281,10 @@ function pitchExports(value, silent) {
         8: 3
     };
     if ([.25, .5, 1, 2, 4, 8].includes(+value)) {
-        pitchModifier = +value;
-        localStorage.setItem('pitchModifier', pitchModifier);
-        infoEl.textContent = pitchModifier === 1
+        settings.pitchModifier = +value;
+        infoEl.textContent = settings.pitchModifier === 1
           ? ''
-          : `All exported samples will be pitched up ${octaves[pitchModifier]} octave${pitchModifier >
+          : `All exported samples will be pitched up ${octaves[settings.pitchModifier]} octave${settings.pitchModifier >
           2 ? 's' : ''}`;
         if (silent) { return; }
         setCountValues();
@@ -1339,102 +1294,41 @@ function pitchExports(value, silent) {
 }
 
 function toggleSetting(param, value, suppressRerender) {
-    if (param === 'zipDl') {
-        zipDownloads = value ?? !zipDownloads;
-        localStorage.setItem('zipDownloads', zipDownloads);
+    if (value === undefined || typeof value === 'boolean') {
+        settings[param] = !settings[param]
     }
-    if (param === 'treatDualMonoStereoAsMono') {
-        treatDualMonoStereoAsMono = value ?? !treatDualMonoStereoAsMono;
-        localStorage.setItem('treatDualMonoStereoAsMono',
-          treatDualMonoStereoAsMono);
-    }
-    if (param === 'shiftClickForFileDownload') {
-        shiftClickForFileDownload = value ?? !shiftClickForFileDownload;
-        localStorage.setItem('shiftClickForFileDownload',
-          shiftClickForFileDownload);
-    }
-    if (param === 'showWelcomeModalOnLaunchIfListEmpty') {
-        showWelcomeModalOnLaunchIfListEmpty = value ?? !showWelcomeModalOnLaunchIfListEmpty;
-        localStorage.setItem('showWelcomeModalOnLaunchIfListEmpty',
-          showWelcomeModalOnLaunchIfListEmpty);
-    }
-    if (param === 'embedSliceData') {
-        embedSliceData = value ?? !embedSliceData;
-        localStorage.setItem('embedSliceData', embedSliceData);
-    }
-    if (param === 'embedCuePoints') {
-        embedCuePoints = value ?? !embedCuePoints;
-        localStorage.setItem('embedCuePoints', embedCuePoints);
-    }
-    if (param === 'embedOrslData') {
-        embedOrslData = value ?? !embedOrslData;
-        localStorage.setItem('embedOrslData', embedOrslData);
-    }
-    if (param === 'exportWithOtFile') {
-        exportWithOtFile = value ?? !exportWithOtFile;
-        localStorage.setItem('exportWithOtFile', exportWithOtFile);
-    }
-    if (param === 'importFileLimit') {
-        importFileLimit = value ?? !importFileLimit;
-        localStorage.setItem('importFileLimit', importFileLimit);
-    }
-    if (param === 'skipMiniWaveformRender') {
-        skipMiniWaveformRender = value ?? !skipMiniWaveformRender;
-        localStorage.setItem('skipMiniWaveformRender', skipMiniWaveformRender);
-    }
-    if (param === 'reverseEvenSamplesInChains') {
-        reverseEvenSamplesInChains = value ?? !reverseEvenSamplesInChains;
-        localStorage.setItem('reverseEvenSamplesInChains', reverseEvenSamplesInChains);
-    }
-    if (param === 'attemptToFindCrossingPoint') {
-        attemptToFindCrossingPoint = value ?? !attemptToFindCrossingPoint;
-        localStorage.setItem('attemptToFindCrossingPoint',
-          attemptToFindCrossingPoint);
-    }
+
     if (param === 'darkModeTheme') {
-        darkModeTheme = value ?? !darkModeTheme;
-        localStorage.setItem('darkModeTheme', darkModeTheme);
         document.body.classList[
-          darkModeTheme ? 'remove' : 'add'
+          settings.darkModeTheme ? 'remove' : 'add'
           ]('light');
     }
     if (param === 'normalizeContrast') {
-        normalizeContrast = value ?? !normalizeContrast;
-        localStorage.setItem('normalizeContrast', normalizeContrast);
         document.body.classList[
-          normalizeContrast ? 'add' : 'remove'
+          settings.normalizeContrast ? 'add' : 'remove'
           ]('normalize-contrast');
     }
-    if (param === 'restoreLastUsedAudioConfig') {
-        restoreLastUsedAudioConfig = value ?? !restoreLastUsedAudioConfig;
-        localStorage.setItem('restoreLastUsedAudioConfig',
-          restoreLastUsedAudioConfig);
-    }
     if (param === 'retainSessionState') {
-        retainSessionState = value ?? !retainSessionState;
-        localStorage.setItem('retainSessionState',
-            retainSessionState);
-        if (retainSessionState) {
+        if (settings.retainSessionState) {
             configDb(true);
         } else {
             clearDbBuffers();
         }
     }
     if (param === 'showTouchModifierKeys') {
-        showTouchModifierKeys = value ?? !showTouchModifierKeys;
-        localStorage.setItem('showTouchModifierKeys', showTouchModifierKeys);
         document.querySelector('.touch-buttons').classList[
-          showTouchModifierKeys ? 'remove' : 'add'
+          settings.showTouchModifierKeys ? 'remove' : 'add'
           ]('hidden');
     }
     if (param === 'playWithPopMarker') {
-        playWithPopMarker = value;
+        settings.playWithPopMarker = value;
         files.forEach(f => f.meta.peak = undefined);
-        localStorage.setItem('playWithPopMarker', playWithPopMarker);
     }
     if (param === 'deClick') {
-        deClick = value;
-        localStorage.setItem('deClick', deClick);
+        settings.deClick = value;
+    }
+    if (param === 'skipMiniWaveformRender') {
+        renderList();
     }
     if (suppressRerender) { return; }
     showExportSettingsPanel();
@@ -1548,82 +1442,82 @@ function showExportSettingsPanel(page = 'settings') {
   <tbody>
   <tr>
   <td><span>Pitch up exported files by octave &nbsp;&nbsp;&nbsp;</span></td>
-  <td>    <button onpointerdown="digichain.pitchExports(1)" class="check ${pitchModifier ===
+  <td>    <button onpointerdown="digichain.pitchExports(1)" class="check ${settings.pitchModifier ===
         1 ? 'button' : 'button-outline'}">OFF</button>
-  <button onpointerdown="digichain.pitchExports(2)" class="check ${pitchModifier ===
+  <button onpointerdown="digichain.pitchExports(2)" class="check ${settings.pitchModifier ===
         2 ? 'button' : 'button-outline'}">1</button>
-  <button onpointerdown="digichain.pitchExports(4)" class="check ${pitchModifier ===
+  <button onpointerdown="digichain.pitchExports(4)" class="check ${settings.pitchModifier ===
         4 ? 'button' : 'button-outline'}">2</button>
-  <button onpointerdown="digichain.pitchExports(8)" class="check ${pitchModifier ===
+  <button onpointerdown="digichain.pitchExports(8)" class="check ${settings.pitchModifier ===
         8 ? 'button' : 'button-outline'}">3</button><br></td>
 </tr>
 <tr>
 <td><span>Reverse all even samples in a chain? &nbsp;&nbsp;&nbsp;</span></td>
 <td><button onpointerdown="digichain.toggleSetting('reverseEvenSamplesInChains')"
  title="When enabled, all even samples in chains will be reversed (back-to-back mode)."
- class="check ${reverseEvenSamplesInChains
+ class="check ${settings.reverseEvenSamplesInChains
           ? 'button'
-          : 'button-outline'}">${reverseEvenSamplesInChains ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.reverseEvenSamplesInChains ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Restore the last used Sample Rate/Bit Depth/Channel? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('restoreLastUsedAudioConfig')" class="check ${restoreLastUsedAudioConfig
+<td><button onpointerdown="digichain.toggleSetting('restoreLastUsedAudioConfig')" class="check ${settings.restoreLastUsedAudioConfig
           ? 'button'
-          : 'button-outline'}">${restoreLastUsedAudioConfig ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.restoreLastUsedAudioConfig ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Retain session data between browser refreshes? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('retainSessionState')" class="check ${retainSessionState
+<td><button onpointerdown="digichain.toggleSetting('retainSessionState')" class="check ${settings.retainSessionState
           ? 'button'
-          : 'button-outline'}">${retainSessionState ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.retainSessionState ? 'YES' : 'NO'}</button></td>
 </tr>
   <tr>
   <td><span>Play pop markers when playing back samples?&nbsp;&nbsp;&nbsp;</span></td>
   <td>
-  <button onpointerdown="digichain.toggleSetting('playWithPopMarker', 0)" class="check ${playWithPopMarker ===
+  <button onpointerdown="digichain.toggleSetting('playWithPopMarker', 0)" class="check ${settings.playWithPopMarker ===
         0 ? 'button' : 'button-outline'}">OFF</button>
-  <button title="0db prevents DT normalization." onpointerdown="digichain.toggleSetting('playWithPopMarker', 1)" class="check ${playWithPopMarker ===
+  <button title="0db prevents DT normalization." onpointerdown="digichain.toggleSetting('playWithPopMarker', 1)" class="check ${settings.playWithPopMarker ===
         1 ? 'button' : 'button-outline'}">0db</button>
-  <button title="Peak sets pop to loudest sample peak." onpointerdown="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${playWithPopMarker ===
+  <button title="Peak sets pop to loudest sample peak." onpointerdown="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${settings.playWithPopMarker ===
         2 ? 'button' : 'button-outline'}">Peak</button>
   </td>
   </tr>
   <td><span>Try to match start/end sample when cropping/truncating?&nbsp;&nbsp;&nbsp;</span></td>
 <td><button title="Could give shorter length samples than specified but can help
-   reduce clicks on looping cropped/truncated samples" onpointerdown="digichain.toggleSetting('attemptToFindCrossingPoint')" class="check ${attemptToFindCrossingPoint
+   reduce clicks on looping cropped/truncated samples" onpointerdown="digichain.toggleSetting('attemptToFindCrossingPoint')" class="check ${settings.attemptToFindCrossingPoint
           ? 'button'
-          : 'button-outline'}">${attemptToFindCrossingPoint ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.attemptToFindCrossingPoint ? 'YES' : 'NO'}</button></td>
 </tr>
     <tr>
   <td><span>De-click exported samples?<br>Helps when importing non-wav files of a different<br>sample rate than the export file, or small buffered audio interfaces. &nbsp;&nbsp;&nbsp;</span></td>
   <td>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0)" class="check ${+settings.deClick ===
         0 ? 'button' : 'button-outline'}">OFF</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.1)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.1)" class="check ${+settings.deClick ===
         0.1 ? 'button' : 'button-outline'}">&gt;10%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.2)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.2)" class="check ${+settings.deClick ===
         0.2 ? 'button' : 'button-outline'}">&gt;20%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.3)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.3)" class="check ${+settings.deClick ===
         0.3 ? 'button' : 'button-outline'}">&gt;30%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.4)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.4)" class="check ${+settings.deClick ===
         0.4 ? 'button' : 'button-outline'}">&gt;40%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.5)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.5)" class="check ${+settings.deClick ===
         0.5 ? 'button' : 'button-outline'}">&gt;50%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.75)" class="check ${+deClick ===
+  <button onpointerdown="digichain.toggleSetting('deClick', 0.75)" class="check ${+settings.deClick ===
         0.75 ? 'button' : 'button-outline'}">&gt;75%</button>
   </td>
   </tr>
 <tr>
 <td><span>Download multi-file/joined downloads as one zip file? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('zipDl')" class="check ${zipDownloads
+<td><button onpointerdown="digichain.toggleSetting('zipDownloads')" class="check ${settings.zipDownloads
           ? 'button'
-          : 'button-outline'}">${zipDownloads ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.zipDownloads ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>When exporting stereo, export dual mono files as mono? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Often, stereo files are just the same mono audio data on both channels, if this is the case, export the file as mono." onpointerdown="digichain.toggleSetting('treatDualMonoStereoAsMono')" class="check ${treatDualMonoStereoAsMono
+<td><button title="Often, stereo files are just the same mono audio data on both channels, if this is the case, export the file as mono." onpointerdown="digichain.toggleSetting('treatDualMonoStereoAsMono')" class="check ${settings.treatDualMonoStereoAsMono
           ? 'button'
-          : 'button-outline'}">${treatDualMonoStereoAsMono ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.treatDualMonoStereoAsMono ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr style="display: none;">
 <td><span>Embed slice information in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
@@ -1633,64 +1527,64 @@ function showExportSettingsPanel(page = 'settings') {
 </tr>
 <tr>
 <td><span>Embed slice information as CUE points in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Embed slice data as wav CUE point markers, compatible with DirtyWave M8 slice sampler. The end points will extend to the start point of the next sample, or the end of the wav file for the last slice." onpointerdown="digichain.toggleSetting('embedCuePoints')" class="check ${embedCuePoints
+<td><button title="Embed slice data as wav CUE point markers, compatible with DirtyWave M8 slice sampler. The end points will extend to the start point of the next sample, or the end of the wav file for the last slice." onpointerdown="digichain.toggleSetting('embedCuePoints')" class="check ${settings.embedCuePoints
           ? 'button'
-          : 'button-outline'}">${embedCuePoints ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.embedCuePoints ? 'YES' : 'NO'}</button></td>
 </tr>
 <!--<tr>
 <td><span>Embed slice information as Lofi-12 XT points in exported wav files?<br>(Applied only to 12/24 kHz wav exports) &nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Embed slice data in wav file header in the Sonicware custom format for the Lofi-12 XT sampler." onpointerdown="digichain.toggleSetting('embedOrslData')" class="check ${embedOrslData
+<td><button title="Embed slice data in wav file header in the Sonicware custom format for the Lofi-12 XT sampler." onpointerdown="digichain.toggleSetting('embedOrslData')" class="check ${settings.embedOrslData
           ? 'button'
-          : 'button-outline'}">${embedOrslData ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.embedOrslData ? 'YES' : 'NO'}</button></td>
 </tr>-->
 <tr>
 <td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 kHz 16/24 [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('exportWithOtFile')" class="check ${exportWithOtFile
+<td><button onpointerdown="digichain.toggleSetting('exportWithOtFile')" class="check ${settings.exportWithOtFile
           ? 'button'
-          : 'button-outline'}">${exportWithOtFile ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.exportWithOtFile ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Limit imports to maximum of 750 files?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts." onpointerdown="digichain.toggleSetting('importFileLimit')" class="check ${importFileLimit
+<td><button title="Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts." onpointerdown="digichain.toggleSetting('importFileLimit')" class="check ${settings.importFileLimit
           ? 'button'
-          : 'button-outline'}">${importFileLimit ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.importFileLimit ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Skip rendering the mini audio waveform in the list?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="When processing large lists of files, skiping the renderings of the waveform can improve the responsiveness of the browse as no canvas element per row will be rendered." onpointerdown="digichain.toggleSetting('skipMiniWaveformRender')" class="check ${skipMiniWaveformRender
+<td><button title="When processing large lists of files, skiping the renderings of the waveform can improve the responsiveness of the browse as no canvas element per row will be rendered." onpointerdown="digichain.toggleSetting('skipMiniWaveformRender')" class="check ${settings.skipMiniWaveformRender
           ? 'button'
-          : 'button-outline'}">${skipMiniWaveformRender ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.skipMiniWaveformRender ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Show Shift/Ctrl modifier touch buttons?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('showTouchModifierKeys')" class="check ${showTouchModifierKeys
+<td><button onpointerdown="digichain.toggleSetting('showTouchModifierKeys')" class="check ${settings.showTouchModifierKeys
           ? 'button'
-          : 'button-outline'}">${showTouchModifierKeys ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.showTouchModifierKeys ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Shift+Click to download single files from the list?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('shiftClickForFileDownload')" class="check ${shiftClickForFileDownload
+<td><button onpointerdown="digichain.toggleSetting('shiftClickForFileDownload')" class="check ${settings.shiftClickForFileDownload
           ? 'button'
-          : 'button-outline'}">${shiftClickForFileDownload ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.shiftClickForFileDownload ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Use Dark theme as the default? (No = Light theme)&nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('darkModeTheme')" class="check ${darkModeTheme
+<td><button onpointerdown="digichain.toggleSetting('darkModeTheme')" class="check ${settings.darkModeTheme
           ? 'button'
-          : 'button-outline'}">${darkModeTheme ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.darkModeTheme ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Normalize text/waveform color contrast? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('normalizeContrast')" class="check ${normalizeContrast
+<td><button onpointerdown="digichain.toggleSetting('normalizeContrast')" class="check ${settings.normalizeContrast
           ? 'button'
-          : 'button-outline'}">${normalizeContrast ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.normalizeContrast ? 'YES' : 'NO'}</button></td>
 </tr>
 <tr>
 <td><span>Show the welcome panel at launch? &nbsp;&nbsp;&nbsp;</span></td>
 <td><button title="The welcome panel will show at launch if the list is empty."
-          onpointerdown="digichain.toggleSetting('showWelcomeModalOnLaunchIfListEmpty')" class="check ${showWelcomeModalOnLaunchIfListEmpty
+          onpointerdown="digichain.toggleSetting('showWelcomeModalOnLaunchIfListEmpty')" class="check ${settings.showWelcomeModalOnLaunchIfListEmpty
           ? 'button'
-          : 'button-outline'}">${showWelcomeModalOnLaunchIfListEmpty ? 'YES' : 'NO'}</button></td>
+          : 'button-outline'}">${settings.showWelcomeModalOnLaunchIfListEmpty ? 'YES' : 'NO'}</button></td>
 </tr>
 </tbody>
 </table>
@@ -1713,12 +1607,12 @@ function showExportSettingsPanel(page = 'settings') {
       <td style="border: none;"><span>Working Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
           <div class="input-set" id="settingsWorkingSampleRateGroup" style="display: flex; align-items: flex-start;">
-              <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz"
+              <input type="number" placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}Hz"
               onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
               onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
               id="settingsWorkingSampleRate" value="${masterSR}" data-sample-rate="${masterSR}" list="commonSR"
-              data-placeholder="Sample Rate between ${supportedSampleRates.toString()}"
-              min="${supportedSampleRates[0]}" max="${supportedSampleRates[1]}">
+              data-placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}"
+              min="${settings.supportedSampleRates[0]}" max="${settings.supportedSampleRates[1]}">
               <datalist id="commonSR">
                 ${[12000, 24000, 32000, 44100, 48000].map(
           v => '<option value="' + v + '">').join('')}
@@ -1732,13 +1626,13 @@ function showExportSettingsPanel(page = 'settings') {
       <td style="border: none;"><span>Target Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
       <td style="border: none;">
           <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup" style="display: flex; align-items: flex-start;">
-              <input type="number" placeholder="Sample Rate between ${supportedSampleRates.toString()}Hz"
+              <input type="number" placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}Hz"
               ${targetContainer === 'a' ? 'disabled="disabled"' : ''}
               onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
               onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
               id="settingsSampleRate" value="${targetSR}" data-sample-rate="${targetSR}" list="commonSR"
-              data-placeholder="Sample Rate between ${supportedSampleRates.toString()}"
-              min="${supportedSampleRates[0]}" max="${supportedSampleRates[1]}">
+              data-placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}"
+              min="${settings.supportedSampleRates[0]}" max="${settings.supportedSampleRates[1]}">
               <datalist id="commonSR">
                 ${[12000, 24000, 32000, 44100, 48000].map(
                   v => '<option value="' + v + '">').join('')}
@@ -2105,7 +1999,7 @@ async function joinAll(
     if (toInternal ||
       (event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
     try {
-        if (zipDownloads && !toInternal && files.filter(
+        if (settings.zipDownloads && !toInternal && files.filter(
           f => f.meta.checked).length > 1) { zip = zip || new JSZip(); }
 
         let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(
@@ -2141,7 +2035,7 @@ async function joinAll(
             const processing = _files.reduce((a, f) => {
                 if (
                   (a.duration + +f.meta.duration <=
-                    (secondsPerFile * pitchModifier)) &&
+                    (secondsPerFile * settings.pitchModifier)) &&
                   (a.processed.length < maxChainLength)) {
                     a.duration = a.duration + +f.meta.duration;
                     a.totalLength = a.totalLength + +f.meta.length;
@@ -2203,10 +2097,10 @@ async function joinAll(
         }
 
         if (masterChannels === 1) {
-            joinToMono(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains);
+            joinToMono(audioArrayBuffer, _files, largest, pad, settings.reverseEvenSamplesInChains);
         }
         if (masterChannels === 2) {
-            joinToStereo(audioArrayBuffer, _files, largest, pad, reverseEvenSamplesInChains);
+            joinToStereo(audioArrayBuffer, _files, largest, pad, settings.reverseEvenSamplesInChains);
         }
 
         const joinedEl = document.getElementById('getJoined');
@@ -2436,13 +2330,13 @@ const playFile = (event, id, loop, start, end) => {
       getMonoFloat32ArrayFromBuffer(file.buffer, file.meta.channel, true) :
       file.buffer;
 
-    if (playWithPopMarker && !event?.editor) {
+    if (settings.playWithPopMarker && !event?.editor) {
         const popAudio = audioCtx.createBuffer(1, 8, masterSR);
         const popBuffer = audioCtx.createBuffer(buffer.numberOfChannels,
           buffer.length + (popAudio.length * 2), masterSR);
         const popData = popAudio.getChannelData(0);
         let peak;
-        if (playWithPopMarker === 2) {
+        if (settings.playWithPopMarker === 2) {
             peak = file.meta.peak ?? editor.normalize(event, file, false, true);
         } else {
             peak = 1;
@@ -3401,7 +3295,7 @@ const setCountValues = () => {
             while (_items.length > 0) {
                 progress = _items.reduce((a, f) => {
                     if (a.duration + +f.meta.duration <=
-                      (secondsPerFile * pitchModifier) && a.processed.length <
+                      (secondsPerFile * settings.pitchModifier) && a.processed.length <
                       maxChainLength) {
                         a.duration = a.duration + +f.meta.duration;
                         a.processed.push(f);
@@ -3443,7 +3337,7 @@ function reRenderListRow(id) {
 }
 
 const getWaveformElementContent = f => {
-    if (skipMiniWaveformRender) {
+    if (settings.skipMiniWaveformRender) {
         return `<i onpointerdown="digichain.playFile(event, '${f.meta.id}')" class="gg-play-button waveform-btn ${f.meta.playing
           ? 'playing'
           : ''}"></i>`;
@@ -3486,7 +3380,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
         '<div>'
       }
           <span class="file-path">${f.file.path}</span>
-          <a title="${shiftClickForFileDownload ? 'Shift+Click to d' : 'D'}ownload processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true, event)">${getNiceFileName(
+          <a title="${settings.shiftClickForFileDownload ? 'Shift+Click to d' : 'D'}ownload processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true, event)">${getNiceFileName(
         f.file.name)}</a>
           ${f.meta.dupeOf ? ' d' : ''}
           ${f.meta.editOf ? ' e' : ''}
@@ -3619,7 +3513,7 @@ const drawEmptyWaveforms = (_files) => {
         return setCountValues();
     }
     canvasElements.forEach((el, i) => {
-        if (!_files[i] || skipMiniWaveformRender) { return; }
+        if (!_files[i] || settings.skipMiniWaveformRender) { return; }
         if (_files[i].waveform && _files[i].waveform.nodeName === 'CANVAS' && el.nodeName === 'CANVAS') {
             el.replaceWith(_files[i].waveform);
             if (_files[i].playHead && !_files[i].waveform.nextElementSibling) {
@@ -4466,7 +4360,7 @@ const consumeFileInput = (event, inputFiles) => {
             inputFiles[inputFiles.findIndex(f => f === archive)] = false;
             zip.loadAsync(archive).then(() => {
                 const fileCount = Object.keys(zip.files).length;
-                const supportedFileCount = importFileLimit &&
+                const supportedFileCount = settings.importFileLimit &&
                   Object.keys(zip.files).filter(
                     zf => supportedAudioTypes.includes(
                       zf.split('.').at(-1).toLowerCase())
@@ -4512,7 +4406,7 @@ const consumeFileInput = (event, inputFiles) => {
         _files = getRandomFileSelectionFrom(_files);
     }
 
-    if (importFileLimit && _files.length > importFileLimitValue) {
+    if (settings.importFileLimit && _files.length > importFileLimitValue) {
         _files = _files.filter(
           (file, idx) => idx < importFileLimitValue || file.fromArchive);
     }
@@ -5070,28 +4964,26 @@ function init() {
     });
 
     /*Actions based on restored local storage states*/
-    pitchExports(pitchModifier, true);
+    pitchExports(settings.pitchModifier, true);
     document.querySelector('.touch-buttons').classList[
-      showTouchModifierKeys ? 'remove' : 'add'
+      settings.showTouchModifierKeys ? 'remove' : 'add'
       ]('hidden');
-    if (localStorage.getItem('darkModeTheme') === null) {
-        darkModeTheme = window.matchMedia(
+    if (settings.darkModeTheme === null) {
+        settings.darkModeTheme = window.matchMedia(
           '(prefers-color-scheme: dark)').matches;
-        localStorage.setItem('darkModeTheme',
-          JSON.stringify(darkModeTheme)
-        );
     }
     document.querySelector(`.logo h3`).dataset.version = document.querySelector(
       'meta[name=version]').content;
     document.body.classList[
-      darkModeTheme ? 'remove' : 'add'
+      settings.darkModeTheme ? 'remove' : 'add'
       ]('light');
     document.body.classList[
-      normalizeContrast ? 'add' : 'remove'
+      settings.normalizeContrast ? 'add' : 'remove'
       ]('normalize-contrast');
-    if (restoreLastUsedAudioConfig) {
-        changeAudioConfig(lastUsedAudioConfig, true);
+    if (settings.restoreLastUsedAudioConfig) {
+        changeAudioConfig(settings.lastUsedAudioConfig, true);
     } else {
+        document.getElementById('audioConfigOptions').value = settings.defaultAudioConfigText;
         setEditorConf({
             audioCtx,
             masterSR,
@@ -5107,13 +4999,13 @@ function init() {
 async function clearIndexedDb() {
     await db.close();
     await indexedDB.deleteDatabase('digichain');
-    if (retainSessionState) {
+    if (settings.retainSessionState) {
         configDb(true);
     }
 }
 
 function configDb(skipLoad = false, callback) {
-    if (!retainSessionState) {
+    if (!settings.retainSessionState) {
         return clearIndexedDb();
     }
     dbReq = indexedDB.open('digichain', 1);
@@ -5135,7 +5027,7 @@ function configDb(skipLoad = false, callback) {
     };
 }
 async function storeState() {
-    if (!retainSessionState) {
+    if (!settings.retainSessionState) {
         return new Promise(resolve => resolve(true));
     }
     if (!db || !dbReq || dbReq.readyState !== 'done') {
@@ -5169,7 +5061,7 @@ async function storeState() {
 
 }
 function loadState(skipConfirm = false) {
-    if (!retainSessionState) {
+    if (!settings.retainSessionState) {
         return showWelcome();
     }
     const transaction = db.transaction(['state'], 'readonly');
@@ -5234,8 +5126,8 @@ function saveSession() {
             channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
         }
     }));
-    const settings = {
-        lastUsedAudioConfig,
+    const sessionSettings = {
+        lastUsedAudioConfig: settings.lastUsedAudioConfig,
         workingSR: masterSR,
         sliceOptions
     };
@@ -5257,7 +5149,7 @@ function saveSession() {
             level: 9
         }
     });
-    zip.file('settings', JSON.stringify(settings), {
+    zip.file('settings', JSON.stringify(sessionSettings), {
         compression: "DEFLATE",
         compressionOptions: {
             level: 9

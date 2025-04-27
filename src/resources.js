@@ -18,6 +18,8 @@ Brian referenced the following during development:
 Tips and Tricks on drawing array buffers to the canvas element: <https://css-tricks.com/making-an-audio-waveform-visualizer-with-vanilla-javascript/>
 [MIT License] Basic beat detection : https://github.com/JMPerez/beats-audio-api/blob/gh-pages/script.js / http://joesul.li/van/beat-detection-using-web-audio/
 */
+import {settings} from './settings.js';
+
 export function buildOpData(slices = [], numChannels, returnTemplate = false) {
     const template = slices?.length ? {
         attack: new Array(24).fill(0),
@@ -318,7 +320,7 @@ export function getSupportedSampleRates() {
         }
     }
     supportedSampleRates[1] = supportedSampleRates[1] > 96000 ? 96000 : supportedSampleRates[1];
-    localStorage.setItem('supportedSampleRates', JSON.stringify(supportedSampleRates));
+    settings.supportedSampleRates = supportedSampleRates;
     return supportedSampleRates;
 }
 
@@ -416,8 +418,7 @@ export function audioBufferToWav(
   buffer, meta, sampleRate, bitDepth, masterNumChannels,
   deClickThreshold = false, renderAsAif = false, pitchModifier = 1,
   embedSliceData = false, embedCuePoints = true, embedOrslData = false) {
-    const treatDualMonoStereoAsMono = (JSON.parse(
-        localStorage.getItem('treatDualMonoStereoAsMono')) ?? true) &&
+    const treatDualMonoStereoAsMono = settings.treatDualMonoStereoAsMono &&
       !meta.editing && !meta.bypassStereoAsDualMono;
 
     let resample;

@@ -6,6 +6,7 @@ import {
     getResampleIfNeeded, dcDialog,
     joinToStereo
 } from './resources.js';
+import {settings} from './settings.js';
 
 const editPanelEl = document.getElementById('editPanel');
 const editableItemsEl = document.getElementById('editableItems');
@@ -1634,8 +1635,6 @@ function stretch(event, item, renderEditPanel = true, targetLength, returnBuffer
 }
 
 function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
-    const attemptToFindCrossingPoint = JSON.parse(
-      localStorage.getItem('attemptToFindCrossingPoint')) ?? false;
 
     if (!renderEditPanel && item) {
         selection.start = 0;
@@ -1643,7 +1642,7 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
     }
     item = item || editing;
 
-    if (attemptToFindCrossingPoint) {
+    if (settings.attemptToFindCrossingPoint) {
         // match start and end sample values
         for (let i = (selection.start -
           Math.floor(((selection.start / 4) * 3))); i < selection.end; i++) {

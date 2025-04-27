@@ -13,6 +13,7 @@ latest
  - Prevent mini-waveform render caching when skip render is enabled.
  - Prevent default event bubbling on keydown events for handled keyboard shortcuts, stops 'funk' noise on macOS for valid shortcuts.
  - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
+ - Fixed bug where when restore last used audio config is set to off, the text label of the audio config indicator was blank.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

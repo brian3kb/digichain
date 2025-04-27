@@ -25,6 +25,7 @@
     "/main.js",
     "/editor.js",
     "/resources.js",
+    "/settings.js",
     "/jszip.js"
   ],
   "dir": "auto",

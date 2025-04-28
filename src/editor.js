@@ -138,6 +138,7 @@ function dropOpKey(event, keyId, zone = -1) {
 
     rsFile.file = {...file.file, ...rsFile.file};
     rsFile.meta.opKey = {};
+    rsFile.meta.channel = rsFile.buffer.numberOfChannels > 1 ? 'S' : rsFile.meta.channel;
     rsFile.meta.opKeyId = keyId;
     rsFile.meta.opKeyPosition = zone;
     addOpKeyData(keyId, zone, rsFile);
@@ -206,7 +207,19 @@ function renderOpKeyDetails() {
 
     const opKeyDetailMarkup = (zone, zoneId, caption) => {
         return `
-        <div class="op-key-detail-title">${caption}</div>
+        <div class="op-key-detail-title">${caption}
+        ` + ( zone !== 'center' && opData[zone] ? `<div class="channel-options has-shift-mod" style="display: ${opData[zone].buffer.numberOfChannels >
+        1 ? 'block' : 'none'}">
+          <a title="Left channel" onclick="digichain.editor.changeChannel(event, 'L', '${zone}')" class="${opData[zone].meta.channel ===
+        'L' ? 'selected' : ''} channel-option-L">L</a>
+          <a title="Sum to mono" onclick="digichain.editor.changeChannel(event, 'S', '${zone}')" class="${opData[zone].meta.channel ===
+        'S' ? 'selected' : ''} channel-option-S">S</a>
+          <a title="Right channel" onclick="digichain.editor.changeChannel(event, 'R', '${zone}')" class="${opData[zone].meta.channel ===
+        'R' ? 'selected' : ''} channel-option-R">R</a>
+          <a title="Difference between Left and Right channels" onclick="digichain.editor.changeChannel(event, 'D', '${zone}')" class="${opData[zone].meta.channel ===
+        'D' ? 'selected' : ''} channel-option-D">D</a>
+          </div>` : '') +
+        `</div>
         <div class="op-key-detail op-key-details-${zone}">
             <span class="op-key-detail-name">${getNiceFileName('', opData[zone], true)??''}</span>
             <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Edit" onclick="digichain.editor.editOpSlice('${zone}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
@@ -233,7 +246,9 @@ function renderOpKeyDetails() {
         ${opKeyDetailMarkup('center', -1, 'Main')}
         ${opKeyDetailMarkup('left', 0, 'Left')}
         ${opKeyDetailMarkup('right', 1, 'Right')}
-    </div>`
+    </div>` + `
+    
+    `
     );
 }
 
@@ -769,7 +784,11 @@ function togglePitchSemitoneCents(event, toggle) {
     centsDiv.classList[toggle === 'semi' ? 'add' : 'remove']('hide');
 }
 
-function changeChannel(event, channel) {
+function changeChannel(event, channel, opDataZone) {
+    if (opDataZone !== undefined) {
+        getOpKeyData(samples.selected)[opDataZone].meta.channel = channel;
+        return renderOpExport();
+    }
     editing.meta.channel = channel;
     render();
 }

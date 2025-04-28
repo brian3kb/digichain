@@ -2663,6 +2663,9 @@ body.grid-view .path-exceeds-127 {
 }
 .op-key-detail-title {
     border-bottom: 1px solid #43392d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .op-key-spacer {
     border-top: 1px solid #43392d;
@@ -2681,6 +2684,12 @@ body.grid-view .path-exceeds-127 {
 .op-key-detail-name:empty::before {
     content: 'no sample';
     opacity: .35;
+}
+.op-key-details .channel-options {
+    display: flex;
+    justify-content: space-around;
+    margin-right: 0;
+    border: none;
 }
 
 #opExportPanelContent:has(.op-key.selected) .op-key-details:not(:empty) {

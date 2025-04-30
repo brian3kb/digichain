@@ -1978,20 +1978,25 @@ td button { margin: 0.5rem; }
 #exportSettingsPanel .export-options {
     margin-bottom: 0.5rem;
     border-bottom: 1px solid;
-    padding-bottom: 0.5rem;
+    border-color: #d79c4e;
+    display: flex;
 }
 #exportSettingsPanel .export-options span {
-    padding: 1rem;
+    padding: .65rem 1rem;
     border-top: 1px solid;
     border-left: 1px solid;
     border-right: 1px solid;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     cursor: pointer;
+    margin-right: .5rem;
+    transform: translateY(1px);
+    border-bottom: 1px solid #d79c4e;
+    z-index: 2;
 }
 #exportSettingsPanel .export-options span.active {
-    border-color: #d79c4e;
     color: #d79c4e;
+    border-bottom-color: #202124;
 }
 #exportSettingsPanel .input-set input {
     max-width: 28.5rem;
@@ -3234,6 +3239,9 @@ body.light .op-key-spacer {
 }
 body.light .op-key .center-c[title$='.'] {
     background-color: #7f8081;
+}
+body.light #exportSettingsPanel .export-options span.active {
+    border-bottom-color: #f5f5f5;
 }
 
 html.scaled {

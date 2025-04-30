@@ -3333,7 +3333,10 @@ function reRenderListRow(id) {
     const item = getFileById(id);
     const rowEl = getRowElementById(id);
     rowEl.innerHTML = buildRowMarkupFromFile(item);
-    rowEl.querySelector('canvas.waveform').replaceWith(item.waveform);
+    const rowWaveform = rowEl.querySelector('canvas.waveform');
+    if (rowWaveform && item.waveform) {
+        rowWaveform.replaceWith(item.waveform);
+    }
 }
 
 const getWaveformElementContent = f => {
@@ -4856,7 +4859,7 @@ function init() {
             let id = +event.code.charAt(event.code.length - 1);
             const selected = files.filter(f => f.meta.checked);
             id = id === 0 ? 9 : (id - 1);
-            event.preventDefault();
+            if (event.code !== 'Digit0' && (!event.metaKey || !event.altKey)) { event.preventDefault();}
             if (selected[id]) {
                 event.altKey ?
                   stopPlayFile(false, selected[id].meta.id) :

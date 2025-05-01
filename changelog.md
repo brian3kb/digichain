@@ -1,5 +1,4 @@
 latest
- - Fix delayed list rendering bug when removing all selected samples.
  - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.
  - Style tweaks to support rendering within itch.io windows.
  - Enhanced waveform rendering accuracy and performance (thanks to github.com/boourns for the pull request).
@@ -7,13 +6,16 @@ latest
  - Improved responsiveness of list with large numbers of samples loaded
  - Reduced file processing load times.
  - Added a welcome screen with some usage guidance, tips, and link out to documentation page.
- - Fixed bug in sanitize name selected action.
  - Show the length in seconds of the sample being edited on the editor.
  - Support importing samples and slices from Renoise Instrument files (.xrni) in addition to sample data from Renoise Project files (.xrnx).
- - Prevent mini-waveform render caching when skip render is enabled.
+ - Mini-waveform renderer no longer builds waveform cache when skip render is enabled.
  - Prevent default event bubbling on keydown events for handled keyboard shortcuts, stops 'funk' noise on macOS for valid shortcuts.
- - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
- - Fixed bug where when restore last used audio config is set to off, the text label of the audio config indicator was blank.
+ - Bug fixes:
+   - Delayed list rendering bug when removing all selected samples.
+   - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
+   - Sanitize name selected action.
+   - When restore last used audio config is set to off, the text label of the audio config indicator was blank.
+   - Where canvas element replacement threw an error when slicing to samples from the slice panel with skip render waveforms enabled.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

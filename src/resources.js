@@ -87,7 +87,6 @@ export function buildOpData(slices = [], numChannels, audioBuffer = false, retur
     };
 
     const scale = 2147483646 / (44100 * (numChannels === 2 ? 20 : 12));
-    // TODO: For the slice end point, try to put on nearest left zero crossing.
     const s = slices.map(slice => ({
         p: slice.p,
         pab: slice.pab,

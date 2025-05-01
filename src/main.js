@@ -1370,7 +1370,7 @@ function toggleSecondsPerFile(event, value) {
         toggleEl.classList.add('on');
         toggleSpanEl.innerText = `${secondsPerFile}s`;
         selectSliceAmount({
-            shiftKey: true,
+            shiftKey: false,
             target: document.querySelector('.slice-grid-off')
         }, 0);
     }
@@ -3751,15 +3751,12 @@ const parseAif = async (
                     break;
                 case 'APPL'://'op-1':
                     const utf8Decoder = new TextDecoder('utf-8');
-                    //let maxSize = chunks.form.type === 'AIFC' ? 44100 * 20 : 44100 * 12;
-                    //let scale = chunks.form.type === 'AIFC' &&
-                    let scale = chunks.comm.channels === 2 ? 2434 : 4058;
+                    const scale = 2147483646 / (44100 * (chunks.comm.channels === 2 ? 20 : 12));
                     chunks.json = {
                         id: String.fromCharCode(dv.getUint8(offset),
                           dv.getUint8(offset + 1), dv.getUint8(offset + 2),
                           dv.getUint8(offset + 3)),
                         size: dv.getUint32(offset + 4),
-                        //bytesInLength: maxSize * 2,
                         scale
                     };
                     let jsonString = utf8Decoder.decode(
@@ -3767,10 +3764,6 @@ const parseAif = async (
                         chunks.json.size + offset + 8));
                     chunks.json.data = JSON.parse(
                       jsonString.replace(/\]\}(.|\n)+/gi, ']}').trimEnd());
-                    // if (chunks.json.data?.original_folder === 'digichain') {
-                    //   chunks.json.scale = 2434;
-                    // }
-                    //jsonString.replace(/\]\}.*/gi, ']}').trimEnd());
                     break;
                 case 'SSND':
                     chunks.buffer = arrayBuffer.slice(offset + 4);
@@ -3856,12 +3849,7 @@ const parseAif = async (
                   0)[i] = resample.outputBuffer[i];
             }
         }
-        const getRelPosition = (v, i) => {
-            //const cVal = Math.min(Math.max(v - 1, 0), chunks.json.maxSize);
-            //return Math.round((chunks.comm.frames * 44100) / chunks.json.bytesInLength * cVal * 2);
-            //return v / (chunks.json.bytesInLength / chunks.comm.frames);
-            return (v / chunks.json.scale) - (i * 13);
-        };
+        const getRelPosition = v => v / chunks.json.scale;
 
         /*Update the slice points to masterSR - hardcoded to 44100 as OP sample rate will always be this.*/
         if (chunks.json && chunks.json.data.start) {

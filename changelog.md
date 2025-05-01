@@ -10,12 +10,15 @@ latest
  - Support importing samples and slices from Renoise Instrument files (.xrni) in addition to sample data from Renoise Project files (.xrnx).
  - Mini-waveform renderer no longer builds waveform cache when skip render is enabled.
  - Prevent default event bubbling on keydown events for handled keyboard shortcuts, stops 'funk' noise on macOS for valid shortcuts.
+ - Improved creation of OP-1 Field / OP-Z chains, nudging end to zero crossing per slice if one is present in the last 256 samples.
+ - OP-1 Field / OP-Z exports now default to one-shot play mode.
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
    - Sanitize name selected action.
    - When restore last used audio config is set to off, the text label of the audio config indicator was blank.
    - Where canvas element replacement threw an error when slicing to samples from the slice panel with skip render waveforms enabled.
+   - Toggling the seconds per chain option de-selected all samples.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

@@ -20,7 +20,7 @@ Tips and Tricks on drawing array buffers to the canvas element: <https://css-tri
 */
 import {settings} from './settings.js';
 
-export function buildOpData(slices = [], numChannels, returnTemplate = false) {
+export function buildOpData(slices = [], numChannels, audioBuffer = false, returnTemplate = false) {
     const template = slices?.length ? {
         attack: new Array(24).fill(0),
         drum_version: 2,
@@ -39,8 +39,8 @@ export function buildOpData(slices = [], numChannels, returnTemplate = false) {
         pan: new Array(24).fill(16384),
         pan_ab: new Array(24).fill(false),
         pitch: new Array(24).fill(0),
-        playmode: new Array(24).fill(5119),
-        reverse: new Array(24).fill(12000),
+        playmode: new Array(24).fill(12288), /*4096 = ->, 12288 = ->|, 20480 = ->G, 28672 = loop */
+        reverse: new Array(24).fill(8192), /*8192 = ->, 24576 = <- */
         start: new Array(24).fill(0),
         stereo: numChannels === 2,
         type: 'drum',
@@ -70,14 +70,30 @@ export function buildOpData(slices = [], numChannels, returnTemplate = false) {
         return opData; /*Return single synth sampler template*/
     }
 
-    const scale = numChannels === 2 ? 2434 : 4058;
+    // check last 256 samples per slice to nudge to a zero crossing
+    const nudgeEndToZero = (start, end) => {
+        if (!audioBuffer) {
+            return end;
+        }
+        for (let i = (end ?? audioBuffer.length); audioBuffer.length > i; i--) {
+            if (i < start || i < (end - 256)) {
+                return end;
+            }
+            if (+audioBuffer.getChannelData(0)[i].toFixed(4) === 0 || i === 0) {
+                return i;
+            }
+        }
+        return end;
+    };
 
-    const s = slices.map((slice, idx) => ({
+    const scale = 2147483646 / (44100 * (numChannels === 2 ? 20 : 12));
+    // TODO: For the slice end point, try to put on nearest left zero crossing.
+    const s = slices.map(slice => ({
         p: slice.p,
         pab: slice.pab,
         st: slice.st > 24576 ? 24576 : (slice.st < -24576 ? -24576 : slice.st),
-        s: Math.floor((slice.s * scale) + (idx * 13)),
-        e: Math.floor((slice.e * scale) + (idx * 13))
+        s: Math.floor(slice.s * scale),
+        e: Math.floor(nudgeEndToZero(slice.s, slice.e) * scale)
     }));
 
     for (let idx = 0; idx < 24; idx++) {
@@ -469,7 +485,7 @@ export function audioBufferToWav(
     return renderAsAif ?
       encodeAif(
         result, sampleRate, numChannels,
-        buildOpData(meta?.slices, numChannels)
+        buildOpData(meta?.slices, numChannels, buffer)
       ) :
       encodeWAV(
         result, format, sampleRate, numChannels, bitDepth, buffer.length,

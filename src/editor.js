@@ -1762,7 +1762,7 @@ function double(event, item, reverse = false, renderEditPanel = true) {
     item.waveform = false;
 }
 
-function padWithZero(event, item, renderEditPanel = true) {
+function padWithZero(event, item, padLength = 0, renderEditPanel = true) {
     if (!renderEditPanel && item) {
         selection.start = 0;
         selection.end = item.buffer.length;
@@ -1771,7 +1771,7 @@ function padWithZero(event, item, renderEditPanel = true) {
 
     const audioArrayBuffer = conf.audioCtx.createBuffer(
       item.buffer.numberOfChannels,
-      item.buffer.length + 2,
+      item.buffer.length + (padLength === 0 ? 2 : +padLength),
       conf.masterSR
     );
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {

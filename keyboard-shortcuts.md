@@ -34,6 +34,7 @@
  - Truncate / Crush : Shows popup to enter a custom value.
  - Sample Slice : In slicing panel, toggles looping the clicked slice (for .ot exports).
  - Trim Right : will trim  both left and right of the sample.
+ - Pad With Zero : allow entering a custom value to pad the sample with in seconds.
  - L : Toggles hiding/showing of the rendered list of samples.
 
 **Ctrl + Click**

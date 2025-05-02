@@ -519,8 +519,8 @@ async function changeChainName(event, index, action) {
         return renderChainNamePanelContent();
     }
 
-    let newName = prompt(
-      'Please enter a name for the chain, names must be unique', item.name);
+    let newName = await dcDialog('prompt',
+      'Please enter a name for the chain, names must be unique', {defaultValue: item.name});
     if (newName) {
         item.name = newName;
         if (index === undefined && chainFileNames.findIndex(
@@ -870,14 +870,14 @@ function trimRightSelected(event) {
     }, 250);
 }
 
-function condenseSelected(event) {
+async function condenseSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    let lower = prompt(
+    let lower = await dcDialog('prompt',
       `Please enter the LOWER threshold (decimal value between 0 and 1)...`);
     if (lower && !isNaN(lower)) {
         lower = Math.abs(+lower);
     }
-    let upper = prompt(
+    let upper = await dcDialog('prompt',
       `Please enter the UPPER threshold (decimal value between 0 and 1)...`);
     if (upper && !isNaN(upper)) {
         upper = Math.abs(+upper);
@@ -969,10 +969,10 @@ function sanitizeNameSelected(event, restore = false) {
     }, 250);
 }
 
-function truncateSelected(event) {
+async function truncateSelected(event) {
     let truncLength = 3;
     if (event.shiftKey || modifierKeys.shiftKey) {
-        const userResponse = prompt(
+        const userResponse = await dcDialog('prompt',
           `Please enter a custom length in seconds to truncate the selected samples to...`);
         if (userResponse && !isNaN(userResponse)) {
             truncLength = Math.abs(+userResponse);
@@ -993,7 +993,7 @@ function truncateSelected(event) {
     }, 250);
 }
 
-function stretchSelected(event, shortest = false) {
+async function stretchSelected(event, shortest = false) {
     let sortedItems = files.filter(
       f => f.meta.checked
     ).sort(
@@ -1005,7 +1005,7 @@ function stretchSelected(event, shortest = false) {
     let stretchLength = sortedItems[0].buffer.length;
     if (event.shiftKey || modifierKeys.shiftKey) {
         const unitOfMeasure = event.ctrlKey || event.metaKey || modifierKeys.ctrlKey ? 'samples' : 'seconds';
-        const userResponse = prompt(
+        const userResponse = await dcDialog('prompt',
           `Please enter a custom length in ${unitOfMeasure} to stretch the selected samples to...`);
         if (userResponse) {
             if (['x', '*'].includes(userResponse[0])) {
@@ -1086,14 +1086,22 @@ function nudgeCrossingsSelected(event) {
     }, 250);
 }
 
-function padWithZeroSelected(event) {
+async function padWithZeroSelected(event, shortest = false) {
+    let customPadLength = 0;
+    if (event.shiftKey || modifierKeys.shiftKey) {
+        const userResponse = await dcDialog('prompt',
+          `Please enter a custom length in seconds to pad the selected samples to...`);
+        if (userResponse && !isNaN(userResponse)) {
+            customPadLength = Math.floor(Math.abs(+userResponse) * masterSR);
+        }
+    }
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     document.getElementById('loadingText').textContent = 'Processing';
     document.body.classList.add('loading');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
-            editor.padWithZero(event, f, false);
+            editor.padWithZero(event, f, customPadLength, false);
             if (idx === selected.length - 1) {
                 document.body.classList.remove('loading');
             }
@@ -1188,10 +1196,10 @@ function fuzzSelected(event) {
     }, 250);
 }
 
-function crushSelected(event) {
+async function crushSelected(event) {
     let crushAmount = 25;
     if (event.shiftKey || modifierKeys.shiftKey) {
-        const userResponse = prompt(
+        const userResponse = await dcDialog('prompt',
           `Please enter a custom crush amount (25 is the default, above 127 will sound the same)...`);
         if (userResponse && !isNaN(userResponse)) {
             crushAmount = Math.abs(+userResponse);
@@ -1334,11 +1342,11 @@ function toggleSetting(param, value, suppressRerender) {
     showExportSettingsPanel();
 }
 
-function setCustomSecondsPerFileValue(targetEl, size, silent = false) {
+async function setCustomSecondsPerFileValue(targetEl, size, silent = false) {
     let newValue = size;
     if (!silent) {
-        newValue = prompt(
-          `Change max seconds per file "${size}" to what new value?`, size);
+        newValue = await dcDialog('prompt',
+          `Change max seconds per file "${size}" to what new value?`, {defaultValue: size});
     }
     if (newValue && !isNaN(newValue)) {
         newValue = Math.abs(Math.ceil(+newValue));
@@ -2908,7 +2916,7 @@ const splitByTransient = (file, threshold = .5) => {
     return metaTransient;
 };
 
-const splitSizeAction = (event, slices, threshold) => {
+const splitSizeAction = async (event, slices, threshold) => {
     let file, otMeta;
     const sliceGroupEl = document.querySelector(
       `#splitOptions .slice-group`);
@@ -2919,7 +2927,7 @@ const splitSizeAction = (event, slices, threshold) => {
     convertChainButtonEl.style.display = 'none';
 
     if (slices === 'custom') {
-        const customSlices = prompt('Enter the number of slices to equally chop this sample');
+        const customSlices = await dcDialog('prompt', 'Enter the number of slices to equally chop this sample', {inputType: 'number'});
         if (typeof parseInt(customSlices) === 'number') {
             slices = parseInt(customSlices);
         }

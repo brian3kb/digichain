@@ -3,7 +3,7 @@ latest
  - Style tweaks to support rendering within itch.io windows.
  - Enhanced waveform rendering accuracy and performance (thanks to github.com/boourns for the pull request).
  - Added user feedback on sample load processing.
- - Improved responsiveness of list with large numbers of samples loaded
+ - Improved responsiveness of list with large numbers of samples loaded.
  - Reduced file processing load times.
  - Added a welcome screen with some usage guidance, tips, and link out to documentation page.
  - Show the length in seconds of the sample being edited on the editor.
@@ -12,13 +12,14 @@ latest
  - Prevent default event bubbling on keydown events for handled keyboard shortcuts, stops 'funk' noise on macOS for valid shortcuts.
  - Improved creation of OP-1 Field / OP-Z chains, nudging end to zero crossing per slice if one is present in the last 256 samples.
  - OP-1 Field / OP-Z exports now default to one-shot play mode.
+ - Shift + click on Pad With Zero selected action allows entering a custom value to pad the sample(s) with in seconds.
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
    - Sanitize name selected action.
    - When restore last used audio config is set to off, the text label of the audio config indicator was blank.
    - Where canvas element replacement threw an error when slicing to samples from the slice panel with skip render waveforms enabled.
-   - Toggling the seconds per chain option de-selected all samples.
+   - Toggling the max-seconds per chain option de-selected all samples.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

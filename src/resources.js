@@ -185,23 +185,29 @@ export function buildXyDrumPatchData(file, slices = []) {
 export async function dcDialog(type = 'message', messageString = '', config = {}) {
     const msgTypes = {message: 'alert', ask: 'prompt', confirm: 'confirm', prompt: 'prompt'};
 
-    if (window.__TAURI__ && (type === 'prompt' || type === 'confirm')) {
+    if (type === 'prompt' || type === 'confirm' || type === 'alert') {
         return await new Promise(resolve => {
             const dcDialogEl = document.querySelector('#dcDialog');
-            const promptTextEl = document.querySelector('#dcDialog .content .prompt');
+
+            dcDialogEl.innerHTML = `
+                <div class="content">
+                    <div class="prompt">${messageString}</div>
+                    <input
+                        style="display: ${type === 'prompt' ? 'block' : 'none'};"
+                        type="${config.inputType??'text'}"
+                        class="prompt-input"
+                        value="${config.defaultValue??''}"
+                    >
+                    <div class="buttons-group">
+                        <button type="submit" class="prompt-ok">${config.okLabel??'OK'}</button>
+                        <button class="prompt-cancel">${config.cancelLabel??'Cancel'}</button>
+                    </div>
+                </div>
+            `;
+
             const promptInputEl = document.querySelector('#dcDialog .content .prompt-input');
             const promptCancelEl = document.querySelector('#dcDialog .content .prompt-cancel');
             const promptOkEl = document.querySelector('#dcDialog .content .prompt-ok');
-
-            promptTextEl.innerText = messageString;
-            promptInputEl.value = config.defaultValue??'';
-
-            promptInputEl.style.display = type === 'prompt' ? 'block' : 'none';
-
-            promptInputEl.setAttribute('type', config.inputType??'text');
-
-            promptCancelEl.innerText = config.cancelLabel??'Cancel';
-            promptOkEl.innerText = config.okLabel??'OK';
 
             promptCancelEl.onclick = () => {
                 resolve(config.defaultValue??false);
@@ -217,7 +223,7 @@ export async function dcDialog(type = 'message', messageString = '', config = {}
                     return promptCancelEl.click();
                 }
                 if (dcDialogEvent.code === 'Enter') {
-                    promptOkEl.click();
+                    setTimeout(() => promptOkEl.click(), 100);
                 }
             };
 

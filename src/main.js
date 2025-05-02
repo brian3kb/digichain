@@ -975,8 +975,8 @@ async function truncateSelected(event) {
         const userResponse = await dcDialog('prompt',
           `Please enter a custom length in seconds to truncate the selected samples to...`);
         if (userResponse && !isNaN(userResponse)) {
-            truncLength = Math.abs(+userResponse);
-        }
+            truncLength = Math.abs(+userResponse) || 3;
+        } else { return; }
     }
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     document.getElementById('loadingText').textContent = 'Processing';

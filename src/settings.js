@@ -13,6 +13,7 @@ const defaultSettings = {
     attemptToFindCrossingPoint: false,
     darkModeTheme: null,
     deClick: 0.4,
+    ditherExports: false,
     embedCuePoints: true,
     embedOrslData: false,
     exportWithOtFile: false,

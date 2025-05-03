@@ -2,6 +2,7 @@ latest
  - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.
  - Style tweaks to support rendering within itch.io windows.
  - Enhanced waveform rendering accuracy and performance (thanks to github.com/boourns for the pull request).
+ - Dither exports option when outputting 8/16/24 bit wav or 16 bit aif files.
  - Added user feedback on sample load processing.
  - Improved responsiveness of list with large numbers of samples loaded.
  - Reduced file processing load times.

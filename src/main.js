@@ -237,7 +237,10 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 
     let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value || localStorage.getItem('workingSampleRate') || 48000);
 
-    /*toggleSetting('embedCuePoints', true, true);*/
+    try {
+        const dither = JSON.parse(document.getElementById('ditherGroup').dataset.dither);
+        settings.ditherExports = dither;
+    } catch(e) {}
 
     if (audioValuesFromCommonSelectEl) {
         toggleSetting('exportWithOtFile', 'ot' === commonSelectDevice, true);
@@ -1656,12 +1659,25 @@ function showExportSettingsPanel(page = 'settings') {
   <td>
   <div style="padding: 1.5rem 0;" class="${targetContainer === 'a' ? 'disabled' : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onclick="((event, el) => {
       el.dataset.bitDepth = event.target.dataset.bitDepth || el.dataset.bitDepth;
-  el.querySelectorAll('button').forEach(b => b.classList = b.dataset.bitDepth === el.dataset.bitDepth ? 'check button' : 'check button-outline')
+  el.querySelectorAll('button').forEach(b => b.classList = b.dataset.bitDepth === el.dataset.bitDepth ? 'check button' : 'check button-outline');
+  document.getElementById('ditherGroup').classList[+el.dataset.bitDepth === 32 ? 'add': 'remove']('disabled');
   })(event, this);">
       <button id="acoBitDepth8" data-bit-depth="8" class="check button${masterBitDepth !== 8 ? '-outline' : ''}">8 Bit</button>
       <button id="acoBitDepth16" data-bit-depth="16" class="check button${masterBitDepth !== 16 ? '-outline' : ''}">16 Bit</button>
       <button id="acoBitDepth24" data-bit-depth="24" class="check button${masterBitDepth !== 24 ? '-outline' : ''}">24 Bit</button>
      <button id="acoBitDepth32" data-bit-depth="32" class="check button${masterBitDepth !== 32 ? '-outline' : ''}">32 Bit</button>
+ </div>
+  </td>
+  </tr>
+  <tr>
+  <td><span>Dither 8/16/24 Bit Exports&nbsp;&nbsp;&nbsp;</span></td>
+  <td>
+  <div style="padding: 1.5rem 0;" class="${masterBitDepth === 32 ? 'disabled' : ''}" data-dither="${settings.ditherExports}" id="ditherGroup" onclick="((event, el) => {
+      el.dataset.dither = event.target.dataset.dither || el.dataset.dither;
+  el.querySelectorAll('button').forEach(b => b.classList = b.dataset.dither === el.dataset.dither ? 'check button' : 'check button-outline');
+  })(event, this);">
+      <button id="acoDitherNo" data-dither="false" class="check button${!settings.ditherExports || masterBitDepth === 32 ? '' : '-outline'}">NO</button>
+      <button id="acoDitherYes" data-dither="true" class="check button${settings.ditherExports && masterBitDepth !== 32 ? '' : '-outline'}">YES</button>
  </div>
   </td>
   </tr>

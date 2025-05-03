@@ -782,9 +782,10 @@ export function encodeAif(audioData, sampleRate, numberOfChannels, opJsonData) {
 
         offset = offset + 16; //0x1042
 
+        const noise = () =>  settings.ditherExports ? (Math.random() - Math.random()) / 65536 : 0;
         for (let i = 0; i < samples.length; i++) {
-            let byte = Math.round(samples[i] * 32767);
-            view.setInt16(offset, byte);
+            const sample = Math.max(-1, Math.min(1, samples[i] + noise()));
+            view.setInt16(offset, Math.round(sample * 32767));
             offset += 2;
         }
 
@@ -833,23 +834,26 @@ function writeFloat32(output, offset, input) {
 }
 
 function floatTo8BitPCM(output, offset, input) {
+    const noise = () => settings.ditherExports ? (Math.random() - Math.random()) / 255 : 0;
     for (let i = 0; i < input.length; i++, offset++) {
         //const s = Math.max(-1, Math.min(1, input[i]));
-        const s = Math.floor(Math.max(-1, Math.min(1, input[i])) * 127 + 128);
+        const s = Math.floor(Math.max(-1, Math.min(1, input[i] + noise())) * 127 + 128);
         output.setInt8(offset, s);
     }
 }
 
 function floatTo16BitPCM(output, offset, input) {
+    const noise = () =>  settings.ditherExports ? (Math.random() - Math.random()) / 65536 : 0;
     for (let i = 0; i < input.length; i++, offset += 2) {
-        const s = Math.max(-1, Math.min(1, input[i]));
+        const s = Math.max(-1, Math.min(1, input[i] + noise()));
         output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
     }
 }
 
 function floatTo24BitPCM(output, offset, input) {
+    const noise = () => settings.ditherExports ? (Math.random() - Math.random()) / (1 << 24) : 0;
     for (let i = 0; i < input.length; i++, offset += 3) {
-        const s = Math.floor(input[i] * 8388608 + 0.5);
+        const s = Math.floor((input[i] + noise()) * 8388608 + 0.5);
         output.setInt24(offset, s, true);
     }
 }

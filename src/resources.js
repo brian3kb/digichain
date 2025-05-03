@@ -229,6 +229,7 @@ export async function dcDialog(type = 'message', messageString = '', config = {}
 
             if (!dcDialogEl.open) {
                 dcDialogEl.showModal();
+                setTimeout(() => type !== 'prompt' ? dcDialogEl.focus() : false, 50);
             }
         });
     }

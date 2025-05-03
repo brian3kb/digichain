@@ -876,12 +876,12 @@ async function condenseSelected(event) {
       `Please enter the LOWER threshold (decimal value between 0 and 1)...`);
     if (lower && !isNaN(lower)) {
         lower = Math.abs(+lower);
-    }
+    } else { return ;}
     let upper = await dcDialog('prompt',
       `Please enter the UPPER threshold (decimal value between 0 and 1)...`);
     if (upper && !isNaN(upper)) {
         upper = Math.abs(+upper);
-    }
+    } else { return ;}
     document.getElementById('loadingText').textContent = 'Processing';
     document.body.classList.add('loading');
     setTimeout(() => {

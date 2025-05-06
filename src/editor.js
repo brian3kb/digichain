@@ -247,9 +247,37 @@ function renderOpKeyDetails() {
         ${opKeyDetailMarkup('left', 0, 'Left')}
         ${opKeyDetailMarkup('right', 1, 'Right')}
     </div>` + `
-    
-    `
+    <div class="op-key-details-controls">
+        <span>Panning</span>
+        <div class="channel-options channel-options-stereo channel-options-stereo-opf ${opKeyConfig.pab
+          ? 'op-pan-ab-true'
+          : ''}" style="display: block; border: 1px solid #40392e;"
+           ondblclick="digichain.editor.changeOpParam({target:{value: 16384}}, 'p')"
+           >
+              <input class="channel-balance" type="range" style="display: inline-block;"
+              min="0" max="32768" onchange="digichain.editor.changeOpParam(event, 'p')" value="${opKeyConfig.p ?? 16384}" />
+              <div style="display: inline-block;">
+                <span class="op-la"></span>
+                <span class="op-rb"></span>
+              </div>
+          </div>
+    </div>
+    <div class="op-key-details-controls">
+    <a onclick="digichain.editor.changeOpParam(false, 'pab')" title="Only applicable to OP-1 Field Exports.">L/R <-> A/B Toggle</a>
+    <span></span>
+    </div>
+`
     );
+}
+
+function changeOpParam(event, key, id) {
+    const opKeyConfig = opDataConfig[id || samples.selected];
+    if (event && event.target.value) {
+        opKeyConfig[key] = event.target.value;
+    } else {
+        opKeyConfig[key] = !opKeyConfig[key];
+    }
+    renderOpExport();
 }
 
 async function renderOpExport(reset = false) {
@@ -1985,6 +2013,7 @@ export const editor = {
     dropOpKey,
     opKeySelected,
     editOpSlice,
+    changeOpParam,
     removeOpKeyData,
     renderOpExport,
     toggleOpExportSetting,

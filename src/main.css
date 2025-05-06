@@ -2660,6 +2660,12 @@ body.grid-view .path-exceeds-127 {
     flex-direction: column;
 }
 
+.op-key-details-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .op-key-detail {
     display: flex;
     justify-content: space-around;

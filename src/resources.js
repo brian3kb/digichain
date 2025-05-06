@@ -20,6 +20,41 @@ Tips and Tricks on drawing array buffers to the canvas element: <https://css-tri
 */
 import {settings} from './settings.js';
 
+export const opToXyValues = {
+    pan: () => 0,
+    playmode: value => {
+        switch (value) {
+            case 4096:
+                return 'gate';
+            case 20480:
+                return 'group';
+            case 28672:
+                return 'loop';
+            case 12288:
+            default:
+                return 'oneshot';
+        }
+    },
+    reverse: value => value === 24576,
+    volume: () => 0
+};
+
+// check last 256 samples per slice to nudge to a zero crossing
+const nudgeEndToZero = (start, end, buffer, seekRegion = 256) => {
+    if (!buffer) {
+        return end;
+    }
+    for (let i = (end ?? buffer.length); buffer.length > i; i--) {
+        if (i < start || i < (end - seekRegion)) {
+            return end;
+        }
+        if (+buffer.getChannelData(0)[i].toFixed(4) === 0 || i === 0) {
+            return i;
+        }
+    }
+    return end;
+};
+
 export function buildOpData(slices = [], numChannels, audioBuffer = false, returnTemplate = false) {
     const template = slices?.length ? {
         attack: new Array(24).fill(0),
@@ -70,29 +105,15 @@ export function buildOpData(slices = [], numChannels, audioBuffer = false, retur
         return opData; /*Return single synth sampler template*/
     }
 
-    // check last 256 samples per slice to nudge to a zero crossing
-    const nudgeEndToZero = (start, end) => {
-        if (!audioBuffer) {
-            return end;
-        }
-        for (let i = (end ?? audioBuffer.length); audioBuffer.length > i; i--) {
-            if (i < start || i < (end - 256)) {
-                return end;
-            }
-            if (+audioBuffer.getChannelData(0)[i].toFixed(4) === 0 || i === 0) {
-                return i;
-            }
-        }
-        return end;
-    };
-
     const scale = 2147483646 / (44100 * (numChannels === 2 ? 20 : 12));
     const s = slices.map(slice => ({
-        p: slice.p,
-        pab: slice.pab,
-        st: slice.st > 24576 ? 24576 : (slice.st < -24576 ? -24576 : slice.st),
+        p: slice.p || 16384,
+        pab: slice.pab || false,
+        st: (slice.st > 24576 ? 24576 : (slice.st < -24576 ? -24576 : slice.st)) || 0,
+        pm: slice.pm || 12288,
+        r: slice.r || 8192,
         s: Math.floor(slice.s * scale),
-        e: Math.floor(nudgeEndToZero(slice.s, slice.e) * scale)
+        e: Math.floor(nudgeEndToZero(slice.s, slice.e, audioBuffer) * scale)
     }));
 
     for (let idx = 0; idx < 24; idx++) {
@@ -100,6 +121,8 @@ export function buildOpData(slices = [], numChannels, audioBuffer = false, retur
         opData.pan[idx] = slice.p;
         opData.pan_ab[idx] = slice.pab;
         opData.pitch[idx] = slice.st;
+        opData.playmode[idx] = slice.pm;
+        opData.reverse[idx] = slice.r;
         opData.start[idx] = slice.s;
         opData.end[idx] = slice.e;
         s.push(slice);
@@ -111,24 +134,24 @@ export function buildXyRegionFromSlice(slice, index) {
     return {
         'fade.in': 0,
         'fade.out': 0,
-        'framecount': slice.length,
+        'framecount': slice.l || (slice.e - slice.s),
         'gain': 0,
         'hikey': 53 + index,
         'lokey': 53 + index,
-        'pan': 0,
+        'pan': opToXyValues.pan(slice.p),
         'pitch.keycenter': 60,
-        'playmode': 'oneshot',
-        'reverse': false,
+        'playmode': opToXyValues.playmode(slice.pm),
+        'reverse': opToXyValues.reverse(slice.r),
         'sample': `${slice.name || 'slice_' + (index + 1)}.wav`,
-        'sample.end': slice.end || slice.length,
-        'sample.start': slice.start || 0,
+        'sample.end': slice.e || (slice.l || (slice.e - slice.s)),
+        'sample.start': slice.s || 0,
         'transpose': 0,
         'tune': 0
     };
 }
 
 export function buildXyDrumPatchData(file, slices = []) {
-    const modulationDefault = () => ({'amount': 16383, 'target': 0});
+    const modulationDefault = () => ({'amount': 16384, 'target': 0});
     const template = {
         'engine': {
             'bendrange': 8191,

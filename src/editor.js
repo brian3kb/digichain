@@ -228,7 +228,6 @@ function renderOpKeyDetails() {
         <div class="op-key-spacer"></div>
         `;
     };
-    //TODO: Expand options here for all slice parameter editing
 
     return `
     <div style="display: flex; justify-content: space-between;">
@@ -267,6 +266,7 @@ function renderOpKeyDetails() {
     <span></span>
     </div>
 `
+      //TODO: Add play-mode and reverse ui controls
     );
 }
 
@@ -383,7 +383,7 @@ function buildOpKit() {
 
         let combinedBuffer = conf.audioCtx.createBuffer(
           2,
-          keySamples.length,
+          keySamples.length || 1,
           44100
         );
 
@@ -437,7 +437,7 @@ function buildOpKit() {
         type: 'audio/aiff'
     });
     linkEl.href = URL.createObjectURL(blob);
-    linkEl.setAttribute('download', `${samples.kitName}.aif` || 'field-kit.aif');
+    linkEl.setAttribute('download', `${samples.kitName || 'field-kit'}.aif`);
     linkEl.click();
 }
 

@@ -44,15 +44,27 @@ const nudgeEndToZero = (start, end, buffer, seekRegion = 256) => {
     if (!buffer) {
         return end;
     }
+    const isStereo = buffer.numberOfChannels > 1;
+    let firstZeroCrossingLeft, lastZeroCrossingLeft;
     for (let i = (end ?? buffer.length); buffer.length > i; i--) {
         if (i < start || i < (end - seekRegion)) {
             return end;
         }
         if (+buffer.getChannelData(0)[i].toFixed(4) === 0 || i === 0) {
-            return i;
+            if (isStereo === false){
+                return i;
+            }
+            firstZeroCrossingLeft = firstZeroCrossingLeft || i;
+            lastZeroCrossingLeft = i;
+
+        }
+        if (isStereo && +buffer.getChannelData(1)[i].toFixed(4) === 0 || i === 0) {
+            if (lastZeroCrossingLeft === i) {
+                return i;
+            }
         }
     }
-    return end;
+    return firstZeroCrossingLeft || end;
 };
 
 export function buildOpData(slices = [], numChannels, audioBuffer = false, returnTemplate = false) {

@@ -85,7 +85,7 @@ function getOpKeyData(keyId) {
 
     return {
         center, left, right,
-        hasData:  center || left || right,
+        hasData:  !!(center || left || right),
         length: Math.max(center?.buffer?.length??0, left?.buffer?.length??0, right?.buffer?.length??0)
     };
 }
@@ -229,6 +229,31 @@ function renderOpKeyDetails() {
         `;
     };
 
+    const opControlsMarkup = () => {
+        return `
+        <div class="op-key-details-controls">
+            <span>Panning</span>
+            <div class="channel-options channel-options-stereo channel-options-stereo-opf ${opKeyConfig.pab
+              ? 'op-pan-ab-true'
+              : ''}" style="display: block; border: 1px solid #40392e;"
+               ondblclick="digichain.editor.changeOpParam({target:{value: 16384}}, 'p')"
+               >
+                  <input class="channel-balance" type="range" style="display: inline-block;"
+                  min="0" max="32768" onchange="digichain.editor.changeOpParam(event, 'p')" value="${opKeyConfig.p ?? 16384}" />
+                  <div style="display: inline-block;">
+                    <span class="op-la"></span>
+                    <span class="op-rb"></span>
+                  </div>
+              </div>
+        </div>
+        <div class="op-key-details-controls">
+        <a onclick="digichain.editor.changeOpParam(false, 'pab')" title="Only applicable to OP-1 Field Exports.">L/R <-> A/B Toggle</a>
+        <span></span>
+        </div>
+        `;
+        //TODO: Add play-mode and reverse ui controls
+    };
+
     return `
     <div style="display: flex; justify-content: space-between;">
         <h5>${samples.selected + 1} / 24</h5>
@@ -240,40 +265,20 @@ function renderOpKeyDetails() {
     ` + (opKeyConfig.linkedTo ?
       `<div class="op-key-details-buttons">
         <div class="op-key-detail-title">Samples Linked to Key ${+opKeyConfig.linkedTo + 1}</div>
-    </div>`:
+    </div>
+    <div class="op-key-spacer"></div>` + opControlsMarkup():
     `<div class="op-key-details-buttons">
         ${opKeyDetailMarkup('center', -1, 'Main')}
         ${opKeyDetailMarkup('left', 0, 'Left')}
         ${opKeyDetailMarkup('right', 1, 'Right')}
-    </div>` + `
-    <div class="op-key-details-controls">
-        <span>Panning</span>
-        <div class="channel-options channel-options-stereo channel-options-stereo-opf ${opKeyConfig.pab
-          ? 'op-pan-ab-true'
-          : ''}" style="display: block; border: 1px solid #40392e;"
-           ondblclick="digichain.editor.changeOpParam({target:{value: 16384}}, 'p')"
-           >
-              <input class="channel-balance" type="range" style="display: inline-block;"
-              min="0" max="32768" onchange="digichain.editor.changeOpParam(event, 'p')" value="${opKeyConfig.p ?? 16384}" />
-              <div style="display: inline-block;">
-                <span class="op-la"></span>
-                <span class="op-rb"></span>
-              </div>
-          </div>
-    </div>
-    <div class="op-key-details-controls">
-    <a onclick="digichain.editor.changeOpParam(false, 'pab')" title="Only applicable to OP-1 Field Exports.">L/R <-> A/B Toggle</a>
-    <span></span>
-    </div>
-`
-      //TODO: Add play-mode and reverse ui controls
+    </div>` + opControlsMarkup()
     );
 }
 
 function changeOpParam(event, key, id) {
     const opKeyConfig = opDataConfig[id || samples.selected];
     if (event && event.target.value) {
-        opKeyConfig[key] = event.target.value;
+        opKeyConfig[key] = +event.target.value;
     } else {
         opKeyConfig[key] = !opKeyConfig[key];
     }
@@ -371,7 +376,6 @@ async function acceptDroppedChainItems(droppedFiles = []) {
 function buildXyKit() { }
 
 function buildOpKit() {
-  //TODO: Add parameters from UI to embedded JSON
     const kit = opDataConfig.map((key, keyId) => {
         const keySamples = getOpKeyData(key.linkedTo || keyId);
         keySamples.left = keySamples.left ?
@@ -380,6 +384,19 @@ function buildOpKit() {
         keySamples.right = keySamples.right ?
           bufferToFloat32Array(keySamples.right.buffer, keySamples.right.meta.channel, true, conf.audioCtx, 1, 44100) :
           false;
+
+        if (key.linkedTo) {
+            return {
+                ...key
+            };
+        }
+
+        if (!keySamples.hasData) {
+            return {
+                blank: true,
+                ...key
+            };
+        }
 
         let combinedBuffer = conf.audioCtx.createBuffer(
           2,
@@ -419,20 +436,40 @@ function buildOpKit() {
           ...key
         };
     });
-    kit.totalLength = kit.reduce((acc, val) => acc + val.length, 0);
+
+    kit.totalLength = kit.reduce((acc, val) => acc + (val.length || 0), 0);
+
+    /*Loop over the keys with samples data assigned first*/
+    let lastValidKey;
     for (let s = 0; s < kit.length; s++) {
-        kit[s].s = s === 0 ? 0 : kit[s - 1].e;
-        kit[s].e = kit[s].s + kit[s].length;
+        if (!kit[s].blank && !kit[s].linkedTo) {
+            kit[s].s = s === 0 ? 0 : kit[lastValidKey].e;
+            kit[s].e = kit[s].s + kit[s].length;
+            lastValidKey = s;
+        }
     }
+    /*Then loop over the blank and linkedTo keys to match upto the mapped sample keys*/
+    for (let s = 0; s < kit.length; s++) {
+        if (kit[s].blank) {
+            kit[s].s = kit.totalLength;
+            kit[s].e = kit.totalLength;
+        }
+        if (kit[s].linkedTo){
+            const key = +kit[s].linkedTo;
+            kit[s].s = kit[key].s;
+            kit[s].e = kit[key].e;
+        }
+    }
+
     const kitAudio = conf.audioCtx.createBuffer(
       2,
       kit.totalLength,
       44100
     );
-    joinToStereo(kitAudio, kit);
+    joinToStereo(kitAudio, kit.filter(key => key.buffer));
 
     const linkEl = document.querySelector('.aif-link-hidden');
-    const dataView = encodeAif(kitAudio, '44100', 2, buildOpData(kit, 2));
+    const dataView = encodeAif(kitAudio, '44100', 2, buildOpData(kit, 2, kitAudio));
     let blob = new window.Blob([dataView], {
         type: 'audio/aiff'
     });

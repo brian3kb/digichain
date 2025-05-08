@@ -119,11 +119,11 @@ export function buildOpData(slices = [], numChannels, audioBuffer = false, retur
 
     const scale = 2147483646 / (44100 * (numChannels === 2 ? 20 : 12));
     const s = slices.map(slice => ({
-        p: slice.p || 16384,
+        p: slice.p??16384,
         pab: slice.pab || false,
         st: (slice.st > 24576 ? 24576 : (slice.st < -24576 ? -24576 : slice.st)) || 0,
-        pm: slice.pm || 12288,
-        r: slice.r || 8192,
+        pm: slice.pm??12288,
+        r: slice.r??8192,
         s: Math.floor(slice.s * scale),
         e: Math.floor(nudgeEndToZero(slice.s, slice.e, audioBuffer) * scale)
     }));

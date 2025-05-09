@@ -1045,6 +1045,7 @@ select {
     height: 3.8rem;
     padding: .6rem 1.0rem .7rem;
     width: 100%;
+    background-blend-mode: soft-light;
 }
 
 input[type='color']:focus,
@@ -1070,10 +1071,6 @@ select:focus {
 select {
     background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 8" width="30"><path fill="%23d1d1d1" d="M0,0l6,8l6-8"/></svg>') center right no-repeat;
     padding-right: 3.0rem;
-}
-
-select:focus {
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 8" width="30"><path fill="%239b4dca" d="M0,0l6,8l6-8"/></svg>');
 }
 
 select[multiple] {
@@ -1565,11 +1562,12 @@ body {
     float: left;
 }
 input, .btn-audio-config { color: #a8a8a8; }
-.input-set input, .btn-audio-config {
+.input-set input, .input-set select, .btn-audio-config {
     width: 65%;
     padding: 0 0.5rem;
     border: 1px solid #8a5d2e;
     padding-left: 7.5rem;
+    background-color: #202124;
 }
 .input-set[readonly], .btn-audio-config {
     border: 1px solid #312b25;
@@ -2665,6 +2663,9 @@ body.grid-view .path-exceeds-127 {
     justify-content: space-between;
     align-items: center;
 }
+.op-key-details-controls select, .op-key-details-controls button {
+    border-color: #40392e;
+}
 
 .op-key-detail {
     display: flex;
@@ -3146,12 +3147,15 @@ body.light .pop-up,
 body.light .dialog-pop-up,
 body.light #opExportPanel,
 body.light select,
+body.light input,
+body.light .slice-options #sliceSelection,
 body.light #toggleOptionsButton i,
 body.light .selected-actions-button-list,
 body.light *[class*=is-]:after,
 body.light *[class*=sff-]:after
 {
     background-color: #f5f5f5;
+    background-blend-mode: normal;
 }
 
 body.light .header-menu {
@@ -3183,7 +3187,7 @@ body.light .right-buttons:has(.toggle-seconds-per-file.on) button.dl-spaced {
     opacity: 1;
 }
 
-body.normalize-contrast a, body.normalize-contrast .waveform, body.normalize-contrast input {
+body.normalize-contrast a, body.normalize-contrast .waveform {
     filter: contrast(0.5);
 }
 
@@ -3227,10 +3231,6 @@ body.show-help .help-text {
 }
 
 body.light.show-help .help-text {
-    background-color: #ede5d8;
-}
-
-body.light .slice-options #sliceSelection {
     background-color: #ede5d8;
 }
 

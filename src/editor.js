@@ -246,12 +246,28 @@ function renderOpKeyDetails() {
                   </div>
               </div>
         </div>
+        
         <div class="op-key-details-controls">
-        <a onclick="digichain.editor.changeOpParam(false, 'pab')" title="Only applicable to OP-1 Field Exports.">L/R <-> A/B Toggle</a>
-        <span></span>
+            <a onclick="digichain.editor.changeOpParam(false, 'pab')" title="Only applicable to OP-1 Field Exports." style="padding-top: .75rem;">L/R ↔ A/B Toggle</a>
+            <span></span>
+        </div>
+        <br>
+        <div class="op-key-details-controls">
+            <div class="slice-options input-set" style="width: 100%;">
+                  <label for="opPlayMode" class="before-input" style="margin-top: -.15rem;">Play Mode</label>
+                  <select name="opPlayMode" id="opPlayMode" onchange="digichain.editor.changeOpParam(event, 'pm')" style="width: 100%; color:inherit;">
+                    <option value="4096" ${+opKeyConfig?.pm === 4096 ? 'selected' : '' }>Gate</option>
+                    <option value="20480" ${+opKeyConfig?.pm === 20480 ? 'selected' : '' }>Group</option>
+                    <option value="28672" ${+opKeyConfig?.pm === 28672 ? 'selected' : '' }>Loop</option>
+                    <option value="12288" ${!opKeyConfig.pm || +opKeyConfig?.pm === 12288 ? 'selected' : '' }>One Shot</option>
+                  </select>
+            </div>
+        </div>
+        <div class="op-key-details-controls" style="margin-top: .5rem;">
+            <span style="margin-top: -.75rem;">Play Direction</span>
+            <button class="button button-outline" style="padding: 0 .75rem; min-width: 8rem;" onclick="digichain.editor.changeOpParam({target:{value: ${!opKeyConfig.r || +opKeyConfig?.r === 8192 ? 24576 : 8192}}}, 'r')">${!opKeyConfig.r || +opKeyConfig?.r === 8192 ? 'Forward' : 'Reverse'}</button>
         </div>
         `;
-        //TODO: Add play-mode and reverse ui controls
     };
 
     return `
@@ -329,7 +345,7 @@ async function renderOpExport(reset = false) {
             <button ondrop="digichain.splitAction(event, false, true, false, true)" title="Spreads a chain across the kit, this will replace any existing samples in the kit." class="button-outline op-chain-drop-zone">Drop Chain</button>
         </div>
         <div class="op-buttons row" style="justify-content: space-between;">
-            <button class="button float-right" onclick="digichain.editor.buildXyKit()">Build XY Kit</button>
+            <button class="button float-right" onclick="digichain.editor.buildXyKit()" disabled>Build XY Kit</button>
             <button class="button float-right" onclick="digichain.editor.buildOpKit()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>Build Field Kit</button>
             <span>&nbsp;</span>
             <span>&nbsp;</span>
@@ -443,7 +459,7 @@ function buildOpKit() {
     let lastValidKey;
     for (let s = 0; s < kit.length; s++) {
         if (!kit[s].blank && !kit[s].linkedTo) {
-            kit[s].s = s === 0 ? 0 : kit[lastValidKey].e;
+            kit[s].s = (s === 0 || !lastValidKey) ? 0 : kit[lastValidKey].e;
             kit[s].e = kit[s].s + kit[s].length;
             lastValidKey = s;
         }

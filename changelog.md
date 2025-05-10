@@ -14,6 +14,7 @@ latest
  - Improved creation of OP-1 Field / OP-Z chains, nudging end to zero crossing per slice if one is present in the last 256 samples.
  - OP-1 Field / OP-Z exports now default to one-shot play mode.
  - Shift + click on Pad With Zero selected action allows entering a custom value to pad the sample(s) with in seconds.
+ - Config option, treat slice data in files as distinct files on join - defaults to YES, when set to YES, if a file contains slice data or has had slice data configured those slices will be represented as distinct files when creating new chains that include those selected slices; when set to NO, the per-file slices will be discarded when joined to new chains.
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.

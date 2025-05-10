@@ -15,6 +15,7 @@ const defaultSettings = {
     deClick: 0.4,
     ditherExports: false,
     embedCuePoints: true,
+    splitOutExistingSlicesOnJoin: true,
     embedOrslData: false,
     exportWithOtFile: false,
     importFileLimit: true,

@@ -1341,6 +1341,9 @@ function toggleSetting(param, value, suppressRerender) {
     if (param === 'skipMiniWaveformRender') {
         renderList();
     }
+    if (param === 'splitOutExistingSlicesOnJoin') {
+        setCountValues();
+    }
     if (suppressRerender) { return; }
     showExportSettingsPanel();
 }
@@ -1541,6 +1544,12 @@ function showExportSettingsPanel(page = 'settings') {
 <td><button title="Embed slice data as wav CUE point markers, compatible with DirtyWave M8 slice sampler. The end points will extend to the start point of the next sample, or the end of the wav file for the last slice." onpointerdown="digichain.toggleSetting('embedCuePoints')" class="check ${settings.embedCuePoints
           ? 'button'
           : 'button-outline'}">${settings.embedCuePoints ? 'YES' : 'NO'}</button></td>
+</tr>
+<tr>
+<td><span>Treat slice data in files as distinct files on join?&nbsp;&nbsp;&nbsp;</span></td>
+<td><button title="If a file already has slice information, when set to YES these slices will be treated as files when creating chains, if set to NO, per file slice data will be discarded." onpointerdown="digichain.toggleSetting('splitOutExistingSlicesOnJoin')" class="check ${settings.splitOutExistingSlicesOnJoin
+          ? 'button'
+          : 'button-outline'}">${settings.splitOutExistingSlicesOnJoin ? 'YES' : 'NO'}</button></td>
 </tr>
 <!--<tr>
 <td><span>Embed slice information as Lofi-12 XT points in exported wav files?<br>(Applied only to 12/24 kHz wav exports) &nbsp;&nbsp;&nbsp;</span></td>
@@ -2029,6 +2038,20 @@ async function joinAll(
         let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(
           f => f.meta.checked);
 
+        /*Expand any slices into distinct files for processing.*/
+        if (filesRemaining.length === 0 && settings.splitOutExistingSlicesOnJoin) {
+            const _filesWithSlices = [];
+            _files.forEach(
+              (f, fIdx) => f.meta?.slices?.length ? _filesWithSlices.push(fIdx) : false
+            )
+            while (_filesWithSlices.length > 0) {
+                const __fileId = _filesWithSlices.pop();
+                const __file = _files[__fileId];
+                const exploded = splitByOtSlices({}, __file.meta.id, false, 'ot', [], false, true);
+                _files.splice(__fileId, 1, ...exploded);
+            }
+        }
+
         let tempFiles, slices, largest;
         let totalLength = 0;
 
@@ -2079,7 +2102,7 @@ async function joinAll(
         let offset = 0;
         for (let x = 0; x < _files.length; x++) {
             const fileSliceData = _files[x].meta.slices || metaFiles.getByFileInDcFormat(_files[x]);
-            if (fileSliceData.length) {
+            if (fileSliceData.length && settings.splitOutExistingSlicesOnJoin) {
                 if (slices.length > 0) {
                     const _slices = JSON.parse(
                       JSON.stringify(fileSliceData));
@@ -2716,7 +2739,7 @@ function splitFromTrack(event, track) {
 
 const splitByOtSlices = (
   event, id, pushInPlace = false, sliceSource = 'ot',
-  excludeSlices = [], saveSlicesMetaOnly = false) => {
+  excludeSlices = [], saveSlicesMetaOnly = false, returnAsCollection = false) => {
     const file = getFileById(id);
     const pushInPlaceItems = [];
     let otMeta;
@@ -2790,14 +2813,19 @@ const splitByOtSlices = (
               slice(otMeta.slices[i].startPoint, otMeta.slices[i].endPoint).
               forEach((a, idx) => slice.buffer.getChannelData(1)[idx] = a);
         }
-        if (pushInPlace) {
+        if (pushInPlace || returnAsCollection) {
             pushInPlaceItems.push(slice);
         } else {
             files.push(slice);
         }
-        unsorted.push(uuid);
+        if (!returnAsCollection) {
+            unsorted.push(uuid);
+        }
     }
     if (pushInPlaceItems.length) {
+        if (returnAsCollection) {
+            return pushInPlaceItems;
+        }
         if (isOpExportPanelOpen()) {
             editor.acceptDroppedChainItems(pushInPlaceItems);
         } else {
@@ -3274,7 +3302,9 @@ const setFileNumTicker = () => {
 
 const setCountValues = () => {
     const filesSelected = files.filter(f => f.meta.checked);
-    const selectionCount = filesSelected.length;
+    const selectionCount = settings.splitOutExistingSlicesOnJoin ? filesSelected.reduce(
+      (a, f) => a + (f.meta?.slices?.length || 1), 0
+    ) : filesSelected.length;
     const filesDuration = files.reduce((a, f) => a += +f.meta.duration, 0);
     const filesSelectedDuration = filesSelected.reduce(
       (a, f) => a += +f.meta.duration, 0);
@@ -3298,7 +3328,7 @@ const setCountValues = () => {
                   : joinCount}${idx === 0 ? ' Spaced' : ''}${joinCount === 1
                 ? ' Chain'
                 : ' Chains'}`;
-              el.dataset.joinCount = joinCount;
+              el.dataset.joinCount = `${joinCount}`;
           });
         try {
             document.querySelectorAll('tr').
@@ -4877,6 +4907,10 @@ function init() {
                   stopPlayFile(false, selected[id].meta.id) :
                   playFile(false, selected[id].meta.id,
                     (event.shiftKey || modifierKeys.shiftKey));
+            }
+            if (event.shiftKey && (event.metaKey || event.ctrlKey)) {
+                document.body.classList.remove('shiftKey-down');
+                document.body.classList.remove('ctrlKey-down');
             }
         }
 

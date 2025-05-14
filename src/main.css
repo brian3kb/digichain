@@ -1651,6 +1651,9 @@ tr.selected {
     /*background-color: #cb9d5b0d;*/
     background-color: #cb9d5b14;
 }
+tr.drag-offset {
+    box-shadow: inset 0 12px 0 #3f3a34;
+}
 td.waveform-td:has(canvas) {
     width: 180px;
 }

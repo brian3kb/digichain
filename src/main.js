@@ -42,6 +42,7 @@ let mergeFiles = [];
 let chainFileNames = []; //{ name: '', used: false }
 let lastSort = '';
 let lastSelectedRow;
+let lastDragOverRow;
 let lastLastSelectedRow;
 let lastSliceFileImport = []; // [].enabledTracks = {t[x]: boolean}
 let lastOpKit = [];
@@ -3152,6 +3153,12 @@ const handleRowClick = (event, id) => {
 
 const rowDragStart = (event) => {
     if (event.target?.classList?.contains('file-row')) {
+        const opExport = document.getElementById('opExportPanel');
+        if (!navigator.vendor.startsWith('Apple') && opExport.classList.contains('show')) {
+            opExport.style.transform = 'translateX(-9999px)';
+            setTimeout(() => opExport.style.transform = 'translateX(0)', 0);
+        }
+        event.target.classList.add('is-dragging');
         lastSelectedRow = event.target;
         attachDragDownloadBlob(event, event.target.dataset.id);
     }
@@ -4698,7 +4705,9 @@ const dropHandler = (event) => {
             }
         }, 500);
     } else {
-        let target = event.target;
+        let target = lastDragOverRow || event.target;
+        event.target?.classList?.remove('is-dragging');
+        lastDragOverRow?.classList?.remove('drag-offset');
         if (document.getElementById('opExportPanel').
           classList.
           contains('show')) {
@@ -4716,9 +4725,8 @@ const dropHandler = (event) => {
             let selectedRowId = getFileIndexById(lastSelectedRow.dataset.id);
             let targetRowId = getFileIndexById(target.dataset.id);
             let item = files.splice(selectedRowId, 1)[0];
-            files.splice(targetRowId, 0, item);
-            targetRowId === 0 ? target.before(lastSelectedRow) : target.after(
-              lastSelectedRow);
+            files.splice((targetRowId <= selectedRowId ? targetRowId : (targetRowId-1)), 0, item);
+            renderList();
         }
     }
 };
@@ -4774,6 +4782,25 @@ function init() {
       'dragover',
       (event) => {
           event.preventDefault();
+          if (
+            lastSelectedRow &&
+            lastSelectedRow.classList.contains('is-dragging') &&
+            !document.getElementById('opExportPanel').
+            classList.contains('show')
+          ) {
+              const dragOverRow = document.elementsFromPoint(event.clientX, event.clientY).filter(
+                el => el.tagName === 'TD'
+              ).map(
+                td => td.parentElement
+              ).find(
+                r => r !== lastSelectedRow && r.classList.contains('file-row')
+              );
+              if (dragOverRow && dragOverRow !== lastDragOverRow) {
+                  dragOverRow.classList.add('drag-offset');
+                  lastDragOverRow?.classList?.remove('drag-offset');
+                  lastDragOverRow = dragOverRow;
+              }
+          }
       },
       false
     );

@@ -3302,20 +3302,23 @@ const setFileNumTicker = () => {
 
 const setCountValues = () => {
     const filesSelected = files.filter(f => f.meta.checked);
-    const selectionCount = settings.splitOutExistingSlicesOnJoin ? filesSelected.reduce(
-      (a, f) => a + (f.meta?.slices?.length || 1), 0
-    ) : filesSelected.length;
+    const selectionCount = filesSelected.length;
+    const selectionSlicesCount = settings.splitOutExistingSlicesOnJoin ? filesSelected.reduce(
+      (a, f) => a + (f.meta?.slices?.length ? (f.meta.slices.length - 1) : 0), 0
+    ) : 0;
+    const chainCount = selectionSlicesCount + selectionCount;
     const filesDuration = files.reduce((a, f) => a += +f.meta.duration, 0);
     const filesSelectedDuration = filesSelected.reduce(
       (a, f) => a += +f.meta.duration, 0);
-    const joinCount = selectionCount === 0 ? 0 : (selectionCount > 0 &&
-    sliceGrid > 0 ? Math.ceil(selectionCount / sliceGrid) : 1);
+    const joinCount = chainCount === 0 ? 0 : (chainCount > 0 &&
+    sliceGrid > 0 ? Math.ceil(chainCount / sliceGrid) : 1);
     document.getElementById(
-      'fileNum').textContent = `${files.length}/${selectionCount}`;
+      'fileNum').textContent = `${files.length}/${selectionCount}` + (selectionSlicesCount ?
+      ` (+${selectionSlicesCount} slices)`: '');
     document.querySelector(
       '.selection-count').textContent = ` ${selectionCount || '-'} `;
     document.querySelector(
-      '.selection-count').dataset.selectionCount = selectionCount;
+      '.selection-count').dataset.selectionCount = `${selectionCount}`;
     document.getElementById(
       'lengthHeaderLink').textContent = `Length (${secondsToMinutes(
       filesSelectedDuration)}/${secondsToMinutes(filesDuration)})`;
@@ -3333,10 +3336,13 @@ const setCountValues = () => {
         try {
             document.querySelectorAll('tr').
               forEach(row => row.classList.remove('end-of-grid'));
-            document.querySelectorAll('tr.checked').forEach(
-              (row, i) => (i + 1) % sliceGrid === 0 ? row.classList.add(
-                'end-of-grid') : row.classList.remove('end-of-grid'));
-
+            /*Can't show the end-joined-file line when slices are treated as distinct files in join operations.*/
+            if (!settings.splitOutExistingSlicesOnJoin) {
+                document.querySelectorAll('tr.checked').forEach(
+                  (row, i) => (i + 1) % sliceGrid === 0 ? row.classList.add(
+                    'end-of-grid') : row.classList.remove('end-of-grid')
+                );
+            }
         } catch (e) {}
     } else { /*When using max length in seconds.*/
         const calcFiles = (items, count = 0) => {

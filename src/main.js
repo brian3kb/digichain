@@ -3322,6 +3322,8 @@ const setCountValues = () => {
     document.getElementById(
       'fileNum').textContent = `${files.length}/${selectionCount}` + (selectionSlicesCount ?
       ` (+${selectionSlicesCount} slices)`: '');
+    document.getElementById(
+      'fileNum').classList.remove('gg-spinner');
     document.querySelector(
       '.selection-count').textContent = ` ${selectionCount || '-'} `;
     document.querySelector(
@@ -4330,12 +4332,12 @@ const renderListWhenReady = (count, fileCount) => {
     importOrder = [...new Set(importOrder)];
     if (count.every(c => unsorted.includes(c))) {
         sort({skipRender: true}, 'id');
+        processedCount = 0;
         renderList();
     } else {
+        setFileNumTicker();
         setTimeout(() => renderListWhenReady(count), 1000);
     }
-    processedCount = 0;
-    setFileNumTicker();
 };
 
 const setLoadingProgress = (count, total) => {

@@ -15,6 +15,8 @@ latest
  - OP-1 Field / OP-Z exports now default to one-shot play mode.
  - Shift + click on Pad With Zero selected action allows entering a custom value to pad the sample(s) with in seconds.
  - Config option, treat slice data in files as distinct files on join - defaults to YES, when set to YES, if a file contains slice data or has had slice data configured those slices will be represented as distinct files when creating new chains that include those selected slices; when set to NO, the per-file slices will be discarded when joined to new chains.
+ - Moved about pop-up into unified audio config, settings, about panel.
+ - Supporting the import and export of digichain session files.
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
@@ -22,6 +24,7 @@ latest
    - When restore last used audio config is set to off, the text label of the audio config indicator was blank.
    - Where canvas element replacement threw an error when slicing to samples from the slice panel with skip render waveforms enabled.
    - Toggling the max-seconds per chain option de-selected all samples.
+   - Play-head was not displayed when playing the highlighted sample in the list using the P key keyboard shortcut.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

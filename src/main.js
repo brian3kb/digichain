@@ -18,6 +18,7 @@ import {
     getUniqueName
 } from './editor.js';
 import './jszip.js';
+import './msgpack.min.js';
 
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
@@ -214,6 +215,18 @@ function setAudioOptionsFromCommonConfig(event) {
     }
 }
 
+function setSliceOptionsFromArray(sliceOptions = []) {
+    sliceOptions.forEach((option, index) => changeSliceOption(
+      document.querySelector(`.master-slices .sel-${index}`), option,
+      true
+    ));
+
+    selectSliceAmount({
+        shiftKey: false,
+        target: document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)
+    }, sliceOptions[+document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)?.dataset?.sel??0]);
+}
+
 async function changeAudioConfig(configString = '', onloadRestore = false) {
     const settingsPanelEl = document.getElementById('exportSettingsPanel');
     const configOptionsEl = document.getElementById('audioConfigOptions');
@@ -297,15 +310,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     document.body.dataset.targetSr = targetSR;
     document.body.dataset.workingSr = workingSR;
 
-    sliceOptions.forEach((option, index) => changeSliceOption(
-      document.querySelector(`.master-slices .sel-${index}`), option,
-      true
-    ));
-
-    selectSliceAmount({
-        shiftKey: false,
-        target: document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)
-    }, sliceOptions[+document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)?.dataset?.sel??0]);
+    setSliceOptionsFromArray(sliceOptions);
 
     if (!onloadRestore) {
         checkAndSetAudioContext();
@@ -1257,22 +1262,6 @@ function fadeSelected(event, type) {
     }, 250);
 }
 
-function showInfo() {
-    const description = document.querySelector(
-      'meta[name=description]').content;
-    const version = document.querySelector(
-      'meta[name=version]').content;
-    const infoPanelContentEl = document.querySelector(
-      '#infoPanelMd .content');
-    infoPanelContentEl.innerHTML = `
-  <h3>DigiChain (${version})</h3>
-  <p>${description}</p>
-  <p class="float-right"><a href="https://brianbar.net/" target="_blank">Brian Barnett</a>
-  (<a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>
-`;
-    document.querySelector('#infoPanelMd').showModal();
-}
-
 function showWelcome() {
     if (settings.showWelcomeModalOnLaunchIfListEmpty && unsorted.length === 0) {
         const welcomeModalEl = document.querySelector('#welcomePanelMd');
@@ -1439,341 +1428,355 @@ function showExportSettingsPanel(page = 'settings') {
     const panelEl = document.querySelector('#exportSettingsPanel');
     const panelContentEl = document.querySelector(
       '#exportSettingsPanel .content');
+
     panelEl.dataset.page = page;
-    if (page === 'settings') {
-        panelContentEl.innerHTML = `
-  <div class="export-options">
-  <span class="${page !== 'settings' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('audio')">Audio Config</span>
-  <span class="${page === 'settings' ? 'active': ''}">Settings</span>
-  </div>
-  <span class="settings-info">All settings here will persist when the app re-opens.</span>
-  <table style="padding-top:0;">
-  <thead>
-  <tr>
-  <th width="68%"></th>
-  <th></th>
-</tr>
-</thead>
-  <tbody>
-  <tr>
-  <td><span>Pitch up exported files by octave &nbsp;&nbsp;&nbsp;</span></td>
-  <td>    <button onpointerdown="digichain.pitchExports(1)" class="check ${settings.pitchModifier ===
-        1 ? 'button' : 'button-outline'}">OFF</button>
-  <button onpointerdown="digichain.pitchExports(2)" class="check ${settings.pitchModifier ===
-        2 ? 'button' : 'button-outline'}">1</button>
-  <button onpointerdown="digichain.pitchExports(4)" class="check ${settings.pitchModifier ===
-        4 ? 'button' : 'button-outline'}">2</button>
-  <button onpointerdown="digichain.pitchExports(8)" class="check ${settings.pitchModifier ===
-        8 ? 'button' : 'button-outline'}">3</button><br></td>
-</tr>
-<tr>
-<td><span>Reverse all even samples in a chain? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('reverseEvenSamplesInChains')"
- title="When enabled, all even samples in chains will be reversed (back-to-back mode)."
- class="check ${settings.reverseEvenSamplesInChains
-          ? 'button'
-          : 'button-outline'}">${settings.reverseEvenSamplesInChains ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Restore the last used Sample Rate/Bit Depth/Channel? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('restoreLastUsedAudioConfig')" class="check ${settings.restoreLastUsedAudioConfig
-          ? 'button'
-          : 'button-outline'}">${settings.restoreLastUsedAudioConfig ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Retain session data between browser refreshes? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('retainSessionState')" class="check ${settings.retainSessionState
-          ? 'button'
-          : 'button-outline'}">${settings.retainSessionState ? 'YES' : 'NO'}</button></td>
-</tr>
-  <tr>
-  <td><span>Play pop markers when playing back samples?&nbsp;&nbsp;&nbsp;</span></td>
-  <td>
-  <button onpointerdown="digichain.toggleSetting('playWithPopMarker', 0)" class="check ${settings.playWithPopMarker ===
-        0 ? 'button' : 'button-outline'}">OFF</button>
-  <button title="0db prevents DT normalization." onpointerdown="digichain.toggleSetting('playWithPopMarker', 1)" class="check ${settings.playWithPopMarker ===
-        1 ? 'button' : 'button-outline'}">0db</button>
-  <button title="Peak sets pop to loudest sample peak." onpointerdown="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${settings.playWithPopMarker ===
-        2 ? 'button' : 'button-outline'}">Peak</button>
-  </td>
-  </tr>
-  <td><span>Try to match start/end sample when cropping/truncating?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Could give shorter length samples than specified but can help
-   reduce clicks on looping cropped/truncated samples" onpointerdown="digichain.toggleSetting('attemptToFindCrossingPoint')" class="check ${settings.attemptToFindCrossingPoint
-          ? 'button'
-          : 'button-outline'}">${settings.attemptToFindCrossingPoint ? 'YES' : 'NO'}</button></td>
-</tr>
-    <tr>
-  <td><span>De-click exported samples?<br>Helps when importing non-wav files of a different<br>sample rate than the export file, or small buffered audio interfaces. &nbsp;&nbsp;&nbsp;</span></td>
-  <td>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0)" class="check ${+settings.deClick ===
-        0 ? 'button' : 'button-outline'}">OFF</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.1)" class="check ${+settings.deClick ===
-        0.1 ? 'button' : 'button-outline'}">&gt;10%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.2)" class="check ${+settings.deClick ===
-        0.2 ? 'button' : 'button-outline'}">&gt;20%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.3)" class="check ${+settings.deClick ===
-        0.3 ? 'button' : 'button-outline'}">&gt;30%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.4)" class="check ${+settings.deClick ===
-        0.4 ? 'button' : 'button-outline'}">&gt;40%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.5)" class="check ${+settings.deClick ===
-        0.5 ? 'button' : 'button-outline'}">&gt;50%</button>
-  <button onpointerdown="digichain.toggleSetting('deClick', 0.75)" class="check ${+settings.deClick ===
-        0.75 ? 'button' : 'button-outline'}">&gt;75%</button>
-  </td>
-  </tr>
-<tr>
-<td><span>Download multi-file/joined downloads as one zip file? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('zipDownloads')" class="check ${settings.zipDownloads
-          ? 'button'
-          : 'button-outline'}">${settings.zipDownloads ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>When exporting stereo, export dual mono files as mono? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Often, stereo files are just the same mono audio data on both channels, if this is the case, export the file as mono." onpointerdown="digichain.toggleSetting('treatDualMonoStereoAsMono')" class="check ${settings.treatDualMonoStereoAsMono
-          ? 'button'
-          : 'button-outline'}">${settings.treatDualMonoStereoAsMono ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr style="display: none;">
-<td><span>Embed slice information in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Embed the slice information into the wav file in DigiChain format, this includes start, end points and the source file name for the slice." onpointerdown="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData
-          ? 'button'
-          : 'button-outline'}">${embedSliceData ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Embed slice information as CUE points in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Embed slice data as wav CUE point markers, compatible with DirtyWave M8 slice sampler. The end points will extend to the start point of the next sample, or the end of the wav file for the last slice." onpointerdown="digichain.toggleSetting('embedCuePoints')" class="check ${settings.embedCuePoints
-          ? 'button'
-          : 'button-outline'}">${settings.embedCuePoints ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Treat slice data in files as distinct files on join?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="If a file already has slice information, when set to YES these slices will be treated as files when creating chains, if set to NO, per file slice data will be discarded." onpointerdown="digichain.toggleSetting('splitOutExistingSlicesOnJoin')" class="check ${settings.splitOutExistingSlicesOnJoin
-          ? 'button'
-          : 'button-outline'}">${settings.splitOutExistingSlicesOnJoin ? 'YES' : 'NO'}</button></td>
-</tr>
-<!--<tr>
-<td><span>Embed slice information as Lofi-12 XT points in exported wav files?<br>(Applied only to 12/24 kHz wav exports) &nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Embed slice data in wav file header in the Sonicware custom format for the Lofi-12 XT sampler." onpointerdown="digichain.toggleSetting('embedOrslData')" class="check ${settings.embedOrslData
-          ? 'button'
-          : 'button-outline'}">${settings.embedOrslData ? 'YES' : 'NO'}</button></td>
-</tr>-->
-<tr>
-<td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 kHz 16/24 [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('exportWithOtFile')" class="check ${settings.exportWithOtFile
-          ? 'button'
-          : 'button-outline'}">${settings.exportWithOtFile ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Limit imports to maximum of 750 files?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts." onpointerdown="digichain.toggleSetting('importFileLimit')" class="check ${settings.importFileLimit
-          ? 'button'
-          : 'button-outline'}">${settings.importFileLimit ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Skip rendering the mini audio waveform in the list?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="When processing large lists of files, skiping the renderings of the waveform can improve the responsiveness of the browse as no canvas element per row will be rendered." onpointerdown="digichain.toggleSetting('skipMiniWaveformRender')" class="check ${settings.skipMiniWaveformRender
-          ? 'button'
-          : 'button-outline'}">${settings.skipMiniWaveformRender ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Show Shift/Ctrl modifier touch buttons?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('showTouchModifierKeys')" class="check ${settings.showTouchModifierKeys
-          ? 'button'
-          : 'button-outline'}">${settings.showTouchModifierKeys ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Shift+Click to download single files from the list?&nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('shiftClickForFileDownload')" class="check ${settings.shiftClickForFileDownload
-          ? 'button'
-          : 'button-outline'}">${settings.shiftClickForFileDownload ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Use Dark theme as the default? (No = Light theme)&nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('darkModeTheme')" class="check ${settings.darkModeTheme
-          ? 'button'
-          : 'button-outline'}">${settings.darkModeTheme ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Normalize text/waveform color contrast? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button onpointerdown="digichain.toggleSetting('normalizeContrast')" class="check ${settings.normalizeContrast
-          ? 'button'
-          : 'button-outline'}">${settings.normalizeContrast ? 'YES' : 'NO'}</button></td>
-</tr>
-<tr>
-<td><span>Show the welcome panel at launch? &nbsp;&nbsp;&nbsp;</span></td>
-<td><button title="The welcome panel will show at launch if the list is empty."
-          onpointerdown="digichain.toggleSetting('showWelcomeModalOnLaunchIfListEmpty')" class="check ${settings.showWelcomeModalOnLaunchIfListEmpty
-          ? 'button'
-          : 'button-outline'}">${settings.showWelcomeModalOnLaunchIfListEmpty ? 'YES' : 'NO'}</button></td>
-</tr>
-</tbody>
-</table>
-`;
-    } else {
-        panelContentEl.innerHTML = `
-  <div class="export-options">
-    <span class="${page !== 'settings' ? 'active': ''}">Audio Config</span>
-    <span class="${page === 'settings' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel()">Settings</span>
-  </div>
-  <table style="padding-top:0;" id="settingAudioConfig">
-  <thead>
-  <tr>
-  <th style="border: none;"></th>
-  <th style="border: none;"></th>
-</tr>
-</thead>
-  <tbody>
-    <tr>
-      <td style="border: none;"><span>Working Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
-      <td style="border: none;">
-          <div class="input-set" id="settingsWorkingSampleRateGroup" style="display: flex; align-items: flex-start;">
-              <input type="number" placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}Hz"
-              onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
-              onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
-              id="settingsWorkingSampleRate" value="${masterSR}" data-sample-rate="${masterSR}" list="commonSR"
-              data-placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}"
-              min="${settings.supportedSampleRates[0]}" max="${settings.supportedSampleRates[1]}">
-              <datalist id="commonSR">
-                ${[12000, 24000, 32000, 44100, 48000].map(
-          v => '<option value="' + v + '">').join('')}
-              </datalist>
-              <button title="Restore currently active working sample rate" class="button-clear" onpointerdown="(() => {const i = document.getElementById('settingsWorkingSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
-          </div>
-      </td>
-  </tr>
-    <tr><td colspan="2"><span><small>Caution: Changing the working sample rate will resample any files currently in the list to the specified sample rate.</small></span><br><br></td></tr>
-  <tr>
-      <td style="border: none;"><span>Target Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
-      <td style="border: none;">
-          <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup" style="display: flex; align-items: flex-start;">
-              <input type="number" placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}Hz"
-              ${targetContainer === 'a' ? 'disabled="disabled"' : ''}
-              onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
-              onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
-              id="settingsSampleRate" value="${targetSR}" data-sample-rate="${targetSR}" list="commonSR"
-              data-placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}"
-              min="${settings.supportedSampleRates[0]}" max="${settings.supportedSampleRates[1]}">
-              <datalist id="commonSR">
-                ${[12000, 24000, 32000, 44100, 48000].map(
-                  v => '<option value="' + v + '">').join('')}
-              </datalist>
-              <button title="Restore currently active sample rate" class="button-clear" onpointerdown="(() => {const i = document.getElementById('settingsSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
-          </div>
-      </td>
-  </tr>
-  <tr><td colspan="2"></td></tr>
 
-  <tr>
-  <td><span>Bit Depth&nbsp;&nbsp;&nbsp;</span></td>
-  <td>
-  <div style="padding: 1.5rem 0;" class="${targetContainer === 'a' ? 'disabled' : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onclick="((event, el) => {
-      el.dataset.bitDepth = event.target.dataset.bitDepth || el.dataset.bitDepth;
-  el.querySelectorAll('button').forEach(b => b.classList = b.dataset.bitDepth === el.dataset.bitDepth ? 'check button' : 'check button-outline');
-  document.getElementById('ditherGroup').classList[+el.dataset.bitDepth === 32 ? 'add': 'remove']('disabled');
-  })(event, this);">
-      <button id="acoBitDepth8" data-bit-depth="8" class="check button${masterBitDepth !== 8 ? '-outline' : ''}">8 Bit</button>
-      <button id="acoBitDepth16" data-bit-depth="16" class="check button${masterBitDepth !== 16 ? '-outline' : ''}">16 Bit</button>
-      <button id="acoBitDepth24" data-bit-depth="24" class="check button${masterBitDepth !== 24 ? '-outline' : ''}">24 Bit</button>
-     <button id="acoBitDepth32" data-bit-depth="32" class="check button${masterBitDepth !== 32 ? '-outline' : ''}">32 Bit</button>
- </div>
-  </td>
-  </tr>
-  <tr>
-  <td><span>Dither 8/16/24 Bit Exports&nbsp;&nbsp;&nbsp;</span></td>
-  <td>
-  <div style="padding: 1.5rem 0;" class="${masterBitDepth === 32 ? 'disabled' : ''}" data-dither="${settings.ditherExports}" id="ditherGroup" onclick="((event, el) => {
-      el.dataset.dither = event.target.dataset.dither || el.dataset.dither;
-  el.querySelectorAll('button').forEach(b => b.classList = b.dataset.dither === el.dataset.dither ? 'check button' : 'check button-outline');
-  })(event, this);">
-      <button id="acoDitherNo" data-dither="false" class="check button${!settings.ditherExports || masterBitDepth === 32 ? '' : '-outline'}">NO</button>
-      <button id="acoDitherYes" data-dither="true" class="check button${settings.ditherExports && masterBitDepth !== 32 ? '' : '-outline'}">YES</button>
- </div>
-  </td>
-  </tr>
-  <tr>
-      <td><span>Channels&nbsp;&nbsp;&nbsp;</span></td>
+    let panelMarkup = `
+      <div class="export-options">
+          <span class="${page === 'audio' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('audio')">Audio Config</span>
+          <span class="${page === 'settings' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('settings')">Settings</span>
+          <span class="${page === 'about' || !page ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('about')">About</span>
+      </div>
+    `;
+    switch (page) {
+        case 'settings':
+            panelMarkup += `
+      <span class="settings-info">All settings here will persist when the app re-opens.</span>
+      <table style="padding-top:0;">
+      <thead>
+      <tr>
+      <th width="68%"></th>
+      <th></th>
+    </tr>
+    </thead>
+      <tbody>
+      <tr>
+      <td><span>Pitch up exported files by octave &nbsp;&nbsp;&nbsp;</span></td>
+      <td>    <button onpointerdown="digichain.pitchExports(1)" class="check ${settings.pitchModifier ===
+            1 ? 'button' : 'button-outline'}">OFF</button>
+      <button onpointerdown="digichain.pitchExports(2)" class="check ${settings.pitchModifier ===
+            2 ? 'button' : 'button-outline'}">1</button>
+      <button onpointerdown="digichain.pitchExports(4)" class="check ${settings.pitchModifier ===
+            4 ? 'button' : 'button-outline'}">2</button>
+      <button onpointerdown="digichain.pitchExports(8)" class="check ${settings.pitchModifier ===
+            8 ? 'button' : 'button-outline'}">3</button><br></td>
+    </tr>
+    <tr>
+    <td><span>Reverse all even samples in a chain? &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('reverseEvenSamplesInChains')"
+     title="When enabled, all even samples in chains will be reversed (back-to-back mode)."
+     class="check ${settings.reverseEvenSamplesInChains
+              ? 'button'
+              : 'button-outline'}">${settings.reverseEvenSamplesInChains ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Restore the last used Sample Rate/Bit Depth/Channel? &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('restoreLastUsedAudioConfig')" class="check ${settings.restoreLastUsedAudioConfig
+              ? 'button'
+              : 'button-outline'}">${settings.restoreLastUsedAudioConfig ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Retain session data between browser refreshes? &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('retainSessionState')" class="check ${settings.retainSessionState
+              ? 'button'
+              : 'button-outline'}">${settings.retainSessionState ? 'YES' : 'NO'}</button></td>
+    </tr>
+      <tr>
+      <td><span>Play pop markers when playing back samples?&nbsp;&nbsp;&nbsp;</span></td>
       <td>
-        <div style="padding: 1.5rem 0;" id="channelsGroup" data-channels="${masterChannels}" onclick="((event, el) => {
-      el.dataset.channels = event.target.dataset.channels || el.dataset.channels;
-  el.querySelectorAll('button').forEach(b => b.classList = b.dataset.channels === el.dataset.channels ? 'check button' : 'check button-outline')
-  })(event, this);">
-        <button id="acoChannelm" data-channels="1" class="check button${masterChannels !== 1 ? '-outline' : ''}">MONO</button>
-          <button id="acoChannels" data-channels="2" class="check button${masterChannels !== 2 ? '-outline' : ''}">STEREO</button>
-          </div>
+      <button onpointerdown="digichain.toggleSetting('playWithPopMarker', 0)" class="check ${settings.playWithPopMarker ===
+            0 ? 'button' : 'button-outline'}">OFF</button>
+      <button title="0db prevents DT normalization." onpointerdown="digichain.toggleSetting('playWithPopMarker', 1)" class="check ${settings.playWithPopMarker ===
+            1 ? 'button' : 'button-outline'}">0db</button>
+      <button title="Peak sets pop to loudest sample peak." onpointerdown="digichain.toggleSetting('playWithPopMarker', 2)" class="check ${settings.playWithPopMarker ===
+            2 ? 'button' : 'button-outline'}">Peak</button>
       </td>
-  </tr>
-
-  <tr>
-      <td style="border: none;"><span>Container&nbsp;&nbsp;&nbsp;</span></td>
-      <td style="border: none;">
-        <div style="padding: 1.5rem 0;" id="targetContainerGroup" data-container="${targetContainer}" onclick="((event, el) => {
-      el.dataset.container = event.target.dataset.container || el.dataset.container;
-  el.querySelectorAll('button').forEach(b => b.classList = b.dataset.container === el.dataset.container ? 'check button' : 'check button-outline');
-  if (el.dataset.container === 'a') {
-      document.getElementById('acoBitDepth16').click();
-      document.getElementById('bitDepthGroup').classList.add('disabled');
-      document.getElementById('settingsSampleRate').value = 44100;
-      document.getElementById('settingsSampleRate').disabled = true;
-      document.getElementById('settingsSampleRateGroup').classList.add('disabled');
-  } else {
-        document.getElementById('bitDepthGroup').classList.remove('disabled');
-        document.getElementById('settingsSampleRate').disabled = false
-        document.getElementById('settingsSampleRateGroup').classList.remove('disabled');
-  }
-  })(event, this);">
-        <button id="acoContainerw" data-container="w" class="check button${targetContainer === 'w' ? '' : '-outline'}">WAV</button>
-          <button id="acoContainera" data-container="a" class="check button${targetContainer === 'a' ? '' : '-outline'}">AIF</button>
-          </div>
+      </tr>
+      <td><span>Try to match start/end sample when cropping/truncating?&nbsp;&nbsp;&nbsp;</span></td>
+    <td><button title="Could give shorter length samples than specified but can help
+       reduce clicks on looping cropped/truncated samples" onpointerdown="digichain.toggleSetting('attemptToFindCrossingPoint')" class="check ${settings.attemptToFindCrossingPoint
+              ? 'button'
+              : 'button-outline'}">${settings.attemptToFindCrossingPoint ? 'YES' : 'NO'}</button></td>
+    </tr>
+        <tr>
+      <td><span>De-click exported samples?<br>Helps when importing non-wav files of a different<br>sample rate than the export file, or small buffered audio interfaces. &nbsp;&nbsp;&nbsp;</span></td>
+      <td>
+      <button onpointerdown="digichain.toggleSetting('deClick', 0)" class="check ${+settings.deClick ===
+            0 ? 'button' : 'button-outline'}">OFF</button>
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.1)" class="check ${+settings.deClick ===
+            0.1 ? 'button' : 'button-outline'}">&gt;10%</button>
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.2)" class="check ${+settings.deClick ===
+            0.2 ? 'button' : 'button-outline'}">&gt;20%</button>
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.3)" class="check ${+settings.deClick ===
+            0.3 ? 'button' : 'button-outline'}">&gt;30%</button>
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.4)" class="check ${+settings.deClick ===
+            0.4 ? 'button' : 'button-outline'}">&gt;40%</button>
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.5)" class="check ${+settings.deClick ===
+            0.5 ? 'button' : 'button-outline'}">&gt;50%</button>
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.75)" class="check ${+settings.deClick ===
+            0.75 ? 'button' : 'button-outline'}">&gt;75%</button>
       </td>
-  </tr>
-    <tr><td colspan="3"><span><small>Note: Choosing AIF will set the sample rate to 44100 and the bit depth to 16 bit.</small></span><br><br></td></tr>
-
-  <tr>
-
-  <tr>
-    <td><span>Slice Grid Options&nbsp;&nbsp;&nbsp;</span></td>
-    <td>
-        <div id="sliceGridGroup">
-           ${[1,2,3,4,5,6].map((g, i) => '<input id="gridSize' + g + '" placeholder="" type="number" class="acoSliceGridOption" onfocus="(() => {this.placeholder = this.value; this.value = \'\';})()" onblur="(() => { this.value = this.value || this.placeholder;})()" list="commonGridSizes" value="' + sliceOptions[i + 1] + '">').join('')}
-           <datalist id="commonGridSizes">
-                ${[2,4,8,10,12,15,16,24,30,32,48,60,64,128].map(
-          v => '<option value="' + v + '">').join('')}
-           </datalist>
-        </div>
-    </td>
-  </tr>
-
-  <td style="border-bottom: none;">
-    <a class="button" style="margin: 2.5rem 2rem;" onpointerdown="digichain.changeAudioConfig()">Apply Audio Settings</a>
-  </td>
-  <td style="border-bottom: none;">
-    <select id="audioValuesFromCommonSelect" class="btn-audio-config" style="margin: 0 2rem; max-width: 25rem; float: right;" onchange="digichain.setAudioOptionsFromCommonConfig(event)">
-        <option value="none" disabled selected>Common Configurations</option>
-        <option value="48000m16w0-4-8-16-32-64-128">Digitakt</option>
-        <option value="48000s16w0-4-8-16-32-64-128">Digitakt II</option>
-        <option value="44100s16w0-4-8-16-32-64-128" data-device="m8">Dirtywave M8</option>
-        <option value="48000m16w0-8-10-12-15-30-60">Model:Samples</option>
-        <option value="44100s16w0-4-8-16-32-48-64" data-device="ot">Octatrack (16bit)</option>
-        <option value="44100s24w0-4-8-16-32-48-64" data-device="ot">Octatrack (24bit)</option>
-        <option value="44100s16a0-4-8-12-16-20-24" data-device="op1f">OP-1 Field</option>
-        <option value="44100m16a0-4-8-12-16-20-24" data-device="opz">OP-1 / OP-Z</option>
-        <option value="44100s16w0-4-8-12-16-20-24" data-device="opxy">OP-XY</option>
-        <option value="44100m16w0-4-8-16-24-32-48">Polyend Tracker</option>
-        <option value="44100s16w0-4-8-16-24-32-48">Polyend Tracker Mini</option>
-        <option value="48000m16w0-8-10-12-15-30-60">Rytm</option>
-        <option value="12000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 12kHz</option>
-        <option value="24000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 24kHz</option>
-        <option value="46875m16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (mono)</option>
-        <option value="46875s16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (stereo)</option>
-    </select>
-  </td>
-  </tr>
-  <tr><td colspan="2"  style="border: none;">&nbsp;</td></tr>
-</tbody>
-</table>
-`;
+      </tr>
+    <tr>
+    <td><span>Download multi-file/joined downloads as one zip file? &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('zipDownloads')" class="check ${settings.zipDownloads
+              ? 'button'
+              : 'button-outline'}">${settings.zipDownloads ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>When exporting stereo, export dual mono files as mono? &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button title="Often, stereo files are just the same mono audio data on both channels, if this is the case, export the file as mono." onpointerdown="digichain.toggleSetting('treatDualMonoStereoAsMono')" class="check ${settings.treatDualMonoStereoAsMono
+              ? 'button'
+              : 'button-outline'}">${settings.treatDualMonoStereoAsMono ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr style="display: none;">
+    <td><span>Embed slice information in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
+    <td><button title="Embed the slice information into the wav file in DigiChain format, this includes start, end points and the source file name for the slice." onpointerdown="digichain.toggleSetting('embedSliceData')" class="check ${embedSliceData
+              ? 'button'
+              : 'button-outline'}">${embedSliceData ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Embed slice information as CUE points in exported wav files?&nbsp;&nbsp;&nbsp;</span></td>
+    <td><button title="Embed slice data as wav CUE point markers, compatible with DirtyWave M8 slice sampler. The end points will extend to the start point of the next sample, or the end of the wav file for the last slice." onpointerdown="digichain.toggleSetting('embedCuePoints')" class="check ${settings.embedCuePoints
+              ? 'button'
+              : 'button-outline'}">${settings.embedCuePoints ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Treat slice data in files as distinct files on join?&nbsp;&nbsp;&nbsp;</span></td>
+    <td><button title="If a file already has slice information, when set to YES these slices will be treated as files when creating chains, if set to NO, per file slice data will be discarded." onpointerdown="digichain.toggleSetting('splitOutExistingSlicesOnJoin')" class="check ${settings.splitOutExistingSlicesOnJoin
+              ? 'button'
+              : 'button-outline'}">${settings.splitOutExistingSlicesOnJoin ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <!--<tr>
+    <td><span>Embed slice information as Lofi-12 XT points in exported wav files?<br>(Applied only to 12/24 kHz wav exports) &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button title="Embed slice data in wav file header in the Sonicware custom format for the Lofi-12 XT sampler." onpointerdown="digichain.toggleSetting('embedOrslData')" class="check ${settings.embedOrslData
+              ? 'button'
+              : 'button-outline'}">${settings.embedOrslData ? 'YES' : 'NO'}</button></td>
+    </tr>-->
+    <tr>
+    <td><span>Create accompanying .ot metadata file?<br>(Applied only to 44.1 kHz 16/24 [non-aif] audio contexts) &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('exportWithOtFile')" class="check ${settings.exportWithOtFile
+              ? 'button'
+              : 'button-outline'}">${settings.exportWithOtFile ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Limit imports to maximum of 750 files?&nbsp;&nbsp;&nbsp;</span></td>
+    <td><button title="Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts." onpointerdown="digichain.toggleSetting('importFileLimit')" class="check ${settings.importFileLimit
+              ? 'button'
+              : 'button-outline'}">${settings.importFileLimit ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Skip rendering the mini audio waveform in the list?&nbsp;&nbsp;&nbsp;</span></td>
+    <td><button title="When processing large lists of files, skiping the renderings of the waveform can improve the responsiveness of the browse as no canvas element per row will be rendered." onpointerdown="digichain.toggleSetting('skipMiniWaveformRender')" class="check ${settings.skipMiniWaveformRender
+              ? 'button'
+              : 'button-outline'}">${settings.skipMiniWaveformRender ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Show Shift/Ctrl modifier touch buttons?&nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('showTouchModifierKeys')" class="check ${settings.showTouchModifierKeys
+              ? 'button'
+              : 'button-outline'}">${settings.showTouchModifierKeys ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Shift+Click to download single files from the list?&nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('shiftClickForFileDownload')" class="check ${settings.shiftClickForFileDownload
+              ? 'button'
+              : 'button-outline'}">${settings.shiftClickForFileDownload ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Use Dark theme as the default? (No = Light theme)&nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('darkModeTheme')" class="check ${settings.darkModeTheme
+              ? 'button'
+              : 'button-outline'}">${settings.darkModeTheme ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Normalize text/waveform color contrast? &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('normalizeContrast')" class="check ${settings.normalizeContrast
+              ? 'button'
+              : 'button-outline'}">${settings.normalizeContrast ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
+    <td><span>Show the welcome panel at launch? &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button title="The welcome panel will show at launch if the list is empty."
+              onpointerdown="digichain.toggleSetting('showWelcomeModalOnLaunchIfListEmpty')" class="check ${settings.showWelcomeModalOnLaunchIfListEmpty
+              ? 'button'
+              : 'button-outline'}">${settings.showWelcomeModalOnLaunchIfListEmpty ? 'YES' : 'NO'}</button></td>
+    </tr>
+    </tbody>
+    </table>
+    `;
+            break;
+        case 'audio':
+            panelMarkup += `
+      <table style="padding-top:0;" id="settingAudioConfig">
+      <thead>
+      <tr>
+      <th style="border: none;"></th>
+      <th style="border: none;"></th>
+    </tr>
+    </thead>
+      <tbody>
+        <tr>
+          <td style="border: none;"><span>Working Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
+          <td style="border: none;">
+              <div class="input-set" id="settingsWorkingSampleRateGroup" style="display: flex; align-items: flex-start;">
+                  <input type="number" placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}Hz"
+                  onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
+                  onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
+                  id="settingsWorkingSampleRate" value="${masterSR}" data-sample-rate="${masterSR}" list="commonSR"
+                  data-placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}"
+                  min="${settings.supportedSampleRates[0]}" max="${settings.supportedSampleRates[1]}">
+                  <datalist id="commonSR">
+                    ${[12000, 24000, 32000, 44100, 48000].map(
+              v => '<option value="' + v + '">').join('')}
+                  </datalist>
+                  <button title="Restore currently active working sample rate" class="button-clear" onpointerdown="(() => {const i = document.getElementById('settingsWorkingSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
+              </div>
+          </td>
+      </tr>
+        <tr><td colspan="2"><span><small>Caution: Changing the working sample rate will resample any files currently in the list to the specified sample rate.</small></span><br><br></td></tr>
+      <tr>
+          <td style="border: none;"><span>Target Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
+          <td style="border: none;">
+              <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup" style="display: flex; align-items: flex-start;">
+                  <input type="number" placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}Hz"
+                  ${targetContainer === 'a' ? 'disabled="disabled"' : ''}
+                  onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
+                  onblur="(() => { this.value = this.value || this.placeholder; this.placeholder = this.dataset.placeholder;})()"
+                  id="settingsSampleRate" value="${targetSR}" data-sample-rate="${targetSR}" list="commonSR"
+                  data-placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}"
+                  min="${settings.supportedSampleRates[0]}" max="${settings.supportedSampleRates[1]}">
+                  <datalist id="commonSR">
+                    ${[12000, 24000, 32000, 44100, 48000].map(
+                      v => '<option value="' + v + '">').join('')}
+                  </datalist>
+                  <button title="Restore currently active sample rate" class="button-clear" onpointerdown="(() => {const i = document.getElementById('settingsSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
+              </div>
+          </td>
+      </tr>
+      <tr><td colspan="2"></td></tr>
+    
+      <tr>
+      <td><span>Bit Depth&nbsp;&nbsp;&nbsp;</span></td>
+      <td>
+      <div style="padding: 1.5rem 0;" class="${targetContainer === 'a' ? 'disabled' : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onclick="((event, el) => {
+          el.dataset.bitDepth = event.target.dataset.bitDepth || el.dataset.bitDepth;
+      el.querySelectorAll('button').forEach(b => b.classList = b.dataset.bitDepth === el.dataset.bitDepth ? 'check button' : 'check button-outline');
+      document.getElementById('ditherGroup').classList[+el.dataset.bitDepth === 32 ? 'add': 'remove']('disabled');
+      })(event, this);">
+          <button id="acoBitDepth8" data-bit-depth="8" class="check button${masterBitDepth !== 8 ? '-outline' : ''}">8 Bit</button>
+          <button id="acoBitDepth16" data-bit-depth="16" class="check button${masterBitDepth !== 16 ? '-outline' : ''}">16 Bit</button>
+          <button id="acoBitDepth24" data-bit-depth="24" class="check button${masterBitDepth !== 24 ? '-outline' : ''}">24 Bit</button>
+         <button id="acoBitDepth32" data-bit-depth="32" class="check button${masterBitDepth !== 32 ? '-outline' : ''}">32 Bit</button>
+     </div>
+      </td>
+      </tr>
+      <tr>
+      <td><span>Dither 8/16/24 Bit Exports&nbsp;&nbsp;&nbsp;</span></td>
+      <td>
+      <div style="padding: 1.5rem 0;" class="${masterBitDepth === 32 ? 'disabled' : ''}" data-dither="${settings.ditherExports}" id="ditherGroup" onclick="((event, el) => {
+          el.dataset.dither = event.target.dataset.dither || el.dataset.dither;
+      el.querySelectorAll('button').forEach(b => b.classList = b.dataset.dither === el.dataset.dither ? 'check button' : 'check button-outline');
+      })(event, this);">
+          <button id="acoDitherNo" data-dither="false" class="check button${!settings.ditherExports || masterBitDepth === 32 ? '' : '-outline'}">NO</button>
+          <button id="acoDitherYes" data-dither="true" class="check button${settings.ditherExports && masterBitDepth !== 32 ? '' : '-outline'}">YES</button>
+     </div>
+      </td>
+      </tr>
+      <tr>
+          <td><span>Channels&nbsp;&nbsp;&nbsp;</span></td>
+          <td>
+            <div style="padding: 1.5rem 0;" id="channelsGroup" data-channels="${masterChannels}" onclick="((event, el) => {
+          el.dataset.channels = event.target.dataset.channels || el.dataset.channels;
+      el.querySelectorAll('button').forEach(b => b.classList = b.dataset.channels === el.dataset.channels ? 'check button' : 'check button-outline')
+      })(event, this);">
+            <button id="acoChannelm" data-channels="1" class="check button${masterChannels !== 1 ? '-outline' : ''}">MONO</button>
+              <button id="acoChannels" data-channels="2" class="check button${masterChannels !== 2 ? '-outline' : ''}">STEREO</button>
+              </div>
+          </td>
+      </tr>
+    
+      <tr>
+          <td style="border: none;"><span>Container&nbsp;&nbsp;&nbsp;</span></td>
+          <td style="border: none;">
+            <div style="padding: 1.5rem 0;" id="targetContainerGroup" data-container="${targetContainer}" onclick="((event, el) => {
+          el.dataset.container = event.target.dataset.container || el.dataset.container;
+      el.querySelectorAll('button').forEach(b => b.classList = b.dataset.container === el.dataset.container ? 'check button' : 'check button-outline');
+      if (el.dataset.container === 'a') {
+          document.getElementById('acoBitDepth16').click();
+          document.getElementById('bitDepthGroup').classList.add('disabled');
+          document.getElementById('settingsSampleRate').value = 44100;
+          document.getElementById('settingsSampleRate').disabled = true;
+          document.getElementById('settingsSampleRateGroup').classList.add('disabled');
+      } else {
+            document.getElementById('bitDepthGroup').classList.remove('disabled');
+            document.getElementById('settingsSampleRate').disabled = false
+            document.getElementById('settingsSampleRateGroup').classList.remove('disabled');
+      }
+      })(event, this);">
+            <button id="acoContainerw" data-container="w" class="check button${targetContainer === 'w' ? '' : '-outline'}">WAV</button>
+              <button id="acoContainera" data-container="a" class="check button${targetContainer === 'a' ? '' : '-outline'}">AIF</button>
+              </div>
+          </td>
+      </tr>
+        <tr><td colspan="3"><span><small>Note: Choosing AIF will set the sample rate to 44100 and the bit depth to 16 bit.</small></span><br><br></td></tr>
+    
+      <tr>
+    
+      <tr>
+        <td><span>Slice Grid Options&nbsp;&nbsp;&nbsp;</span></td>
+        <td>
+            <div id="sliceGridGroup">
+               ${[1,2,3,4,5,6].map((g, i) => '<input id="gridSize' + g + '" placeholder="" type="number" class="acoSliceGridOption" onfocus="(() => {this.placeholder = this.value; this.value = \'\';})()" onblur="(() => { this.value = this.value || this.placeholder;})()" list="commonGridSizes" value="' + sliceOptions[i + 1] + '">').join('')}
+               <datalist id="commonGridSizes">
+                    ${[2,4,8,10,12,15,16,24,30,32,48,60,64,128].map(
+              v => '<option value="' + v + '">').join('')}
+               </datalist>
+            </div>
+        </td>
+      </tr>
+    
+      <td style="border-bottom: none;">
+        <a class="button" style="margin: 2.5rem 2rem;" onpointerdown="digichain.changeAudioConfig()">Apply Audio Settings</a>
+      </td>
+      <td style="border-bottom: none;">
+        <select id="audioValuesFromCommonSelect" class="btn-audio-config" style="margin: 0 2rem; max-width: 25rem; float: right;" onchange="digichain.setAudioOptionsFromCommonConfig(event)">
+            <option value="none" disabled selected>Common Configurations</option>
+            <option value="48000m16w0-4-8-16-32-64-128">Digitakt</option>
+            <option value="48000s16w0-4-8-16-32-64-128">Digitakt II</option>
+            <option value="44100s16w0-4-8-16-32-64-128" data-device="m8">Dirtywave M8</option>
+            <option value="48000m16w0-8-10-12-15-30-60">Model:Samples</option>
+            <option value="44100s16w0-4-8-16-32-48-64" data-device="ot">Octatrack (16bit)</option>
+            <option value="44100s24w0-4-8-16-32-48-64" data-device="ot">Octatrack (24bit)</option>
+            <option value="44100s16a0-4-8-12-16-20-24" data-device="op1f">OP-1 Field</option>
+            <option value="44100m16a0-4-8-12-16-20-24" data-device="opz">OP-1 / OP-Z</option>
+            <option value="44100s16w0-4-8-12-16-20-24" data-device="opxy">OP-XY</option>
+            <option value="44100m16w0-4-8-16-24-32-48">Polyend Tracker</option>
+            <option value="44100s16w0-4-8-16-24-32-48">Polyend Tracker Mini</option>
+            <option value="48000m16w0-8-10-12-15-30-60">Rytm</option>
+            <option value="12000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 12kHz</option>
+            <option value="24000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 24kHz</option>
+            <option value="46875m16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (mono)</option>
+            <option value="46875s16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (stereo)</option>
+        </select>
+      </td>
+      </tr>
+      <tr><td colspan="2"  style="border: none;">&nbsp;</td></tr>
+    </tbody>
+    </table>
+    `;
+            break;
+        case 'about':
+        default:
+            panelMarkup += `
+              <h3 style="padding-top: 2rem;">DigiChain (${document.querySelector('meta[name=version]').content})</h3>
+              <p>${document.querySelector('meta[name=description]').content}</p>
+              <p class="float-right"><a href="https://brianbar.net/" target="_blank">Brian Barnett</a>
+              (<a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>
+            `;
     }
+
+    panelContentEl.innerHTML = panelMarkup;
 
     if (!panelEl.open) {
         panelEl.showModal();
@@ -4398,7 +4401,36 @@ const addBlankFile = () => {
     renderList();
 };
 
-const consumeFileInput = (event, inputFiles) => {
+const restoreSessionFile = async sessionFile => {
+    const zip = new JSZip();
+    const loadingEl = document.getElementById('loadingText');
+    loadingEl.textContent = 'Restoring Session...';
+    document.body.classList.add('loading');
+
+    await zip.loadAsync(sessionFile);
+
+    let sessionSettings = await zip.file('settings').async('uint8array');
+    sessionSettings = window.msgpack.decode(sessionSettings);
+    masterSR = sessionSettings.workingSR;
+    await changeAudioConfig(sessionSettings.lastUsedAudioConfig, true);
+    setSliceOptionsFromArray(sessionSettings.sliceOptions);
+
+    let sessionUnsorted = await zip.file('unsorted').async('uint8array');
+    sessionUnsorted = window.msgpack.decode(sessionUnsorted);
+    unsorted = sessionUnsorted;
+
+    let sessionImportOrder = await zip.file('importOrder').async('uint8array');
+    sessionImportOrder = window.msgpack.decode(sessionImportOrder);
+    importOrder = sessionImportOrder;
+
+    let sessionFiles = await zip.file('files').async('uint8array');
+    sessionFiles = window.msgpack.decode(sessionFiles);
+    files = sessionFiles.map(f => bufferRateResampler(f));
+    renderList(true);
+    document.body.classList.remove('loading');
+};
+
+const consumeFileInput = async (event, inputFiles) => {
     const loadingEl = document.getElementById('loadingText');
     loadingEl.textContent = 'Loading samples';
     document.body.classList.add('loading');
@@ -4407,6 +4439,22 @@ const consumeFileInput = (event, inputFiles) => {
     if (isAudioCtxClosed) { return; }
 
     inputFiles = [...inputFiles];
+
+    /*Restore the first session file found in the files passed - any other dropped data will be skipped.*/
+    const sessionFile = inputFiles.find(f => f?.name?.split('.')?.reverse()[0].toLowerCase() === 'dcsd');
+    if (sessionFile) {
+        const dialogResponse = await dcDialog(
+          'confirm',
+          `Would you like to restore the session:<br>
+          '${sessionFile.name}'?
+          <br><br>
+          (Items currently in the list will be removed).`,
+          { okLabel: 'Restore', cancelLabel: 'Cancel' }
+        );
+        if (dialogResponse) {
+            return restoreSessionFile(sessionFile);
+        }
+    }
 
     let _zips = [...inputFiles].filter(
       f => ['zip', 'dtprj', 'xrns', 'xrni'].includes(
@@ -5196,9 +5244,9 @@ function clearDbBuffers() {
     clearIndexedDb();
 }
 
-function saveSession() {
+function saveSession(excludeUnselected = false) {
     const zip = new JSZip();
-    const data = files.map(f => ({
+    const data = (excludeUnselected ? files.filter(f => f.meta.checked) : files).map(f => ({
         file: f.file,
         meta: f.meta,
         buffer: {
@@ -5215,25 +5263,25 @@ function saveSession() {
         workingSR: masterSR,
         sliceOptions
     };
-    zip.file('files', JSON.stringify(data), {
+    zip.file('files', window.msgpack.encode(data), {
         compression: "DEFLATE",
         compressionOptions: {
             level: 9
         }
     });
-    zip.file('unsorted', JSON.stringify(unsorted), {
+    zip.file('unsorted', window.msgpack.encode(unsorted), {
         compression: "DEFLATE",
         compressionOptions: {
             level: 9
         }
     });
-    zip.file('importOrder', JSON.stringify(importOrder), {
+    zip.file('importOrder', window.msgpack.encode(importOrder), {
         compression: "DEFLATE",
         compressionOptions: {
             level: 9
         }
     });
-    zip.file('settings', JSON.stringify(sessionSettings), {
+    zip.file('settings', window.msgpack.encode(sessionSettings), {
         compression: "DEFLATE",
         compressionOptions: {
             level: 9
@@ -5308,7 +5356,6 @@ window.digichain = {
     performMergeUiCall,
     performBlendUiCall,
     selectSliceAmount,
-    showInfo,
     toggleCheck,
     move,
     playFile,

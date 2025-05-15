@@ -9,6 +9,7 @@ Licensed under AGPLv3 <https://github.com/brian3kb/digichain/blob/main/LICENSE>
 DigiChain bundled resources:
 [MIT license] JSZip  : <https://github.com/Stuk/jszip/blob/main/LICENSE.markdown>
 [MIT license] Pako : <https://github.com/nodeca/pako/blob/main/LICENSE>
+[MIT license] msgpack-lite : <https://github.com/kawanet/msgpack-lite>
 [MIT license] Modified version of Audiobuffer-to-wav : <https://github.com/Experience-Monks/audiobuffer-to-wav/blob/master/LICENSE.md>
 [MIT license] Modified version of Audiobuffer-to-aiff : <https://github.com/hunjunior/audiobuffer-to-aiff/blob/master/LICENSE>
 

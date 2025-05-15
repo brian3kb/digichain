@@ -26,7 +26,8 @@
     "/editor.js",
     "/resources.js",
     "/settings.js",
-    "/jszip.js"
+    "/jszip.js",
+    "/msgpack.min.js"
   ],
   "dir": "auto",
   "lang": "en",

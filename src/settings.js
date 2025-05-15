@@ -1,5 +1,3 @@
-import {getSupportedSampleRates} from './resources.js';
-
 const settingsStore = {};
 
 const isStringValue = ['lastUsedAudioConfig', 'defaultAudioConfigText'];
@@ -78,3 +76,22 @@ export const settings = new Proxy(settingsStore, {
         return true;
     }
 });
+
+function getSupportedSampleRates() {
+    let supportedSampleRates = [8000, 48000];
+    try {
+        new AudioContext({sampleRate: 1});
+        supportedSampleRates = [1, 96000];
+    } catch(e) {
+        const matches = e.toString().match(
+          /\[(.*?)\]/g
+        );
+        if (matches?.length) {
+            supportedSampleRates = matches[0].split(',').map(
+              sr => +sr.replace(/\D+/g, '')
+            );
+        }
+    }
+    supportedSampleRates[1] = supportedSampleRates[1] > 96000 ? 96000 : supportedSampleRates[1];
+    return supportedSampleRates;
+}

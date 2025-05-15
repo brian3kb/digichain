@@ -2406,7 +2406,7 @@ const playFile = (event, id, loop, start, end) => {
     file.source.loop = loop;
 
     if (id && !event?.editor &&event.target && event.target !== file.waveform) {
-        file.waveform = event.target;
+        file.waveform = file.waveform?.tagName === 'CANVAS' ? file.waveform : event.target;
     }
 
     if (id && !event?.editor && file.waveform && file.waveform.nodeName !== 'BUTTON') {

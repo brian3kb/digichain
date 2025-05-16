@@ -3285,6 +3285,51 @@ html.scaled {
 #dcDialog .buttons-group .prompt-ok {
     margin-left: 2rem;
 }
+
+.toast {
+    position: absolute;
+    z-index: 20;
+    width: 30rem;
+    padding: 1rem 2rem;
+    background-color: #d79c4ee3;
+    top: 1rem;
+    margin: auto calc(50% - 15rem);
+    color: #ffffff;
+    border: 4px solid #43392d;
+    border-style: double;
+    border-radius: .4rem;
+    text-align: center;
+    animation-duration: .5s;
+    animation-fill-mode: both;
+}
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translate3d(0, -100%, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+.fadeInDown {
+    animation-name: fadeInDown;
+}
+@keyframes fadeOutUp {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+        transform: translate3d(0, -100%, 0);
+    }
+}
+.fadeOutUp {
+    animation-name: fadeOutUp;
+}
+
 body:not(.light) #dcDialog .prompt {
     color: #98a4ae;
 }

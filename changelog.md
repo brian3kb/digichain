@@ -18,6 +18,7 @@ latest
  - Moved about pop-up into unified audio config, settings, about panel.
  - Supporting the import and export of digichain session files.
  - Using a custom dialog instead of the browser built-ins to handle user prompts/confirmations.
+ - Moved browser based alert messaging into a toast style notification that displays at the top center of the active window or dialog.
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.

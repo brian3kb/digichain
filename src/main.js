@@ -7,7 +7,7 @@ import {
     joinToMono,
     joinToStereo,
     bufferToFloat32Array,
-    detectTempo, dcDialog
+    detectTempo, dcDialog, showToastMessage
 } from './resources.js';
 import {
     editor,
@@ -267,13 +267,13 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     }
 
     if (configData.sr < settings.supportedSampleRates[0] || configData.sr > settings.supportedSampleRates[1]) {
-        alert(
-          `ERROR: The sample rate ${configData.sr}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`);
+        showToastMessage(
+          `ERROR: The sample rate ${configData.sr}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`, 8000);
         return false;
     }
     if (workingSR < settings.supportedSampleRates[0] || workingSR > settings.supportedSampleRates[1]) {
-        alert(
-          `ERROR: The sample rate ${workingSR}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`);
+        showToastMessage(
+          `ERROR: The sample rate ${workingSR}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`, 8000);
         return false;
     }
 
@@ -348,8 +348,8 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 function checkAudioContextState() {
     if (audioCtx.state === 'closed') {
         document.body.classList.remove('loading');
-        alert(
-          'ERROR: The Audio Context has been closed, please refresh the browser tab.');
+        showToastMessage(
+          'ERROR: The Audio Context has been closed, please refresh the browser tab.', 30000);
         return true;
     }
     if (['interrupted', 'suspended'].includes(audioCtx.state)) {
@@ -609,7 +609,7 @@ const showEditPanel = (event, id, view = 'sample') => {
     let data, folderOptions;
     if (view === 'opExport') {
         if (document.body.dataset.workingSr !== '44100') {
-            return alert('The Working Sample Rate must be set to 44100 in the audio configuration to use OP-Export.');
+            return showToastMessage('The Working Sample Rate must be set to 44100 in the audio configuration to use OP-Export.', 6000);
         }
         lastOpKit = files.filter(f => f.meta.checked);
         data = lastOpKit;
@@ -1797,7 +1797,7 @@ function showMergePanel() {
         return f;
     });
     if (mergeFiles.length < 2) {
-        return alert('Merge requires more than one file to be selected.');
+        return showToastMessage('Merge requires more than one file to be selected.');
     }
 
     mergePanelContentEl.innerHTML = `
@@ -1903,7 +1903,7 @@ function showBlendPanel() {
         return f;
     });
     if (mergeFiles.length < 2) {
-        return alert('Blend requires more than one file to be selected.');
+        return showToastMessage('Blend requires more than one file to be selected.');
     }
 
     mergePanelContentEl.innerHTML = `
@@ -2246,7 +2246,7 @@ async function joinAll(
             errorMessage += `\n\n "${joinError.toString ? joinError.toString() : JSON.stringify(joinError)}"`;
         }
         document.getElementById('loadingText').textContent = 'Unexpected Error';
-        alert(errorMessage);
+        showToastMessage(errorMessage, 15000);
         setTimeout(() => document.body.classList.remove('loading'), 3000);
         console.log(joinError);
     }
@@ -4665,7 +4665,7 @@ const consumeFileInput = async (event, inputFiles) => {
                 }
                 if (error.encountered && error.text && idx === _files.length -
                   1) {
-                    alert(error.text + ` (failed: ${error.count})`);
+                    showToastMessage(error.text + ` (failed: ${error.count})`, 15000);
                 }
             }
             processedCount++;
@@ -4790,22 +4790,22 @@ function init() {
               /\d+\.\d+\.\d+\.\d+/);
             if (chromeVersion && chromeVersion[0] &&
               +chromeVersion[0].split('.')[0] < 114) {
-                return alert(
-                  'Chromium browser versions below 114.x.x are not supported.');
+                return showToastMessage(
+                  'Chromium browser versions below 114.x.x are not supported.', 30000);
             }
             const safariVersion = navigator.userAgent.match(
               /Version\/\d+\.\d+\.\d+/);
             if (safariVersion && safariVersion[0] &&
               +safariVersion[0].match(/\d+\.\d+/) < 16.3) {
-                return alert(
-                  'Safari browser versions below 16.3 are not supported.');
+                return showToastMessage(
+                  'Safari browser versions below 16.3 are not supported.', 30000);
             }
             const firefoxVersion = navigator.userAgent.match(
               /Firefox\/\d+\.\d+/);
             if (firefoxVersion && firefoxVersion[0] &&
               +firefoxVersion[0].match(/\d+\.\d+/) < 115) {
-                return alert(
-                  'Firefox browser versions below 115.x are not supported.');
+                return showToastMessage(
+                  'Firefox browser versions below 115.x are not supported.', 30000);
             }
         } catch (e) {}
     })();
@@ -5314,7 +5314,7 @@ try {
     if (navigator.brave) {
         alertText += 'If you are using Brave browser, please disable Brave Shields for digichain.brianbar.net.';
     }
-    alert(alertText);
+    showToastMessage(alertText, 30000);
     console.log(err);
 }
 

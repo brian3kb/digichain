@@ -218,6 +218,23 @@ export function buildXyDrumPatchData(file, slices = []) {
     };
 }
 
+export function showToastMessage(messageString, duration = 3000) {
+    const attachToEl = [...document.querySelectorAll('dialog')].find(d => d.open) || document.body;
+    const toast = document.createElement('div');
+    const existingToast = attachToEl.querySelectorAll('.toast');
+    if (existingToast.length > 0) {
+        existingToast.forEach(et => et.classList.add('fadeOutUp'));
+    }
+    toast.classList.add('toast');
+    toast.classList.add('fadeInDown');
+    toast.textContent = messageString;
+    attachToEl.appendChild(toast);
+    setTimeout(() => {
+        setTimeout(() => toast.remove(), 500);
+        toast.classList.add('fadeOutUp');
+    }, duration);
+}
+
 export async function dcDialog(type = 'message', messageString = '', config = {}) {
     const msgTypes = {message: 'alert', ask: 'prompt', confirm: 'confirm', prompt: 'prompt'};
 

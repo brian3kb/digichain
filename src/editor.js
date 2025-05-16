@@ -4,7 +4,7 @@ import {
     encodeAif,
     Resampler,
     getResampleIfNeeded, dcDialog,
-    joinToStereo
+    joinToStereo, showToastMessage
 } from './resources.js';
 import {settings} from './settings.js';
 
@@ -909,7 +909,7 @@ function zoomLevel(view, level) {
         }
         const step = editing.buffer.length / (1024 * level);
         if ((1024 * level) < 1024 || (1024 * level) > 32768 || step < 1) {
-            return alert('Unable to zoom any further');
+            return showToastMessage('Unable to zoom any further');
         }
         renderEditPanelWaveform(level);
         selection.step = step;
@@ -1008,7 +1008,7 @@ function reSamplePitch(
     item = item || editing;
 
     if (item.buffer.length < 1024 && pitchValue > 1) {
-        return alert('Sample too small to be pitched up further.');
+        return showToastMessage('Sample too small to be pitched up further.');
     }
 
     const newSR = (conf.masterSR * pitchValue);

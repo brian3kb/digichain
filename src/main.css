@@ -3260,19 +3260,30 @@ html.scaled {
 
 #dcDialog {
     max-width: 50rem;
-    padding: 2rem 4.2rem 1.25rem 2rem;
+    padding: 2rem 2rem 1.25rem 2rem;
     max-height: fit-content;
+}
+#dcDialog .content {
+    display: flex;
+    flex-direction: column;
 }
 #dcDialog .prompt {
     padding-bottom: 2rem;
 }
+#dcDialog input {
+    width: 95%;
+    margin: 0 auto 2rem auto;
+}
 #dcDialog .buttons-group {
     display: flex;
-    justify-content: space-around;
+    justify-content: flex-start;
     flex-direction: row-reverse;
 }
 #dcDialog .buttons-group button {
     min-width: 5rem;
+}
+#dcDialog .buttons-group .prompt-ok {
+    margin-left: 2rem;
 }
 body:not(.light) #dcDialog .prompt {
     color: #98a4ae;

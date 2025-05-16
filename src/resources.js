@@ -236,7 +236,7 @@ export async function dcDialog(type = 'message', messageString = '', config = {}
                     >
                     <div class="buttons-group">
                         <button type="submit" class="prompt-ok">${config.okLabel??'OK'}</button>
-                        <button class="prompt-cancel">${config.cancelLabel??'Cancel'}</button>
+                        <button class="prompt-cancel button-outline">${config.cancelLabel??'Cancel'}</button>
                     </div>
                 </div>
             `;

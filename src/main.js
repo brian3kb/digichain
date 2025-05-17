@@ -1433,9 +1433,10 @@ function showExportSettingsPanel(page = 'settings') {
 
     let panelMarkup = `
       <div class="export-options">
-          <span class="${page === 'audio' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('audio')">Audio Config</span>
-          <span class="${page === 'settings' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('settings')">Settings</span>
           <span class="${page === 'about' || !page ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('about')">About</span>
+          <span class="${page === 'audio' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('audio')">Audio Config</span>
+          <span class="${page === 'session' || !page ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('session')">Session</span>
+          <span class="${page === 'settings' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('settings')">Settings</span>
       </div>
     `;
     switch (page) {
@@ -1636,9 +1637,9 @@ function showExportSettingsPanel(page = 'settings') {
       </tr>
         <tr><td colspan="2"><span><small>Caution: Changing the working sample rate will resample any files currently in the list to the specified sample rate.</small></span><br><br></td></tr>
       <tr>
-          <td style="border: none;"><span>Target Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
+          <td style="border: none;"><span style="padding-top: 1rem; display: block;">Target Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
           <td style="border: none;">
-              <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup" style="display: flex; align-items: flex-start;">
+              <div class="input-set ${targetContainer === 'a' ? 'disabled' : ''}" id="settingsSampleRateGroup" style="display: flex; align-items: flex-start; padding-top: .5rem;">
                   <input type="number" placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}Hz"
                   ${targetContainer === 'a' ? 'disabled="disabled"' : ''}
                   onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
@@ -1654,7 +1655,7 @@ function showExportSettingsPanel(page = 'settings') {
               </div>
           </td>
       </tr>
-      <tr><td colspan="2"></td></tr>
+      <tr><td colspan="2" style="padding-top: 1.5rem;"></td></tr>
     
       <tr>
       <td><span>Bit Depth&nbsp;&nbsp;&nbsp;</span></td>
@@ -1766,11 +1767,51 @@ function showExportSettingsPanel(page = 'settings') {
     </table>
     `;
             break;
+        case 'session':
+            panelMarkup += `
+              <br>
+              <span>Export the current list and audio configuration to a DigiChain session file.</span>
+              <table id="settingSession">
+              <thead>
+              <tr>
+              <th style="width: 38%;"></th>
+              <th></th>
+              </tr>
+              </thead>
+                  <tbody>
+                  <tr>
+                      <td style="border: none;"><span style="padding-top: 1rem; display: block;">Session File Name&nbsp;&nbsp;&nbsp;</span></td>
+                      <td style="border: none;">
+                          <div class="input-set" style="display: flex; align-items: flex-start; padding-top: .5rem;">
+                              <input type="text" id="sessionFileName" value="digichain_session">
+                          </div>
+                      </td>
+                  </tr>
+                  <tr><td colspan="2" style="padding-top: 1.5rem;"></td></tr>
+                
+                  <tr>
+                  <td><span>Include Unselected List Items?&nbsp;&nbsp;&nbsp;</span></td>
+                  <td>
+                  <div id="sessionIncludeUnselected" style="padding: 1.5rem 0;" data-session-unselected="yes" onclick="((event, el) => {
+                      el.dataset.sessionUnselected = event.target.dataset.sessionUnselected || el.dataset.sessionUnselected;
+                  el.querySelectorAll('button').forEach(b => b.classList = b.dataset.sessionUnselected === el.dataset.sessionUnselected ? 'check button' : 'check button-outline');
+                  })(event, this);">
+                      <button data-session-unselected="no" class="check button-outline">No</button>
+                      <button data-session-unselected="yes" class="check button">Yes</button>
+                 </div>
+                  </td>
+                  </tr>
+            </tbody>
+            </table>
+            <a class="button" style="margin-left: 2rem;" onclick="digichain.saveSessionUiCall()">Export Session to File</a>
+            `
+            break;
         case 'about':
         default:
             panelMarkup += `
               <h3 style="padding-top: 2rem;">DigiChain (${document.querySelector('meta[name=version]').content})</h3>
-              <p>${document.querySelector('meta[name=description]').content}</p>
+              <p>${document.querySelector('meta[name=description]').content.replaceAll('--', '<br>')}</p>
+              <p class="float-left"><a href="https://github.com/brian3kb/digichain/blob/main/changelog.md" target="_blank">Change log</a></p>
               <p class="float-right"><a href="https://brianbar.net/" target="_blank">Brian Barnett</a>
               (<a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>
             `;
@@ -5244,9 +5285,28 @@ function clearDbBuffers() {
     clearIndexedDb();
 }
 
-function saveSession(excludeUnselected = false) {
+function saveSessionUiCall() {
+    const settingsPanelEl = document.getElementById('exportSettingsPanel');
+    const sessionFileName = document.querySelector('#sessionFileName').value;
+    const sessionIncludeUnselected = document.querySelector('#sessionIncludeUnselected').dataset.sessionUnselected === 'yes';
+
+    if (!sessionFileName) {
+        return showToastMessage('Please specify a session file name.');
+    }
+    if ((sessionIncludeUnselected && files.length === 0) || (!sessionIncludeUnselected && files.filter(f => f.meta.checked).length === 0)) {
+        return showToastMessage('Session must include at least one file.');
+    }
+    document.getElementById('loadingText').textContent = 'Exporting Session...';
+    document.body.classList.add('loading');
+    saveSession(sessionFileName, sessionIncludeUnselected);
+    if (settingsPanelEl.open) {
+        settingsPanelEl.close();
+    }
+}
+
+function saveSession(sessionFileName = 'digichain_session', includeUnselected = false) {
     const zip = new JSZip();
-    const data = (excludeUnselected ? files.filter(f => f.meta.checked) : files).map(f => ({
+    const data = (includeUnselected ? files : files.filter(f => f.meta.checked)).map(f => ({
         file: f.file,
         meta: f.meta,
         buffer: {
@@ -5293,9 +5353,10 @@ function saveSession(excludeUnselected = false) {
     }).then(blob => {
         const el = document.getElementById('getJoined');
         el.href = URL.createObjectURL(blob);
-        el.setAttribute('download', 'digichain_session.dcsd');
+        el.setAttribute('download', `${sessionFileName}.dcsd`);
         el.click();
         document.body.classList.remove('loading');
+        showToastMessage(`Session '${sessionFileName}.dcsd' created.`, 10000);
     });
 }
 
@@ -5323,6 +5384,7 @@ window.digichain = {
     sliceOptions: () => sliceOptions,
     lastSelectedFile: () => getFileById(lastSelectedRow?.dataset?.id),
     saveSession,
+    saveSessionUiCall,
     changeAudioConfig,
     removeSelected,
     toggleSelectedActionsList,

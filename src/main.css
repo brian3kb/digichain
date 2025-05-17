@@ -2049,7 +2049,7 @@ td button { margin: 0.5rem; }
 #exportSettingsPanel #sliceGridGroup input::-webkit-inner-spin-button {
     display: none;
 }
-#settingAudioConfig button.check {
+#settingAudioConfig button.check, #settingSession button.check {
     width: 7rem;
 }
 

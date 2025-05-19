@@ -164,6 +164,11 @@ export function buildXyRegionFromSlice(slice, index) {
 }
 
 export function buildXyDrumPatchData(file, slices = []) {
+    const _slices = slices.map(slice => ({
+        ...slice,
+        e: nudgeEndToZero(slice.s, slice.e, slice.buffer || file.buffer),
+        name: (file.buffer ? file.kitName : slice.name)??''
+    }));
     const modulationDefault = () => ({'amount': 16384, 'target': 0});
     const template = {
         'engine': {
@@ -212,10 +217,11 @@ export function buildXyDrumPatchData(file, slices = []) {
         },
         'octave': 0,
         'platform': 'OP-XY',
-        'regions': slices.map(buildXyRegionFromSlice),
+        'regions': _slices.map(buildXyRegionFromSlice),
         "type": "drum",
         "version": 4
     };
+    return template;
 }
 
 export function showToastMessage(messageString, duration = 3000) {

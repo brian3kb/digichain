@@ -1,10 +1,9 @@
 import {
     audioBufferToWav, bufferToFloat32Array,
-    buildOpData, deClick, detectTempo,
-    encodeAif,
+    deClick, detectTempo,
     Resampler,
     getResampleIfNeeded, dcDialog,
-    joinToStereo, showToastMessage
+    joinToStereo, showToastMessage, buildXyDrumPatchData
 } from './resources.js';
 import {settings} from './settings.js';
 
@@ -104,7 +103,7 @@ function calculateSamplesLengths() {
     }, {});
 
     samples.buffersLength = Object.keys(lengths).reduce((acc, val) => acc + lengths[val], 0);
-    samples.maxBuffersLength = samples.buffersLength < (20 * 44100) ? (20 * 44100) : (24 * 20 * 44100);
+    samples.maxBuffersLength = (samples.buffersLength < (20 * 44100) && !samples.xyMultiOut) ? (20 * 44100) : (24 * 20 * 44100);
     samples.isXyOnly = samples.buffersLength > (20 * 44100);
 }
 
@@ -118,7 +117,7 @@ function addOpKeyData(keyId, zone, opData) {
     calculateSamplesLengths();
 }
 
-function dropOpKey(event, keyId, zone = -1) {
+async function dropOpKey(event, keyId, zone = -1) {
     event?.target?.classList?.remove('drag-over');
     if (zone !== -1) {
         event?.stopPropagation();
@@ -127,7 +126,8 @@ function dropOpKey(event, keyId, zone = -1) {
     if (!lastSelectedFile) { return; }
 
     if (lastSelectedFile.meta.duration > 20) {
-        if(!confirm(`The sample '${lastSelectedFile.file.filename} is ${lastSelectedFile.meta.duration} seconds in length, samples must be less than 20 seconds. The sample will be re-pitched to fit within the limit.`)) {
+        const response = await dcDialog('confirm', `The sample '${lastSelectedFile.file.filename} is ${lastSelectedFile.meta.duration} seconds in length, samples must be less than 20 seconds. The sample will be re-pitched to fit within the limit.`);
+        if (!response) {
             return ;
         }
         //TODO: resample pitched up and flag files meta data with pitch change.
@@ -301,6 +301,10 @@ function changeOpParam(event, key, id) {
     renderOpExport();
 }
 
+function getKitName() {
+    return samples.kitName || `dckit-${new Date().toJSON().replaceAll(/^\d{4}|\-|T|:|\.|\d{2}Z$/gi, '')}`;
+}
+
 async function renderOpExport(reset = false) {
     if (reset) {
         const confirmReset = await dcDialog('confirm', 'Reset OP Export kit config?', {kind: 'warning', okLabel: 'Reset'});
@@ -322,6 +326,7 @@ async function renderOpExport(reset = false) {
         calculateSamplesLengths();
     }
     const xyMultiOut = samples.buffersLength > (20 * 44100) ? true : samples.xyMultiOut;
+    samples.xyMultiOut = xyMultiOut;
     opExportEl.innerHTML = `
     <div>
         <div class="op-key-details">${renderOpKeyDetails()}</div>
@@ -337,7 +342,7 @@ async function renderOpExport(reset = false) {
         <div class="op-buttons row" style="justify-content: space-between;">
             <button style="padding: 0 .75rem;"
             title="Toggle building the kit as a single audio sample or as multiple audio sample files in the created XY preset. \n\nNote: If the combined samples length is greater than 20 seconds, Field export will be disabled and XY multi file ouput enabled by default."
-            class="button float-right button-outline" onclick="digichain.editor.toggleOpExportSetting(event, 'xyMultiOut')" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>${xyMultiOut ? 'Multi File' : 'Single File'}</button>
+            class="button float-right button-outline" onclick="digichain.editor.toggleOpExportSetting(event, 'xyMultiOut')" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>XY ${xyMultiOut ? 'Multi File' : 'Single File'}</button>
             <button title="Toggle Link Selection Mode" onclick="digichain.editor.toggleOpExportSetting(event, 'linkMode')" class="button-clear toggle-link" style="opacity: ${samples.linkMode ? 1 : .2}; visibility: ${samples.selected !== false ? 'visible' : 'hidden'};"><i class="gg-link"></i></button>
         </div>
         <div class="op-buttons row">
@@ -345,7 +350,7 @@ async function renderOpExport(reset = false) {
             <button ondrop="digichain.splitAction(event, false, true, false, true)" title="Spreads a chain across the kit, this will replace any existing samples in the kit." class="button-outline op-chain-drop-zone">Drop Chain</button>
         </div>
         <div class="op-buttons row" style="justify-content: space-between;">
-            <button class="button float-right" onclick="digichain.editor.buildXyKit()" disabled>Build XY Kit</button>
+            <button class="button float-right" onclick="digichain.editor.buildXyKit()">Build XY Kit</button>
             <button class="button float-right" onclick="digichain.editor.buildOpKit()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>Build Field Kit</button>
             <span>&nbsp;</span>
             <span>&nbsp;</span>
@@ -389,9 +394,7 @@ async function acceptDroppedChainItems(droppedFiles = []) {
     renderOpExport();
 }
 
-function buildXyKit() { }
-
-function buildOpKit() {
+function consolidateOpKeysToKit() {
     const kit = opDataConfig.map((key, keyId) => {
         const keySamples = getOpKeyData(key.linkedTo || keyId);
         keySamples.left = keySamples.left ?
@@ -422,7 +425,8 @@ function buildOpKit() {
 
         for (let i = 0; i < keySamples.length; i++) {
             const centerValLeft = keySamples.center ? keySamples.center.buffer.getChannelData(0)[i] : 0;
-            const centerValRight = keySamples.center ?  keySamples.center.buffer.getChannelData(keySamples.center.buffer.numberOfChannels - 1)[i] : 0;
+            const centerValRight = keySamples.center ? keySamples.center.buffer.getChannelData(
+              keySamples.center.buffer.numberOfChannels - 1)[i] : 0;
             const leftVal = keySamples.left ? keySamples.left.getChannelData(0)[i] : 0;
             const rightVal = keySamples.right ? keySamples.right.getChannelData(0)[i] : 0;
 
@@ -446,31 +450,35 @@ function buildOpKit() {
         }
 
         return {
-          samples: keySamples,
-          buffer: combinedBuffer,
-          length: combinedBuffer.length,
-          ...key
+            samples: keySamples,
+            buffer: combinedBuffer,
+            length: combinedBuffer.length,
+            ...key
         };
     });
 
     kit.totalLength = kit.reduce((acc, val) => acc + (val.length || 0), 0);
+    return kit;
+}
 
+function serializeOpKitToSingleBuffer() {
+    const kit = consolidateOpKeysToKit();
     /*Loop over the keys with samples data assigned first*/
-    let lastValidKey;
+    let lastValidKey = -1;
     for (let s = 0; s < kit.length; s++) {
         if (!kit[s].blank && !kit[s].linkedTo) {
-            kit[s].s = (s === 0 || !lastValidKey) ? 0 : kit[lastValidKey].e;
+            kit[s].s = (s === 0 || lastValidKey === -1) ? 0 : kit[lastValidKey].e;
             kit[s].e = kit[s].s + kit[s].length;
             lastValidKey = s;
         }
     }
-    /*Then loop over the blank and linkedTo keys to match upto the mapped sample keys*/
+    /*Then loop over the blank and linkedTo keys to match up to the mapped sample keys*/
     for (let s = 0; s < kit.length; s++) {
         if (kit[s].blank) {
             kit[s].s = kit.totalLength;
             kit[s].e = kit.totalLength;
         }
-        if (kit[s].linkedTo){
+        if (kit[s].linkedTo) {
             const key = +kit[s].linkedTo;
             kit[s].s = kit[key].s;
             kit[s].e = kit[key].e;
@@ -484,14 +492,71 @@ function buildOpKit() {
     );
     joinToStereo(kitAudio, kit.filter(key => key.buffer));
 
+    return {
+        buffer: kitAudio,
+        slices: kit.map(k=> {
+            const {buffer,samples,...slice} = k;
+            return slice;
+        })
+    };
+}
+
+function buildOpKit(type = 'aif', kitName) {
+    const kit = serializeOpKitToSingleBuffer();
+    kitName = kitName || samples.kitName || getKitName();
     const linkEl = document.querySelector('.aif-link-hidden');
-    const dataView = encodeAif(kitAudio, '44100', 2, buildOpData(kit, 2, kitAudio));
-    let blob = new window.Blob([dataView], {
-        type: 'audio/aiff'
+    const dataView = audioBufferToWav(kit.buffer, {slices: kit.slices.filter(s => !s.blank)}, '44100', 16, 2, false, (type === 'aif'));
+    let blob = new window.Blob([dataView.buffer], {
+        type: type === 'aif' ? 'audio/aiff' : 'audio/wav'
     });
+    if (type === 'wav') {
+        return {
+            buffer: kit.buffer,
+            blob,
+            slices: kit.slices.filter(s => !s.blank)
+        };
+    }
     linkEl.href = URL.createObjectURL(blob);
-    linkEl.setAttribute('download', `${samples.kitName || 'field-kit'}.aif`);
+    linkEl.setAttribute('download', `${kitName}.aif`);
     linkEl.click();
+}
+
+function buildXyKit() {
+    const kitName = samples.kitName || getKitName();
+    const zip = new JSZip();
+    let xyPatchData;
+    if (samples.xyMultiOut) {
+        const kit = consolidateOpKeysToKit();
+        kit.forEach((slice, idx) => {
+            if (!slice.blank) {
+                let sNum = `${slice.buffer ? idx + 1 : slice.linkedTo + 1}`;
+                sNum = sNum.length === 1 ? `0${sNum}` : sNum;
+                slice.name = `${kitName}_${sNum}`;
+                slice.l = slice.length;
+            }
+            if (slice.buffer) {
+                const dataView = audioBufferToWav(slice.buffer, {slices: false}, '44100', 16, 2);
+                let blob = new window.Blob([dataView.buffer], {
+                    type: 'audio/wav'
+                });
+                zip.file(`${slice.name}.wav`, blob, {binary: true});
+            }
+        });
+        xyPatchData = buildXyDrumPatchData({kitName}, kit.filter(s => !s.blank));
+    } else {
+        const {buffer, blob, slices} = buildOpKit('wav', kitName);
+        xyPatchData = buildXyDrumPatchData({buffer, kitName}, slices);
+        zip.file(`${kitName}.wav`, blob, {binary: true});
+    }
+    zip.file('patch.json', JSON.stringify(xyPatchData));
+    zip.generateAsync({type: 'blob'}).then(zipBlob => {
+        const el = document.getElementById('getJoined');
+        el.href = URL.createObjectURL(zipBlob);
+        el.setAttribute('download', `${kitName}.zip`);
+        el.click();
+        document.body.classList.remove('loading');
+    });
+    // TODO: Add some "working" indicator to OP Export build processes.
 }
 
 function toggleSnapToZero(event) {

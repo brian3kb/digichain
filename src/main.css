@@ -1970,7 +1970,10 @@ td button { margin: 0.5rem; }
     margin: -1rem 1rem 0 1rem;
     min-width: 48%;
 }
-
+#exportSettingsPanel {
+    margin-top: 4rem;
+    max-height: calc(89vh - 4rem);
+}
 #exportSettingsPanel .disabled {
     pointer-events: none;
     user-focus: none;

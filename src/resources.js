@@ -227,7 +227,7 @@ export function showToastMessage(messageString, duration = 3000) {
     }
     toast.classList.add('toast');
     toast.classList.add('fadeInDown');
-    toast.textContent = messageString;
+    toast.innerHTML = messageString;
     attachToEl.appendChild(toast);
     setTimeout(() => {
         setTimeout(() => toast.remove(), 500);

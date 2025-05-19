@@ -4468,6 +4468,7 @@ const restoreSessionFile = async sessionFile => {
     sessionFiles = window.msgpack.decode(sessionFiles);
     files = sessionFiles.map(f => bufferRateResampler(f));
     renderList(true);
+    storeState();
     document.body.classList.remove('loading');
 };
 
@@ -5356,7 +5357,7 @@ function saveSession(sessionFileName = 'digichain_session', includeUnselected = 
         el.setAttribute('download', `${sessionFileName}.dcsd`);
         el.click();
         document.body.classList.remove('loading');
-        showToastMessage(`Session '${sessionFileName}.dcsd' created.`, 10000);
+        showToastMessage(`'${sessionFileName}.dcsd'<br>session file created.`, 10000);
     });
 }
 

@@ -4814,11 +4814,15 @@ const dropHandler = (event) => {
               'tr.file-row:last-of-type') : target;
         }
         if (target) {
-            let selectedRowId = getFileIndexById(lastSelectedRow.dataset.id);
+            const selectedRowUuid = lastSelectedRow.dataset.id;
+            let selectedRowId = getFileIndexById(selectedRowUuid);
             let targetRowId = getFileIndexById(target.dataset.id);
             let item = files.splice(selectedRowId, 1)[0];
             files.splice((targetRowId <= selectedRowId ? targetRowId : (targetRowId-1)), 0, item);
             renderList();
+            lastSelectedRow = getRowElementById(selectedRowUuid);
+            lastSelectedRow.classList.add('selected');
+            lastSelectedRow.scrollIntoViewIfNeeded(true);
         }
     }
 };

@@ -1538,10 +1538,21 @@ body {
     padding-bottom: 0.75rem;
     border-bottom: 0.1rem solid #d79c4e30;
     transition: all .25s ease-in;
+    height: 20.5rem;
 }
 .all-options.hidden {
     transform: translateY(-19rem);
     margin-top: -19rem;
+}
+#masterList thead {
+    position: sticky;
+    top: 20.5rem;
+    background-color: #202124;
+    z-index: 2;
+    transition: all .25s ease-in;
+}
+.container:has(.all-options.hidden) #masterList thead {
+    top: 2rem;
 }
 .header-menu {
     position: fixed;
@@ -3158,7 +3169,8 @@ body.light .slice-options #sliceSelection,
 body.light #toggleOptionsButton i,
 body.light .selected-actions-button-list,
 body.light *[class*=is-]:after,
-body.light *[class*=sff-]:after
+body.light *[class*=sff-]:after,
+body.light #masterList thead
 {
     background-color: #f5f5f5;
     background-blend-mode: normal;

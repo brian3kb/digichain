@@ -1307,6 +1307,22 @@ export function Paula() {
     };
 }
 
+export function setLoadingText(text = 'Loading', dismissTimeout) {
+    const loadingEl = document.getElementById('loadingText');
+    if (!text) {
+        loadingEl.textContent = 'Loading';
+        document.body.classList.remove('loading');
+        return;
+    }
+
+    loadingEl.textContent = text;
+    document.body.classList.add('loading');
+
+    if (dismissTimeout) {
+        setTimeout(() => document.body.classList.remove('loading'), parseInt(dismissTimeout));
+    }
+}
+
 CanvasRenderingContext2D.prototype.clear =
   CanvasRenderingContext2D.prototype.clear || function(preserveTransform) {
       if (preserveTransform) {

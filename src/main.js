@@ -7,7 +7,7 @@ import {
     joinToMono,
     joinToStereo,
     bufferToFloat32Array,
-    detectTempo, dcDialog, showToastMessage
+    detectTempo, dcDialog, showToastMessage, setLoadingText
 } from './resources.js';
 import {
     editor,
@@ -15,7 +15,8 @@ import {
     drawWaveform,
     getNiceFileName,
     setEditorConf,
-    getUniqueName
+    getUniqueName,
+    getSetOpExportData
 } from './editor.js';
 import './jszip.js';
 import './msgpack.min.js';
@@ -289,7 +290,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
             return false;
         }
     }
-    document.body.classList.add('loading');
+    setLoadingText('Configuring');
     const selectionString = `${configData.f === 'a' ? 'AIF ' : ''}${configData.sr/1000}kHz/${configData.bd}BIT ${configData.c === 'm' ? 'MONO' : 'STEREO'}`;
     configOptionsEl.value = selectionString;
     const selection = `${configData.sr}${configData.c}${configData.bd}${configData.f}${configData.go.join('-')}`;
@@ -347,7 +348,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 
 function checkAudioContextState() {
     if (audioCtx.state === 'closed') {
-        document.body.classList.remove('loading');
+        setLoadingText('');
         showToastMessage(
           'ERROR: The Audio Context has been closed, please refresh the browser tab.', 30000);
         return true;
@@ -626,7 +627,8 @@ const showEditPanel = (event, id, view = 'sample') => {
           audioCtx,
           masterSR,
           masterChannels,
-          masterBitDepth
+          masterBitDepth,
+          storeState: () => storeState(true)
       },
       view,
       folderOptions
@@ -720,8 +722,7 @@ async function downloadAll(event) {
           });
         if (!userReadyForTheCommitment) { return; }
     }
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
 
     if (settings.zipDownloads && _files.length > 1) {
         const zip = new JSZip();
@@ -765,7 +766,7 @@ async function downloadAll(event) {
                     baseDir: window.__TAURI__.fs.BaseDirectory.Download,
                     create: true
                 });
-                document.body.classList.remove('loading');
+                setLoadingText('');
                 window.__TAURI__.dialog.message(`Saved to the Downloads folder as '${zipName}'.`);
             });
         } else {
@@ -774,7 +775,7 @@ async function downloadAll(event) {
                 el.href = URL.createObjectURL(blob);
                 el.setAttribute('download', zipName);
                 el.click();
-                document.body.classList.remove('loading');
+                setLoadingText('');
             });
         }
         return;
@@ -790,7 +791,7 @@ async function downloadAll(event) {
         lnk?.click();
         if (links.length === 0 && lnk) {
             clearInterval(intervalId);
-            document.body.classList.remove('loading');
+            setLoadingText('');
         }
     }, 500);
 
@@ -849,14 +850,13 @@ function removeSelected() {
 
 function normalizeSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.normalize(event, f, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -865,14 +865,13 @@ function normalizeSelected(event) {
 
 function trimRightSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.trimRight(event, f, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -891,14 +890,13 @@ async function condenseSelected(event) {
     if (upper && !isNaN(upper)) {
         upper = Math.abs(+upper);
     } else { return ;}
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.thresholdCondense(event, f, false, +lower, +upper);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -907,14 +905,13 @@ async function condenseSelected(event) {
 
 function roughStretchSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.roughStretch(event, f, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -923,8 +920,7 @@ function roughStretchSelected(event) {
 
 function shortenNameSelected(event, restore = false) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         let nameList = {};
@@ -959,7 +955,7 @@ function shortenNameSelected(event, restore = false) {
                 names[0].available = false;
             }
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -968,8 +964,7 @@ function shortenNameSelected(event, restore = false) {
 
 function sanitizeNameSelected(event, restore = false) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
 
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
@@ -988,14 +983,13 @@ async function truncateSelected(event) {
         } else { return; }
     }
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.truncate(event, f, false, truncLength);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1029,8 +1023,7 @@ async function stretchSelected(event, shortest = false) {
         }
     }
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
@@ -1040,7 +1033,7 @@ async function stretchSelected(event, shortest = false) {
                 editor.stretch(event, f, false, stretchLength);
             }
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1049,14 +1042,13 @@ async function stretchSelected(event, shortest = false) {
 
 function reverseSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.reverse(event, f, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1065,14 +1057,13 @@ function reverseSelected(event) {
 
 function shiftSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.shift(event, f, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1081,14 +1072,13 @@ function shiftSelected(event) {
 
 function nudgeCrossingsSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.nudgeCrossings(event, f, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1105,14 +1095,13 @@ async function padWithZeroSelected(event, shortest = false) {
         }
     }
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.padWithZero(event, f, customPadLength, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1121,15 +1110,14 @@ async function padWithZeroSelected(event, shortest = false) {
 
 function serializeSelected(event, method = 'LR') {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(
           f => f.meta.checked && f.buffer.numberOfChannels === 2);
         selected.forEach((f, idx) => {
             editor.serialize(event, f, false, method);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1138,15 +1126,14 @@ function serializeSelected(event, method = 'LR') {
 
 function deserializeSelected(event, method = 'LR') {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(
           f => f.meta.checked && f.buffer.numberOfChannels === 1);
         selected.forEach((f, idx) => {
             editor.deserialize(event, f, false, method);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1155,14 +1142,13 @@ function deserializeSelected(event, method = 'LR') {
 
 function pitchUpSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.perSamplePitch(event, 2, -12, f, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1171,14 +1157,13 @@ function pitchUpSelected(event) {
 
 function doubleSelected(event, pingPong = false) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.double(event, f, pingPong, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1191,14 +1176,13 @@ function pingPongSelected(event) {
 
 function fuzzSelected(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.fade('fuzz', f, false);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1217,8 +1201,7 @@ async function crushSelected(event) {
     crushAmount = Math.min(Math.floor(Math.abs(crushAmount)), 127);
 
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(async () => {
         const selected = files.filter(f => f.meta.checked);
         await new Promise(resolve => selected.forEach((f, idx) => {
@@ -1232,7 +1215,7 @@ async function crushSelected(event) {
               //editor.perSamplePitch(event, .5, 12, f, false);
               editor.normalize(event, f, false);
               if (idx === selected.length - 1) {
-                  document.body.classList.remove('loading');
+                  setLoadingText('');
                   resolve(true);
               }
           })), 1000));
@@ -1242,8 +1225,7 @@ async function crushSelected(event) {
 
 function fadeSelected(event, type) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
@@ -1255,7 +1237,7 @@ function fadeSelected(event, type) {
             }
             editor.fade(type, f, false, start, end, true);
             if (idx === selected.length - 1) {
-                document.body.classList.remove('loading');
+                setLoadingText('');
             }
         });
         renderList();
@@ -1867,8 +1849,7 @@ function showMergePanel() {
 
 function performMergeUiCall() {
     const mergePanelEl = document.getElementById('mergePanel');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     if (files.filter(f => f.meta.checked).length === 0) {
         return;
     }
@@ -1929,7 +1910,7 @@ function performMerge(mFiles) {
         if (idx === mFiles.length - 1) {
             files.unshift(newItem);
             unsorted.push(newItem.meta.id);
-            document.body.classList.remove('loading');
+            setLoadingText('');
             renderList();
         }
     });
@@ -1983,8 +1964,7 @@ function performBlendUiCall() {
     const blendLengthEl = document.getElementById('blendLength');
     const blendLength = +blendLengthEl.value;
     const blendPanelEl = document.getElementById('mergePanel');
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     if (files.filter(f => f.meta.checked).length === 0 || !blendLength) {
         return;
     }
@@ -2052,7 +2032,7 @@ function performBlend(mFiles, blendLength) {
         if (idx === mFiles.length - 1) {
             files.unshift(newItem);
             unsorted.push(newItem.meta.id);
-            document.body.classList.remove('loading');
+            setLoadingText('');
             renderList();
         }
     });
@@ -2065,8 +2045,7 @@ function joinAllUICall(event, pad) {
         let _files = files.filter(f => f.meta.duration < secondsPerFile);
         if (_files.length === 0) { return;}
     }
-    document.getElementById('loadingText').textContent = 'Processing';
-    document.body.classList.add('loading');
+    setLoadingText('Processing');
     setTimeout(() => joinAll(event, pad), 500);
 }
 
@@ -2286,9 +2265,8 @@ async function joinAll(
         if (joinError) {
             errorMessage += `\n\n "${joinError.toString ? joinError.toString() : JSON.stringify(joinError)}"`;
         }
-        document.getElementById('loadingText').textContent = 'Unexpected Error';
+        setLoadingText('Unexpected Error', 3000);
         showToastMessage(errorMessage, 15000);
-        setTimeout(() => document.body.classList.remove('loading'), 3000);
         console.log(joinError);
     }
 }
@@ -3652,7 +3630,7 @@ const renderRow = (item, type) => {
     const rowEl = item ? getRowElementById(item.meta.id) : lastSelectedRow;
     rowEl.innerHTML = buildRowMarkupFromFile(rowData, type);
     drawEmptyWaveforms(files);
-    document.body.classList.remove('loading');
+    setLoadingText('');
 };
 
 const renderList = (fromIdb = false) => {
@@ -3666,7 +3644,7 @@ const renderList = (fromIdb = false) => {
     if (files.length && !fromIdb) {
         storeState();
     }
-    document.body.classList.remove('loading');
+    setLoadingText('');
 };
 const bytesToInt = (bh, bm, bl) => {
     return ((bh & 0x7f) << 7 << 7) + ((bm & 0x7f) << 7) + (bl & 0x7f);
@@ -3723,8 +3701,8 @@ const parseXml = (xml, fullPath) => {
 
         if (docType === 'RenoiseSong' || docType === 'RenoiseInstrument') {
             const path = fullPath.replace('Song.xml', '').replace('Instrument.xml', '');
-            const samples = [...doc.getElementsByTagName('Sample')];
-            const sampleSlices = samples.map(sample => ({
+            const xmlSamples = [...doc.getElementsByTagName('Sample')];
+            const sampleSlices = xmlSamples.map(sample => ({
                 uuid: crypto.randomUUID(),
                 name: sample.getElementsByTagName('Name')[0].textContent,
                 loopEnd: +sample.getElementsByTagName('DisplayLength')[0].textContent,
@@ -3895,8 +3873,7 @@ const parseAif = async (
 
         /*Only supporting 16bit Aif files, other bit-depths will be skipped.*/
         if (+chunks.comm.bitDepth !== 16) {
-            const loadingEl = document.getElementById('loadingText');
-            loadingEl.textContent = `Skipping unsupported ${chunks.comm.bitDepth}bit aif file '${file.name}'...`;
+            setLoadingText(`Skipping unsupported ${chunks.comm.bitDepth}bit aif file '${file.name}'...`);
             delete chunks.buffer;
             delete chunks.bufferDv;
             dv = false;
@@ -4444,38 +4421,42 @@ const addBlankFile = () => {
 
 const restoreSessionFile = async sessionFile => {
     const zip = new JSZip();
-    const loadingEl = document.getElementById('loadingText');
-    loadingEl.textContent = 'Restoring Session...';
-    document.body.classList.add('loading');
+    setLoadingText('Restoring Session');
 
     await zip.loadAsync(sessionFile);
 
-    let sessionSettings = await zip.file('settings').async('uint8array');
+    let sessionSettings = await zip.file('settings')?.async('uint8array');
     sessionSettings = window.msgpack.decode(sessionSettings);
     masterSR = sessionSettings.workingSR;
     await changeAudioConfig(sessionSettings.lastUsedAudioConfig, true);
     setSliceOptionsFromArray(sessionSettings.sliceOptions);
 
-    let sessionUnsorted = await zip.file('unsorted').async('uint8array');
+    let sessionUnsorted = await zip.file('unsorted')?.async('uint8array');
     sessionUnsorted = window.msgpack.decode(sessionUnsorted);
     unsorted = sessionUnsorted;
 
-    let sessionImportOrder = await zip.file('importOrder').async('uint8array');
+    let sessionImportOrder = await zip.file('importOrder')?.async('uint8array');
     sessionImportOrder = window.msgpack.decode(sessionImportOrder);
     importOrder = sessionImportOrder;
 
-    let sessionFiles = await zip.file('files').async('uint8array');
+    let opExportData = await zip.file('opExportData')?.async('uint8array');
+    if (opExportData) {
+        opExportData = window.msgpack.decode(opExportData);
+        if (opExportData.samples && opExportData.opDataConfig) {
+            getSetOpExportData(opExportData.samples, opExportData.opDataConfig);
+        }
+    }
+
+    let sessionFiles = await zip.file('files')?.async('uint8array');
     sessionFiles = window.msgpack.decode(sessionFiles);
     files = sessionFiles.map(f => bufferRateResampler(f));
     renderList(true);
     storeState();
-    document.body.classList.remove('loading');
+    setLoadingText('');
 };
 
 const consumeFileInput = async (event, inputFiles) => {
-    const loadingEl = document.getElementById('loadingText');
-    loadingEl.textContent = 'Loading samples';
-    document.body.classList.add('loading');
+    setLoadingText('Loading samples');
     checkAndSetAudioContext();
     const isAudioCtxClosed = checkAudioContextState();
     if (isAudioCtxClosed) { return; }
@@ -5193,7 +5174,7 @@ function configDb(skipLoad = false, callback) {
         db = dbReq.result;
         checkAndSetAudioContext();
         if (!skipLoad) {
-            document.body.classList.add('loading');
+            setLoadingText('Restoring Session');
             loadState();
         }
         if (callback) {
@@ -5206,7 +5187,7 @@ function configDb(skipLoad = false, callback) {
         db.createObjectStore('state');
     };
 }
-async function storeState() {
+async function storeState(onlyOpExport = false) {
     if (!settings.retainSessionState) {
         return new Promise(resolve => resolve(true));
     }
@@ -5216,6 +5197,12 @@ async function storeState() {
     }
     const transaction = db.transaction(['state'], 'readwrite', {durability: 'relaxed'});
     const objectStore = transaction.objectStore('state');
+
+    objectStore.put(window.msgpack.encode(getSetOpExportData(false,false,true)), 'opExportData');
+    if (onlyOpExport) {
+        return;
+    }
+
     importOrder = importOrder.filter(id => unsorted.includes(id));
     objectStore.put(unsorted, 'unsorted');
     objectStore.put(importOrder, 'importOrder');
@@ -5238,8 +5225,8 @@ async function storeState() {
             };
         }), 'files');
     });
-
 }
+
 function loadState(skipConfirm = false) {
     if (!settings.retainSessionState) {
         return showWelcome();
@@ -5248,6 +5235,7 @@ function loadState(skipConfirm = false) {
     const objectStore = transaction.objectStore('state');
     let requestUnsorted = objectStore.get('unsorted');
     let requestImportOrder = objectStore.get('importOrder');
+
     requestUnsorted.onsuccess = () => {
         if (requestUnsorted.result) {
             unsorted = requestUnsorted.result;
@@ -5257,6 +5245,13 @@ function loadState(skipConfirm = false) {
     requestImportOrder.onsuccess = () => {
         if (requestImportOrder.result) {
             importOrder = requestImportOrder.result;
+        }
+    }
+    let requestOpExportData = objectStore.get('opExportData');
+    requestOpExportData.onsuccess = () => {
+        if (requestOpExportData.result) {
+            const opExportData = window.msgpack.decode(requestOpExportData.result);
+            getSetOpExportData(opExportData.samples, opExportData.opDataConfig);
         }
     }
     let requestFiles = objectStore.get('files');
@@ -5275,15 +5270,17 @@ function loadState(skipConfirm = false) {
                 );
                 if (!proceed) {
                     clearDbBuffers();
-                    document.body.classList.remove('loading');
+                    setLoadingText('');
                     return ;
                 }
             }
 
             files = requestFiles.result.map(f => bufferRateResampler(f));
+
             renderList(true);
+
         } else {
-            document.body.classList.remove('loading');
+            setLoadingText('');
         }
     }
 }
@@ -5303,8 +5300,7 @@ function saveSessionUiCall() {
     if ((sessionIncludeUnselected && files.length === 0) || (!sessionIncludeUnselected && files.filter(f => f.meta.checked).length === 0)) {
         return showToastMessage('Session must include at least one file.');
     }
-    document.getElementById('loadingText').textContent = 'Exporting Session...';
-    document.body.classList.add('loading');
+    setLoadingText('Exporting Session');
     saveSession(sessionFileName, sessionIncludeUnselected);
     if (settingsPanelEl.open) {
         settingsPanelEl.close();
@@ -5313,6 +5309,12 @@ function saveSessionUiCall() {
 
 function saveSession(sessionFileName = 'digichain_session', includeUnselected = false) {
     const zip = new JSZip();
+    const zipFileOptions = {
+        compression: "DEFLATE",
+        compressionOptions: {
+            level: 9
+        }
+    };
     const data = (includeUnselected ? files : files.filter(f => f.meta.checked)).map(f => ({
         file: f.file,
         meta: f.meta,
@@ -5330,30 +5332,17 @@ function saveSession(sessionFileName = 'digichain_session', includeUnselected = 
         workingSR: masterSR,
         sliceOptions
     };
-    zip.file('files', window.msgpack.encode(data), {
-        compression: "DEFLATE",
-        compressionOptions: {
-            level: 9
-        }
-    });
-    zip.file('unsorted', window.msgpack.encode(unsorted), {
-        compression: "DEFLATE",
-        compressionOptions: {
-            level: 9
-        }
-    });
-    zip.file('importOrder', window.msgpack.encode(importOrder), {
-        compression: "DEFLATE",
-        compressionOptions: {
-            level: 9
-        }
-    });
-    zip.file('settings', window.msgpack.encode(sessionSettings), {
-        compression: "DEFLATE",
-        compressionOptions: {
-            level: 9
-        }
-    });
+
+    zip.file('files', window.msgpack.encode(data), zipFileOptions);
+    zip.file('unsorted', window.msgpack.encode(unsorted), zipFileOptions);
+    zip.file('importOrder', window.msgpack.encode(importOrder), zipFileOptions);
+    zip.file('settings', window.msgpack.encode(sessionSettings), zipFileOptions);
+
+    const opExportData = getSetOpExportData(false,false,true);
+    if (opExportData.samples.length > 0) {
+        zip.file('opExportData', window.msgpack.encode(opExportData), zipFileOptions);
+    }
+
     zip.generateAsync({
         type: "blob",
         compression: "DEFLATE"
@@ -5362,7 +5351,7 @@ function saveSession(sessionFileName = 'digichain_session', includeUnselected = 
         el.href = URL.createObjectURL(blob);
         el.setAttribute('download', `${sessionFileName}.dcsd`);
         el.click();
-        document.body.classList.remove('loading');
+        dsetLoadingText('');
         showToastMessage(`'${sessionFileName}.dcsd'<br>session file created.`, 10000);
     });
 }

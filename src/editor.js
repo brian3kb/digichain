@@ -3,7 +3,8 @@ import {
     deClick, detectTempo,
     Resampler,
     getResampleIfNeeded, dcDialog,
-    joinToStereo, showToastMessage, buildXyDrumPatchData
+    joinToStereo, showToastMessage, buildXyDrumPatchData,
+    setLoadingText
 } from './resources.js';
 import {settings} from './settings.js';
 
@@ -29,8 +30,9 @@ let selection = {
 let showStereoWaveform = false;
 let shouldSnapToZeroCrossing = false;
 
-let samples = [];
 let folders = [];
+
+let samples = [];
 let opDataConfig = Array.from({ length: 24 }).map(i => ({}));
 
 export function setEditorConf(options) {
@@ -57,6 +59,22 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
     }
     if (view === 'opExport') {
         samples.selected = false;
+        /*Rehydrate state if it came from localstorage */
+        if (samples.find(f => f?.buffer?.channel0)) {
+            samples.forEach(f => {
+               if (!f?.buffer?.channel0) { return; }
+                const audioBuffer = conf.audioCtx.createBuffer(
+                  f.buffer.numberOfChannels,
+                  f.buffer.length,
+                  conf.masterSR
+                );
+                audioBuffer.copyToChannel(f.buffer.channel0, 0);
+                if (f.buffer.numberOfChannels === 2) {
+                    audioBuffer.copyToChannel(f.buffer.channel1, 1);
+                }
+                f.buffer = audioBuffer;
+            });
+        }
         renderOpExport();
         opExportPanelEl.classList.add('show');
         rightButtonsEl.classList.add('fade');
@@ -70,11 +88,6 @@ function render() {
     if (!editPanelEl.open) { editPanelEl.showModal(); }
     renderSliceList();
     renderEditPanelWaveform();
-}
-
-function createOpData() {
-
-    //samples.json = samples.json || buildOpData([], conf.masterChannels, true);
 }
 
 function getOpKeyData(keyId) {
@@ -305,12 +318,44 @@ function getKitName() {
     return samples.kitName || `dc${new Date().toJSON().replaceAll(/^\d{4}|\-|T|:|\.|\d{2}Z$/gi, '')}`;
 }
 
+export function getSetOpExportData(_samples, _opDataConfig, forExport) {
+    if (_samples?.length === 0) {
+        samples = [];
+        samples.selected = false;
+        opDataConfig = Array.from({ length: 24 }).map(i => ({}));
+    } else if (_samples && _opDataConfig){
+        samples = _samples;
+        samples.selected = samples.selected || false;
+        opDataConfig = _opDataConfig;
+    }
+    if (forExport) {
+        if (samples.find(f => f?.buffer?.channel0)) {
+            return {samples, opDataConfig};
+        }
+        return {
+            opDataConfig,
+            samples: samples.map(f => ({
+                  ...f,
+                  buffer: f.buffer ? {
+                      duration: f.buffer.duration,
+                      length: f.buffer.length,
+                      numberOfChannels: f.buffer.numberOfChannels,
+                      sampleRate: f.buffer.sampleRate,
+                      channel0: f.buffer.getChannelData(0),
+                      channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
+                  } : false
+              })
+            )
+        };
+    }
+    return {samples, opDataConfig};
+}
+
 async function renderOpExport(reset = false) {
     if (reset) {
         const confirmReset = await dcDialog('confirm', 'Reset OP Export kit config?', {kind: 'warning', okLabel: 'Reset'});
         if (confirmReset) {
-            samples = [];
-            samples.selected = false;
+            getSetOpExportData([]);
         }
     }
 
@@ -358,6 +403,7 @@ async function renderOpExport(reset = false) {
         </div>
     </div>
   `;
+    conf.storeState();
 }
 function toggleOpExportSetting(event, setting) {
     if (setting === 'kitName') {
@@ -513,6 +559,7 @@ function serializeOpKitToSingleBuffer() {
 }
 
 function buildOpKit(type = 'aif', kitName) {
+    setLoadingText('Building Field Kit');
     const kit = serializeOpKitToSingleBuffer();
     kitName = kitName || samples.kitName || getKitName();
     const linkEl = document.querySelector('.aif-link-hidden');
@@ -529,6 +576,7 @@ function buildOpKit(type = 'aif', kitName) {
     }
     linkEl.href = URL.createObjectURL(blob);
     linkEl.setAttribute('download', `${kitName}.aif`);
+    setLoadingText('');
     linkEl.click();
 }
 
@@ -536,6 +584,7 @@ function buildXyKit() {
     const kitName = samples.kitName || getKitName();
     const zip = new JSZip();
     let xyPatchData;
+    setLoadingText('Building XY Kit');
     if (samples.xyMultiOut) {
         const kit = consolidateOpKeysToKit();
         kit.forEach((slice, idx) => {
@@ -575,10 +624,9 @@ function buildXyKit() {
         const el = document.getElementById('getJoined');
         el.href = URL.createObjectURL(zipBlob);
         el.setAttribute('download', `${kitName}.preset.zip`);
+        setLoadingText('');
         el.click();
-        document.body.classList.remove('loading');
     });
-    // TODO: Add some "working" indicator to OP Export build processes.
 }
 
 function toggleSnapToZero(event) {
@@ -2119,7 +2167,7 @@ function sanitizeName(event, files = [], selected = [], restore = false) {
             names[0].available = false;
         }
         if (idx === selected.length - 1) {
-            document.body.classList.remove('loading');
+            setLoadingText('');
         }
     });
 }

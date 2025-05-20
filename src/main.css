@@ -1548,7 +1548,7 @@ body {
     position: sticky;
     top: 20.5rem;
     background-color: #202124;
-    z-index: 2;
+    z-index: 1;
     transition: all .25s ease-in;
 }
 .container:has(.all-options.hidden) #masterList thead {

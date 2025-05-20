@@ -302,7 +302,7 @@ function changeOpParam(event, key, id) {
 }
 
 function getKitName() {
-    return samples.kitName || `dckit-${new Date().toJSON().replaceAll(/^\d{4}|\-|T|:|\.|\d{2}Z$/gi, '')}`;
+    return samples.kitName || `dc${new Date().toJSON().replaceAll(/^\d{4}|\-|T|:|\.|\d{2}Z$/gi, '')}`;
 }
 
 async function renderOpExport(reset = false) {
@@ -482,6 +482,7 @@ function serializeOpKitToSingleBuffer() {
             const key = +kit[s].linkedTo;
             kit[s].s = kit[key].s;
             kit[s].e = kit[key].e;
+            kit[s].length = kit[key].length;
         }
     }
 
@@ -529,9 +530,9 @@ function buildXyKit() {
         const kit = consolidateOpKeysToKit();
         kit.forEach((slice, idx) => {
             if (!slice.blank) {
-                let sNum = `${slice.buffer ? idx + 1 : slice.linkedTo + 1}`;
+                let sNum = `${slice.buffer ? idx + 1 : +slice.linkedTo + 1}`;
                 sNum = sNum.length === 1 ? `0${sNum}` : sNum;
-                slice.name = `${kitName}_${sNum}`;
+                slice.name = `${kitName}${sNum}`;
                 slice.l = slice.length;
             }
             if (slice.buffer) {
@@ -540,6 +541,17 @@ function buildXyKit() {
                     type: 'audio/wav'
                 });
                 zip.file(`${slice.name}.wav`, blob, {binary: true});
+                slice.s = 0;
+                slice.e = slice.buffer.length;
+                slice.l = slice.length || slice.e;
+            }
+        });
+        kit.forEach(slice => {
+            if (slice.linkedTo) {
+                const key = +slice.linkedTo;
+                slice.s = kit[key].s;
+                slice.e = kit[key].e;
+                slice.l = kit[key].l;
             }
         });
         xyPatchData = buildXyDrumPatchData({kitName}, kit.filter(s => !s.blank));
@@ -552,7 +564,7 @@ function buildXyKit() {
     zip.generateAsync({type: 'blob'}).then(zipBlob => {
         const el = document.getElementById('getJoined');
         el.href = URL.createObjectURL(zipBlob);
-        el.setAttribute('download', `${kitName}.zip`);
+        el.setAttribute('download', `${kitName}.preset.zip`);
         el.click();
         document.body.classList.remove('loading');
     });

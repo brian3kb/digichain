@@ -4731,71 +4731,73 @@ const consumeFileInput = async (event, inputFiles) => {
 const dropHandler = (event) => {
     event.preventDefault();
     checkAndSetAudioContext();
-    if (event?.dataTransfer?.items?.length &&
-      event?.dataTransfer?.items[0].kind === 'string') {
-        try {
-            event?.dataTransfer?.items[0].getAsString(async link => {
-                let linkedFile = await fetch(link);
-                if (!linkedFile.url.includes('.wav')) { return; } // probably not a wav file
-                let buffer = await linkedFile.arrayBuffer();
-                const fb = buffer.slice(0);
-                await audioCtx.decodeAudioData(buffer,
-                  data => parseWav(data, fb, {
-                      lastModified: new Date().getTime(),
-                      name: linkedFile.url.split('/').reverse()[0],
-                      size: ((masterBitDepth * masterSR *
-                          (buffer.length / masterSR)) / 8) *
-                        buffer.numberOfChannels / 1024,
-                      type: 'audio/wav'
-                  }, '', true));
-                renderList();
-            });
-            return;
-        } catch (e) {}
-    }
-    if (event?.dataTransfer?.items?.length) {
-        let toConsume = [];
-        let total = event.dataTransfer.items.length;
-        toConsume.count = 0;
-        const addItem = item => {
-            if (item.isFile) {
-                item.file(
-                  (file) => {
-                      file.fullPath = item.fullPath.replace('/', '');
-                      file.uuid = crypto.randomUUID();
-                      if (supportedAudioTypes.some(ext => file.name.toLowerCase().endsWith(ext))) {
-                          importOrder.push(file.uuid);
-                      }
-                      toConsume.push(file);
-                  }
-                );
-                toConsume.count++;
-                total--;
-            } else if (item.isDirectory) {
-                const dirReader = item.createReader();
-                dirReader.readEntries(entries => {
-                    total += entries.length;
-                    for (const entry of entries) {
-                        addItem(entry);
-                    }
-                    total--;
+    if (!lastSelectedRow?.classList?.contains('is-dragging')) {
+        if (event?.dataTransfer?.items?.length &&
+          event?.dataTransfer?.items[0].kind === 'string') {
+            try {
+                event?.dataTransfer?.items[0].getAsString(async link => {
+                    let linkedFile = await fetch(link);
+                    if (!linkedFile.url.includes('.wav')) { return; } // probably not a wav file
+                    let buffer = await linkedFile.arrayBuffer();
+                    const fb = buffer.slice(0);
+                    await audioCtx.decodeAudioData(buffer,
+                      data => parseWav(data, fb, {
+                          lastModified: new Date().getTime(),
+                          name: linkedFile.url.split('/').reverse()[0],
+                          size: ((masterBitDepth * masterSR *
+                              (buffer.length / masterSR)) / 8) *
+                            buffer.numberOfChannels / 1024,
+                          type: 'audio/wav'
+                      }, '', true));
+                    renderList();
                 });
-            }
-        };
-        for (const entry of event.dataTransfer.items) {
-            const itemAsEntry = entry.getAtEntry
-              ? entry.getAtEntry()
-              : entry.webkitGetAsEntry();
-            if (itemAsEntry) {
-                addItem(itemAsEntry);
-            }
+                return;
+            } catch (e) {}
         }
-        let doneInterval = setInterval(() => {
-            if (total <= 0 && toConsume.count === toConsume.length) {
-                clearInterval(doneInterval);
-                consumeFileInput(event, toConsume);
+        if (event?.dataTransfer?.items?.length) {
+            let toConsume = [];
+            let total = event.dataTransfer.items.length;
+            toConsume.count = 0;
+            const addItem = item => {
+                if (item.isFile) {
+                    item.file(
+                      (file) => {
+                          file.fullPath = item.fullPath.replace('/', '');
+                          file.uuid = crypto.randomUUID();
+                          if (supportedAudioTypes.some(ext => file.name.toLowerCase().endsWith(ext))) {
+                              importOrder.push(file.uuid);
+                          }
+                          toConsume.push(file);
+                      }
+                    );
+                    toConsume.count++;
+                    total--;
+                } else if (item.isDirectory) {
+                    const dirReader = item.createReader();
+                    dirReader.readEntries(entries => {
+                        total += entries.length;
+                        for (const entry of entries) {
+                            addItem(entry);
+                        }
+                        total--;
+                    });
+                }
+            };
+            for (const entry of event.dataTransfer.items) {
+                const itemAsEntry = entry.getAtEntry
+                  ? entry.getAtEntry()
+                  : entry.webkitGetAsEntry();
+                if (itemAsEntry) {
+                    addItem(itemAsEntry);
+                }
             }
-        }, 500);
+            let doneInterval = setInterval(() => {
+                if (total <= 0 && toConsume.count === toConsume.length) {
+                    clearInterval(doneInterval);
+                    consumeFileInput(event, toConsume);
+                }
+            }, 500);
+        }
     } else {
         let target = lastDragOverRow || event.target;
         event.target?.classList?.remove('is-dragging');

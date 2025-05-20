@@ -119,7 +119,7 @@ function addOpKeyData(keyId, zone, opData) {
 
 async function dropOpKey(event, keyId, zone = -1) {
     event?.target?.classList?.remove('drag-over');
-    if (zone !== -1) {
+    if (zone !== -1 && event.stopPropagation) {
         event?.stopPropagation();
     }
     const lastSelectedFile = event.buffer ? event : digichain.lastSelectedFile();
@@ -390,7 +390,17 @@ async function acceptDroppedChainItems(droppedFiles = []) {
         startFrom = startFrom > droppedFiles.length ? droppedFiles.length : startFrom;
         droppedFiles = droppedFiles.slice(startFrom);
     }
-    droppedFiles.slice(0, 24).forEach((f, idx) => dropOpKey(f, idx));
+    const userTargetValue = await dcDialog(
+      'confirm',
+      'Place samples in the Left, Center, or Right channel per key?',
+      {
+          cancelLabel: 'Left',
+          centerLabel: 'Right',
+          okLabel: 'Center'
+      }
+    );
+    const placement = userTargetValue === true ? -1 : userTargetValue === false ? 0 : 1;
+    droppedFiles.slice(0, 24).forEach((f, idx) => dropOpKey(f, idx, placement));
     renderOpExport();
 }
 

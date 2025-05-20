@@ -19,6 +19,8 @@ latest
  - Supporting the import and export of digichain session files.
  - Using a custom dialog instead of the browser built-ins to handle user prompts/confirmations.
  - Moved browser based alert messaging into a toast style notification that displays at the top center of the active window or dialog.
+ - OP Export UI for creating drum kits for OP-1 Field and OP-XY via a drag and drop key layout.
+ - OP Export supports combining samples on Left / Right / Center to more easily create A/B kits for use on the Field.
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.

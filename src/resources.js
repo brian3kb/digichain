@@ -258,14 +258,16 @@ export async function dcDialog(type = 'message', messageString = '', config = {}
                         value="${config.defaultValue??''}"
                     >
                     <div class="buttons-group">
-                        <button type="submit" class="prompt-ok">${config.okLabel??'OK'}</button>
-                        <button class="prompt-cancel button-outline">${config.cancelLabel??'Cancel'}</button>
+                        <button type="submit" class="prompt-ok">${config.okLabel??'OK'}</button>` +
+              (config.centerLabel ? `<button class="prompt-center button-outline" style="margin-left: 2rem;">${config.centerLabel}</button>` : '') +
+                        `<button class="prompt-cancel button-outline">${config.cancelLabel??'Cancel'}</button>
                     </div>
                 </div>
             `;
 
             const promptInputEl = document.querySelector('#dcDialog .content .prompt-input');
             const promptCancelEl = document.querySelector('#dcDialog .content .prompt-cancel');
+            const promptCenterEl = document.querySelector('#dcDialog .content .prompt-center');
             const promptOkEl = document.querySelector('#dcDialog .content .prompt-ok');
 
             promptCancelEl.onclick = () => {
@@ -276,6 +278,13 @@ export async function dcDialog(type = 'message', messageString = '', config = {}
                 resolve(type === 'prompt' ? (promptInputEl.value||'') : true);
                 dcDialogEl.close();
             };
+
+            if (promptCenterEl) {
+                promptCenterEl.onclick = () => {
+                    resolve(type === 'prompt' ? (promptInputEl.value||'') : 'center');
+                    dcDialogEl.close();
+                };
+            }
 
             dcDialogEl.onkeydown = dcDialogEvent => {
                 if (dcDialogEvent.code === 'Escape') {

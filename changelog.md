@@ -1,4 +1,4 @@
-latest
+2025.05.20 1.5.0
  - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.
  - Style tweaks to support rendering within itch.io windows.
  - Enhanced waveform rendering accuracy and performance (thanks to github.com/boourns for the pull request).

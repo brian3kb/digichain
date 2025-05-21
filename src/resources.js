@@ -37,7 +37,8 @@ export const opToXyValues = {
         }
     },
     reverse: value => value === 24576,
-    volume: () => 0
+    volume: () => 0,
+    pitch: value => value || value !== 0 ? Math.round((value / 512) / 12) : 0,
 };
 
 // check last 256 samples per slice to nudge to a zero crossing
@@ -158,7 +159,7 @@ export function buildXyRegionFromSlice(slice, index) {
         'sample': `${slice.name || 'slice_' + (index + 1)}.wav`,
         'sample.end': slice.e || (slice.l || (slice.e - slice.s)),
         'sample.start': slice.s || 0,
-        'transpose': 0,
+        'transpose': opToXyValues.pitch(slice.st),
         'tune': 0
     };
 }
@@ -260,7 +261,7 @@ export async function dcDialog(type = 'message', messageString = '', config = {}
                     <div class="buttons-group">
                         <button type="submit" class="prompt-ok">${config.okLabel??'OK'}</button>` +
               (config.centerLabel ? `<button class="prompt-center button-outline" style="margin-left: 2rem;">${config.centerLabel}</button>` : '') +
-                        `<button class="prompt-cancel button-outline">${config.cancelLabel??'Cancel'}</button>
+                        `<button class="prompt-cancel button-outline ${type === 'alert' ? 'hidden' : ''}">${config.cancelLabel??'Cancel'}</button>
                     </div>
                 </div>
             `;

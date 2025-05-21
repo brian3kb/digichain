@@ -139,11 +139,8 @@ async function dropOpKey(event, keyId, zone = -1) {
     if (!lastSelectedFile) { return; }
 
     if (lastSelectedFile.meta.duration > 20) {
-        const response = await dcDialog('confirm', `The sample '${lastSelectedFile.file.filename} is ${lastSelectedFile.meta.duration} seconds in length, samples must be less than 20 seconds. The sample will be re-pitched to fit within the limit.`);
-        if (!response) {
-            return ;
-        }
-        //TODO: resample pitched up and flag files meta data with pitch change.
+        await dcDialog('alert', `Skipping sample '${lastSelectedFile.file.filename}' as it is ${lastSelectedFile.meta.duration} seconds in length, samples must be less than 20 seconds.`);
+        return;
     }
 
     const file = {...lastSelectedFile, file: {...lastSelectedFile.file}, meta: {...lastSelectedFile.meta}};
@@ -157,6 +154,17 @@ async function dropOpKey(event, keyId, zone = -1) {
     addOpKeyData(keyId, zone, rsFile);
     sanitizeName(event, samples, [rsFile]);
     opDataConfig[keyId].linkedTo = false;
+
+    if (rsFile.meta.opPitch) {
+        opDataConfig[keyId].st = rsFile.meta.opPitch;
+    }
+    if (rsFile.meta.opPan) {
+        opDataConfig[keyId].p = rsFile.meta.opPan;
+    }
+    if (rsFile.meta.opPanAb) {
+        opDataConfig[keyId].pab = rsFile.meta.opPanAb;
+    }
+
     renderOpExport();
 }
 

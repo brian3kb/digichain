@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
     <meta name="author" content="Brian Barnett [ brian3kb ]">
-    <meta name="version" content="1.5.0rc1">
+    <meta name="version" content="1.5.0rc2">
     <meta
             name="description"
             content="DigiChain makes the creation of sample chains as easy as possible; Edit, trim, reverse, crush, join, slice, convert; Drag-and-drop uncompressed wav, aif (OP-1 Field/OP-Z), flac, or syx (MachineDrum) audio files and converts them to wav files for transfer via the Elektron Transfer app, or to aif files for use on Teenage Engineering OP-1 Field / OP-Z, or record from direct playback with pop markers.--Include slice data as cue markers for use on Dirtywave M8, or export with a .ot file for direct use on Octatrack. Converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids (icluding Digitakt II).--Files are generated at the chosen session sample rate and bit depth with all processing done in the browser, on *your* computer, no user/audio data is sent to a server.----The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
@@ -57,7 +57,7 @@
         <p>For documentation, see <a style="outline: none;" href="https://brianbar.net/docs/digichain/" target="_blank">https://brianbar.net/docs/digichain/</a></p>
         <br>
         <button class="button" onclick="document.getElementById('welcomePanelMd').close();">Close</button>
-        <button class="button button-outline float-right" onclick="digichain.toggleSetting('showWelcomeModalOnLaunchIfListEmpty', false, true);document.getElementById('welcomePanelMd').close();">Don't show this again</button>
+        <button class="button button-outline float-right" onclick="digichain.toggleSetting('showWelcomeModalOnLaunchIfListEmpty', undefined, true);document.getElementById('welcomePanelMd').close();">Don't show this again</button>
     </div>
 </dialog>
 
@@ -494,13 +494,25 @@
                     120
                 </button>
                 <br>
-                <button title="Download the selected samples joined, spaced evenly. Shift+click will resample back to the list."
-                        class="dl-spaced has-shift-mod" onclick="digichain.joinAll(event, true)"><i
-                        class="gg-software-download"></i><span class="join-count" data-join-count="0"> - Spaced Chains</span></button>
-                <button title="Download the selected samples joined. Shift+click will resample back to the list."
-                        class="btn-download has-shift-mod" onclick="digichain.joinAll(event)"><i
-                        class="gg-software-download"></i><span class="join-count join-count-chain" data-join-count="0"> - Chains</span>
-                </button>
+                <div class="chain-actions">
+                    <button title="Download the selected samples joined, spaced evenly. Shift+click will resample back to the list."
+                    class="dl-spaced has-shift-mod" onclick="digichain.joinAll(event, true)"><i
+                            class="gg-software-download"></i><span class="join-count" data-join-count="0"> - Spaced Chains</span></button>
+                    <button title="Download the selected samples joined. Shift+click will resample back to the list."
+                            class="btn-download dl-chain has-shift-mod" onclick="digichain.joinAll(event)"><i
+                            class="gg-software-download"></i><span class="join-count join-count-chain" data-join-count="0"> - Chains</span>
+                    </button>
+                    <div class="chain-action-icons">
+                        <button title="Toggle between creating Chains, where sample lengths remain the same, and Spaced Chains, where all samples are padded with silence to match the length of the longest sample per chain."
+                                class="button-clear toggle-spaced-chain-mode fade" onclick="digichain.updateSpacedChainMode(true)"><i class="gg-carousel"></i>
+                        </button>
+                        <button title="When enabled, created chains will be added to the top of the sample list instead of producing a zip file to download (the same as holding the Shift key will pressing the Chain button)."
+                                class="button-clear toggle-top-list fade" onclick="digichain.updateUiButtonAction('updateResampleChainsToList', '.toggle-top-list', true)"><i class="gg-top-list"></i>
+                        </button>
+                        <button style="visibility: hidden;" title="OP-XY Preset bundling, samples longer than 20 seconds will be truncated to allow playback on the Xy (be mindful that the XY has a total 64mb of memory per project loaded for samples). When active, only zip downloads will be available."
+                                onclick="digichain.updateExportChainsAsXyPresets(true)" class="button-clear toggle-op-xy-preset-bundling">XY</button>
+                    </div>
+                </div>
                 <a id="getJoined">_</a>
             </div>
         </div>

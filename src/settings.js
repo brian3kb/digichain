@@ -8,6 +8,10 @@ const defaultSettings = {
     restoreLastUsedAudioConfig: true,
     retainSessionState: true,
 
+    spacedChainMode: true,
+    updateResampleChainsToList: false,
+    exportChainsAsXyPresets: false,
+
     attemptToFindCrossingPoint: false,
     darkModeTheme: null,
     deClick: 0.4,

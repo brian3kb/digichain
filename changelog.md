@@ -21,6 +21,9 @@
  - Moved browser based alert messaging into a toast style notification that displays at the top center of the active window or dialog.
  - OP Export UI for creating drum kits for OP-1 Field and OP-XY via a drag and drop key layout.
  - OP Export supports combining samples on Left / Right / Center to more easily create A/B kits for use on the Field.
+ - Chains / Spaced Chains buttons now do not both display, they are toggled via the new Chain Type toggle icon.
+ - Rendering created chains to the top of the list instead of out to a downloaded zip file (the Shift + Click button action), is now toggled from an icon.
+ - XY preset rendering toggle icon, when enabled, chains are created as XY Preset folders in the output zip, samples longer than 20 seconds will be automatically truncated.
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
@@ -28,6 +31,7 @@
    - When restore last used audio config is set to off, the text label of the audio config indicator was blank.
    - Where canvas element replacement threw an error when slicing to samples from the slice panel with skip render waveforms enabled.
    - Toggling the max-seconds per chain option de-selected all samples.
+   - XY common configuration no longer sets the seconds time limit per chain to on.
    - Play-head was not displayed when playing the highlighted sample in the list using the P key keyboard shortcut.
 
 2025.01.16 1.4.16

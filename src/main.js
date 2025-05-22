@@ -320,7 +320,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     secondsPerFile = 0;
     secondsPerFile = 'opz' === commonSelectDevice ? 12 : secondsPerFile;
     secondsPerFile = 'op1f' === commonSelectDevice ? 20 : secondsPerFile;
-    secondsPerFile = 'opxy' === commonSelectDevice ? 20 : secondsPerFile;
+    /*secondsPerFile = 'opxy' === commonSelectDevice ? 20 : secondsPerFile;*/
 
     toggleSecondsPerFile(false,
       !secondsPerFile ? 0 :
@@ -1278,7 +1278,7 @@ function pitchExports(value, silent) {
 
 function toggleSetting(param, value, suppressRerender) {
     if (value === undefined || typeof value === 'boolean') {
-        settings[param] = !settings[param]
+        settings[param] = value === undefined ? !settings[param] : value;
     }
 
     if (param === 'darkModeTheme') {
@@ -1360,6 +1360,34 @@ function toggleSecondsPerFile(event, value) {
             target: document.querySelector('.slice-grid-off')
         }, 0);
     }
+    setCountValues();
+}
+
+function updateSpacedChainMode(toggleSetting) {
+    const spacedEl = document.querySelector('button.dl-spaced');
+    const chainEl = document.querySelector('button.dl-chain');
+    const spacedToggleEl = document.querySelector('.toggle-spaced-chain-mode')
+    if (toggleSetting && !settings.exportChainsAsXyPresets) {
+        settings.spacedChainMode = !settings.spacedChainMode;
+    }
+    spacedToggleEl.classList[settings.spacedChainMode ? 'remove' : 'add']('fade');
+    spacedEl.style.display = settings.spacedChainMode ? 'block' : 'none';
+    chainEl.style.display = settings.spacedChainMode ? 'none' : 'block';
+}
+
+function updateUiButtonAction(param, buttonClass, toggleSetting, forceValue) {
+    const buttonEl = document.querySelector(buttonClass);
+    if (toggleSetting) {
+        settings[param] = forceValue === undefined ? !settings[param] : forceValue;
+    }
+    buttonEl.classList[settings[param]? 'remove' : 'add']('fade');
+}
+
+function updateExportChainsAsXyPresets(toggleSetting) {
+    if (!settings.exportChainsAsXyPresets && settings.spacedChainMode) {
+        updateSpacedChainMode(true);
+    }
+    updateUiButtonAction('exportChainsAsXyPresets', '.toggle-op-xy-preset-bundling', true);
     setCountValues();
 }
 
@@ -2053,7 +2081,7 @@ async function joinAll(
   event, pad = false, filesRemaining = [], fileCount = 0,
   toInternal = false, zip = false) {
     if (files.length === 0) { return; }
-    if (toInternal ||
+    if (toInternal || settings.updateResampleChainsToList ||
       (event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
     try {
         if (settings.zipDownloads && !toInternal && files.filter(
@@ -3329,7 +3357,7 @@ const setFileNumTicker = () => {
     fileNumEl.classList[isProcessing ? 'add' : 'remove']('gg-spinner');
 };
 
-const setCountValues = () => {
+function setCountValues() {
     const filesSelected = files.filter(f => f.meta.checked);
     const selectionCount = filesSelected.length;
     const selectionSlicesCount = settings.splitOutExistingSlicesOnJoin ? filesSelected.reduce(
@@ -3341,6 +3369,7 @@ const setCountValues = () => {
       (a, f) => a += +f.meta.duration, 0);
     const joinCount = chainCount === 0 ? 0 : (chainCount > 0 &&
     sliceGrid > 0 ? Math.ceil(chainCount / sliceGrid) : 1);
+    const chainText = settings.exportChainsAsXyPresets ? ' Preset' : ' Chain';
     document.getElementById(
       'fileNum').textContent = `${files.length}/${selectionCount}` + (selectionSlicesCount ?
       ` (+${selectionSlicesCount} slices)`: '');
@@ -3360,8 +3389,8 @@ const setCountValues = () => {
                 joinCount === 0
                   ? '-'
                   : joinCount}${idx === 0 ? ' Spaced' : ''}${joinCount === 1
-                ? ' Chain'
-                : ' Chains'}`;
+                ? chainText
+                : chainText + 's'}`;
               el.dataset.joinCount = `${joinCount}`;
           });
         try {
@@ -5152,6 +5181,9 @@ function init() {
             masterBitDepth
         });
     }
+    updateSpacedChainMode();
+    updateUiButtonAction('updateResampleChainsToList', '.toggle-top-list');
+    updateUiButtonAction('exportChainsAsXyPresets', '.toggle-op-xy-preset-bundling');
     setTimeout(() => toggleOptionsPanel(), 250);
     configDb();
     document.getElementById('modifierKeyctrlKey').textContent= navigator.userAgent.indexOf('Mac') !== -1 ? 'CMD' : 'CTRL';
@@ -5445,6 +5477,9 @@ window.digichain = {
     pitchExports,
     toggleSetting,
     toggleSecondsPerFile,
+    updateSpacedChainMode,
+    updateUiButtonAction,
+    updateExportChainsAsXyPresets,
     changeOpParam,
     toggleHelp,
     toggleChainNamePanel,

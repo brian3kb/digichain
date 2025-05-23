@@ -2234,7 +2234,7 @@ dialog {
 }
 .dl-single-files { width: 10rem; }
 .dl-spaced, .dl-chain{
-    width: 17.5rem;
+    width: 18.25rem;
     padding: 0;
 }
 
@@ -2248,7 +2248,7 @@ dialog {
     flex-direction: row;
     justify-content: space-around;
     padding-left: 1rem;
-    width: 40%;
+    width: 14rem;
 }
 .chain-action-icons button {
     padding: 0;
@@ -2941,16 +2941,25 @@ body.grid-view .path-exceeds-127 {
 @media (max-width: 40.0rem) {
     .container { margin-top: 2.5rem; }
     .min-width-20, .column-33, .column-33 .download-buttons, .column-33 .slice-group { width: 99%; }
-    .column-33 .btn-download:not(:first-of-type) { width: 49.3%;}
+    .column-33 .btn-download-all { width: 49.3%;}
     .column-33 .check { width: 13.1%; }
     .left-buttons .row { display: block; }
     .left-buttons .button { width: 48.5%; margin-right: 0.1rem; }
     .left-buttons .row .button:first-child { margin-left: 0.25rem;}
+    .dl-chain, .dl-spaced { width: 56%;}
+    .chain-action-icons { width: 43%;}
     .info-panel-md, .split-panel-options {
         width: 90%;
         left: 4.5%;
         margin: 0 auto;
         box-sizing: border-box;
+    }
+    .all-options {
+        height: 35.5rem;
+        position:relative;
+    }
+    #masterList thead {
+        position: inherit;
     }
     .all-options.hidden {
         transform: translateY(-34rem);

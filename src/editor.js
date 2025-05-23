@@ -18,6 +18,12 @@ const rightButtonsEl = document.querySelector('.right-buttons');
 
 const views = ['sample', 'slice', 'opExport'];
 
+const xyRxp = str =>
+  str.replaceAll(/[\[\{<]/g, '(').
+    replaceAll(/[\]\}>]/g, ')').
+    replaceAll(/[^a-zA-Z0-9\s#\-\(\)]/g, '-').
+    replaceAll(/-{3,}/g, '-');
+
 let editing;
 let conf; // {audioCtx, masterSR, masterChannels, masterBitDepth}
 let multiplier = 1;
@@ -2136,13 +2142,11 @@ function changeSelectedFile(event, direction = 1) {
     }
 }
 
-function sanitizeName(event, files = [], selected = [], restore = false) {
-    const xyRxp = str =>
-      str.replaceAll(/[\[\{<]/g, '(').
-        replaceAll(/[\]\}>]/g, ')').
-        replaceAll(/[^a-zA-Z0-9\s#\-\(\)]/g, '-').
-        replaceAll(/-{3,}/g, '-');
+export function sanitizeFileName(value = '') {
+    return xyRxp(value.replace(/\.[^.]*$/, ''));
+}
 
+function sanitizeName(event, files = [], selected = [], restore = false) {
     let nameList = {};
     let nameListArr = [];
     if (!restore) {

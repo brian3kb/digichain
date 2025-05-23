@@ -23,7 +23,7 @@
  - OP Export supports combining samples on Left / Right / Center to more easily create A/B kits for use on the Field.
  - Chains / Spaced Chains buttons now do not both display, they are toggled via the new Chain Type toggle icon.
  - Rendering created chains to the top of the list instead of out to a downloaded zip file (the Shift + Click button action), is now toggled from an icon.
- - XY preset rendering toggle icon, when enabled, chains are created as XY Preset folders in the output zip, samples longer than 20 seconds will be automatically truncated.
+ - XY preset rendering toggle icon, when enabled, chains are created as XY Preset folders in the output zip, max 24 slices and samples longer than 20 seconds will be automatically truncated.
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.

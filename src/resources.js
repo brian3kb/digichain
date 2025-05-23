@@ -38,10 +38,10 @@ export const opToXyValues = {
     },
     reverse: value => value === 24576,
     volume: () => 0,
-    pitch: value => value || value !== 0 ? Math.round((value / 512) / 12) : 0,
+    pitch: value => (value || value !== 0 ? Math.round((value / 512) / 12) : 0) || 0,
 };
 
-// check last 256 samples per slice to nudge to a zero crossing
+/* check the last 256 samples per slice to nudge to a zero crossing*/
 const nudgeEndToZero = (start, end, buffer, seekRegion = 256) => {
     if (!buffer) {
         return end;
@@ -310,6 +310,21 @@ export async function dcDialog(type = 'message', messageString = '', config = {}
         return await window.__TAURI__.dialog[type](messageString, config);
     }
     return await window[msgTypes[type]](messageString);
+}
+
+export function flattenFile(f, cloneProperties) {
+    return {
+        file: cloneProperties ? structuredClone(f.file) : f.file,
+        meta: cloneProperties ? structuredClone(f.meta) : f.meta,
+        buffer: {
+            duration: f.buffer.duration,
+            length: f.buffer.length,
+            numberOfChannels: f.buffer.numberOfChannels,
+            sampleRate: f.buffer.sampleRate,
+            channel0: f.buffer.getChannelData(0),
+            channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
+        }
+    };
 }
 
 export function bufferToFloat32Array(

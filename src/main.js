@@ -7,7 +7,8 @@ import {
     joinToMono,
     joinToStereo,
     bufferToFloat32Array,
-    detectTempo, dcDialog, showToastMessage, setLoadingText
+    detectTempo, dcDialog, showToastMessage, setLoadingText,
+    flattenFile, buildXyDrumPatchData
 } from './resources.js';
 import {
     editor,
@@ -16,7 +17,8 @@ import {
     getNiceFileName,
     setEditorConf,
     getUniqueName,
-    getSetOpExportData
+    getSetOpExportData,
+    sanitizeFileName
 } from './editor.js';
 import './jszip.js';
 import './msgpack.min.js';
@@ -187,7 +189,7 @@ function getSlicesFromMetaFile(file) {
 }
 
 function checkAndSetAudioContext() {
-    if (!audioCtx || audioCtx.sampleRate !== masterSR) {
+    if (!audioCtx || audioCtx.sampleRate !== masterSR || audioCtx.state === 'closed') {
         audioCtx = new AudioContext(
           {sampleRate: masterSR, latencyHint: 'interactive'});
         setEditorConf({
@@ -196,6 +198,9 @@ function checkAndSetAudioContext() {
             masterChannels,
             masterBitDepth
         });
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
     }
 }
 
@@ -2081,11 +2086,17 @@ async function joinAll(
   event, pad = false, filesRemaining = [], fileCount = 0,
   toInternal = false, zip = false) {
     if (files.length === 0) { return; }
-    if (toInternal || settings.updateResampleChainsToList ||
-      (event.shiftKey || modifierKeys.shiftKey)) { toInternal = true; }
+    if ((toInternal || settings.updateResampleChainsToList ||
+      (event.shiftKey || modifierKeys.shiftKey)) && !settings.exportChainsAsXyPresets) { toInternal = true; }
     try {
-        if (settings.zipDownloads && !toInternal && files.filter(
-          f => f.meta.checked).length > 1) { zip = zip || new JSZip(); }
+        const joinedEl = document.getElementById('getJoined');
+        if (
+          ((settings.zipDownloads && !toInternal) || settings.exportChainsAsXyPresets) &&
+          files.filter(
+          f => f.meta.checked).length > 1
+        ) {
+            zip = zip || new JSZip();
+        }
 
         let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(
           f => f.meta.checked);
@@ -2095,7 +2106,7 @@ async function joinAll(
             const _filesWithSlices = [];
             _files.forEach(
               (f, fIdx) => f.meta?.slices?.length ? _filesWithSlices.push(fIdx) : false
-            )
+            );
             while (_filesWithSlices.length > 0) {
                 const __fileId = _filesWithSlices.pop();
                 const __file = _files[__fileId];
@@ -2104,17 +2115,39 @@ async function joinAll(
             }
         }
 
+        /*If exporting as XY presets, truncate files to be 20 seconds or less.*/
+        if (filesRemaining.length === 0 && settings.exportChainsAsXyPresets) {
+            const _filesLongerThanTwentySeconds = [];
+            _files.forEach(
+              (f, fIdx) => +(f.meta?.duration??0) >= 20 ? _filesLongerThanTwentySeconds.push(fIdx) : false
+            );
+            while (_filesLongerThanTwentySeconds.length > 0) {
+                const __fileId = _filesLongerThanTwentySeconds.pop();
+                const __file = _files[__fileId];
+                const _flatFile = flattenFile(__file, true);
+                delete _flatFile.meta.slices;
+                _flatFile.meta.duration = '20.000';
+                _flatFile.buffer.channel0 = _flatFile.buffer.channel0.slice(0, (20 * masterSR));
+                if (_flatFile.buffer.channel1) {
+                    _flatFile.buffer.channel1 = _flatFile.buffer.channel1.slice(0, (20 * masterSR));
+                }
+                _flatFile.buffer.length = _flatFile.buffer.channel0.length;
+                _files.splice(__fileId, 1, ..._flatFile);
+            }
+        }
+
         let tempFiles, slices, largest;
         let totalLength = 0;
+        let sliceGridT = settings.exportChainsAsXyPresets ? ((sliceGrid > 24 || !sliceGrid) ? 24 : sliceGrid) : sliceGrid;
 
         if (secondsPerFile === 0) { /*Using slice grid file lengths*/
             tempFiles = _files.splice(0,
-              (sliceGrid > 0 ? sliceGrid : _files.length));
+              (sliceGridT > 0 ? sliceGridT : _files.length));
 
             filesRemaining = Array.from(_files);
             _files = tempFiles;
-            if (pad && sliceGrid !== 0 && _files.length !== 0) {
-                while (_files.length !== sliceGrid) {
+            if (pad && sliceGridT !== 0 && _files.length !== 0) {
+                while (_files.length !== sliceGridT) {
                     _files.push(_files[_files.length - 1]);
                 }
             }
@@ -2128,7 +2161,7 @@ async function joinAll(
         } else { /*Using max length in seconds (if aif also limit upto 24 files per chain)*/
             _files = _files.filter(f => f.meta.duration < secondsPerFile);
             let maxChainLength = (
-              targetContainer === 'a' ? 24 : (sliceGrid === 0
+              (targetContainer === 'a' || settings.exportChainsAsXyPresets) ? 24 : (sliceGrid === 0
                 ? 64
                 : sliceGrid));
             const processing = _files.reduce((a, f) => {
@@ -2183,96 +2216,133 @@ async function joinAll(
             s.e = s.e > totalLength ? totalLength : s.e;
         });
         slices = slices.filter(s => s.s < s.e);
-        const audioArrayBuffer = audioCtx.createBuffer(
-          masterChannels,
-          totalLength,
-          masterSR
-        );
 
-        for (let channel = 0; channel < masterChannels; channel++) {
-            for (let i = 0; i < totalLength; i++) {
-                audioArrayBuffer.getChannelData(channel)[i] = 0;
-            }
-        }
-
-        if (masterChannels === 1) {
-            joinToMono(audioArrayBuffer, _files, largest, pad, settings.reverseEvenSamplesInChains);
-        }
-        if (masterChannels === 2) {
-            joinToStereo(audioArrayBuffer, _files, largest, pad, settings.reverseEvenSamplesInChains);
-        }
-
-        const joinedEl = document.getElementById('getJoined');
         const path = _files[0].file.path ? `${(_files[0].file.path || '').replace(
           /\//gi, '-')}` : '';
-        const fileData = {
-            file: {
-                name: chainFileNamesAvailable() ? getNextChainFileName(
-                  _files.length) : (_files.length === 1 ?
-                  `${path}chain-${pad ? 'spaced-' : ''}${getNiceFileName('',
-                    _files[0], true)}-${fileCount + 1}--${_files.length}.wav` :
-                  `${path}chain-${pad ? 'spaced-' : ''}${fileCount +
-                  1}--${_files.length}.wav`)
-            }, buffer: audioArrayBuffer, meta: {slices}
-        };
-        if (toInternal) {
+        const _fileName = chainFileNamesAvailable() ?
+          getNextChainFileName(_files.length) :
+          (
+            _files.length === 1 ?
+              `${path}chain-${pad ? 'spaced-' : ''}${getNiceFileName('', _files[0], true)}-${fileCount +
+          1}--${_files.length}` :
+              `${path}chain-${pad ? 'spaced-' : ''}${fileCount + 1}--${_files.length}`
+          );
 
-            const wav = await setWavLink(fileData, joinedEl, false, false,
-              (masterBitDepth === 8 ? 8 : 32));
-            const fileReader = new FileReader();
-            fileReader.readAsArrayBuffer(wav.blob);
-            fileReader.fileCount = fileCount;
-            fileReader.onload = async (e) => {
-                const fb = e.target.result.slice(0);
-                await (masterSR !== (wav.sampleRate || masterSR)
-                    ? new AudioContext(
+        if (settings.exportChainsAsXyPresets) {
+            const xySlices = [];
+            const xyFileName = `${sanitizeFileName(_fileName).substring(0, 14)}${fileCount + 1}`.replaceAll(/([-.])/gi, '');
+            _files.forEach((f, idx) => {
+                let sNum = `${idx + 1}`;
+                sNum = sNum.length === 1 ? `0${sNum}` : sNum;
+
+                if (f.buffer.channel0) {
+                    f = bufferRateResampler(f);
+                }
+
+                f.name = `${xyFileName}${sNum}`;
+                if (f.buffer) {
+                    const dataView = audioBufferToWav(
+                      f.buffer, {...f.meta, renderAt: targetSR}, masterSR, masterBitDepth,
+                      masterChannels, settings.deClick,
+                      false, settings.pitchModifier, false,
+                      false, false
+                    );
+
+                    let blob = new window.Blob([dataView.buffer], {
+                        type: 'audio/wav'
+                    });
+
+                    zip.file(`${xyFileName}.preset/${f.name}.wav`, blob, {binary: true});
+                    xySlices.push({
+                        s: 0,
+                        e: f.buffer.length,
+                        l: f.buffer.length,
+                        buffer: f.buffer,
+                        name: f.name
+                    });
+                }
+            });
+            const xyPatchData = buildXyDrumPatchData({}, xySlices);
+            zip.file(`${xyFileName}.preset/patch.json`, JSON.stringify(xyPatchData));
+        } else {
+
+            const audioArrayBuffer = audioCtx.createBuffer(
+              masterChannels,
+              totalLength,
+              masterSR
+            );
+
+            for (let channel = 0; channel < masterChannels; channel++) {
+                for (let i = 0; i < totalLength; i++) {
+                    audioArrayBuffer.getChannelData(channel)[i] = 0;
+                }
+            }
+
+            if (masterChannels === 1) {
+                joinToMono(audioArrayBuffer, _files, largest, pad, settings.reverseEvenSamplesInChains);
+            }
+            if (masterChannels === 2) {
+                joinToStereo(audioArrayBuffer, _files, largest, pad, settings.reverseEvenSamplesInChains);
+            }
+
+            const fileData = {
+                file: {
+                    name: `${_fileName}.wav`
+                }, buffer: audioArrayBuffer, meta: {slices}
+            };
+            if (toInternal) {
+
+                const wav = await setWavLink(fileData, joinedEl, false, false,
+                  (masterBitDepth === 8 ? 8 : 32));
+                const fileReader = new FileReader();
+                fileReader.readAsArrayBuffer(wav.blob);
+                fileReader.fileCount = fileCount;
+                fileReader.onload = async (e) => {
+                    const fb = e.target.result.slice(0);
+                    await (masterSR !== (wav.sampleRate || masterSR)
+                      ? new AudioContext(
                         {
                             sampleRate: wav.sampleRate,
                             latencyHint: 'interactive'
                         })
-                    : audioCtx).decodeAudioData(e.target.result, buffer => {
-                    parseWav(buffer, fb, {
-                        lastModified: new Date().getTime(),
-                        name: fileData.file.name,
-                        embedSliceData: embedSliceData,
-                        sampleRate: wav.sampleRate || masterSR,
-                        channels: buffer.numberOfChannels,
-                        // name: _files.length === 1 ?
-                        //     `${path}resample_${pad ? 'spaced_' : ''}${getNiceFileName('',
-                        //         _files[0], true)}_${fileReader.fileCount +
-                        //     1}--[${_files.length}].wav` :
-                        //     `${path}resample_${pad ? 'spaced_' : ''}${fileReader.fileCount +
-                        //     1}--[${_files.length}].wav`,
-                        size: (((masterBitDepth === 8 ? 8 : 32) * (wav.sampleRate || masterSR) *
-                            (buffer.length / (wav.sampleRate || masterSR))) /
-                          8) * buffer.numberOfChannels / 1024,
-                        type: 'audio/wav'
-                    }, '', true, false);
-                    renderList();
-                });
-            };
+                      : audioCtx).decodeAudioData(e.target.result, buffer => {
+                        parseWav(buffer, fb, {
+                            lastModified: new Date().getTime(),
+                            name: fileData.file.name,
+                            embedSliceData: embedSliceData,
+                            sampleRate: wav.sampleRate || masterSR,
+                            channels: buffer.numberOfChannels,
+                            size: (((masterBitDepth === 8 ? 8 : 32) * (wav.sampleRate || masterSR) *
+                                (buffer.length / (wav.sampleRate || masterSR))) /
+                              8) * buffer.numberOfChannels / 1024,
+                            type: 'audio/wav'
+                        }, '', true, false);
+                        renderList();
+                    });
+                };
 
-        } else {
-            const renderAsAif = targetContainer === 'a';
-            if (zip) {
-                const wav = await setWavLink(fileData, joinedEl, renderAsAif, true);
-                fileData.file.name = targetContainer === 'a' ?
-                  fileData.file.name.replace('.wav', '.aif') :
-                  fileData.file.name;
-                zip.file(fileData.file.name, wav.blob, {binary: true});
-                let otFile = await createAndSetOtFileLink(
-                  fileData.meta.slices ?? [], fileData,
-                  fileData.file.name);
-                if (otFile) {
-                    zip.file(otFile.name, otFile.blob, {binary: true});
-                }
             } else {
-                await setWavLink(fileData, joinedEl, renderAsAif, true);
-                joinedEl.click();
-                let otFile = await createAndSetOtFileLink(
-                  fileData.meta.slices ?? [], fileData,
-                  fileData.file.name, joinedEl);
-                if (otFile) {joinedEl.click(); }
+                const renderAsAif = targetContainer === 'a';
+                if (zip) {
+                    const wav = await setWavLink(fileData, joinedEl, renderAsAif, true);
+                    fileData.file.name = targetContainer === 'a' ?
+                      fileData.file.name.replace('.wav', '.aif') :
+                      fileData.file.name;
+                    zip.file(fileData.file.name, wav.blob, {binary: true});
+                    let otFile = await createAndSetOtFileLink(
+                      fileData.meta.slices ?? [], fileData,
+                      fileData.file.name);
+                    if (otFile) {
+                        zip.file(otFile.name, otFile.blob, {binary: true});
+                    }
+                } else {
+                    await setWavLink(fileData, joinedEl, renderAsAif, true);
+                    joinedEl.click();
+                    let otFile = await createAndSetOtFileLink(
+                      fileData.meta.slices ?? [], fileData,
+                      fileData.file.name, joinedEl);
+                    if (otFile) {joinedEl.click(); }
+                }
             }
         }
         if (filesRemaining.length > 0) {
@@ -2282,7 +2352,7 @@ async function joinAll(
             if (zip) {
                 zip.generateAsync({type: 'blob'}).then(blob => {
                     joinedEl.href = URL.createObjectURL(blob);
-                    joinedEl.setAttribute('download', 'digichain_files.zip');
+                    joinedEl.setAttribute('download', `digichain_${Date.now()}.zip`);
                     joinedEl.click();
                 });
             }
@@ -3191,6 +3261,9 @@ const selectedHeaderClick = event => {
 
 const handleRowClick = (event, id) => {
     const row = getRowElementById(id);
+    if (document.body.classList.contains('loading') || !row) {
+        return;
+    }
     if (document.querySelector('.pop-up.show')) { return; }
     if (lastSelectedRow) { lastSelectedRow.classList.remove('selected'); }
     row.classList.add('selected');
@@ -3360,6 +3433,7 @@ const setFileNumTicker = () => {
 function setCountValues() {
     const filesSelected = files.filter(f => f.meta.checked);
     const selectionCount = filesSelected.length;
+    let sliceGridT = settings.exportChainsAsXyPresets ? ((sliceGrid > 24 || !sliceGrid) ? 24 : sliceGrid) : sliceGrid;
     const selectionSlicesCount = settings.splitOutExistingSlicesOnJoin ? filesSelected.reduce(
       (a, f) => a + (f.meta?.slices?.length ? (f.meta.slices.length - 1) : 0), 0
     ) : 0;
@@ -3368,7 +3442,7 @@ function setCountValues() {
     const filesSelectedDuration = filesSelected.reduce(
       (a, f) => a += +f.meta.duration, 0);
     const joinCount = chainCount === 0 ? 0 : (chainCount > 0 &&
-    sliceGrid > 0 ? Math.ceil(chainCount / sliceGrid) : 1);
+    sliceGridT > 0 ? Math.ceil(chainCount / sliceGridT) : 1);
     const chainText = settings.exportChainsAsXyPresets ? ' Preset' : ' Chain';
     document.getElementById(
       'fileNum').textContent = `${files.length}/${selectionCount}` + (selectionSlicesCount ?
@@ -3399,7 +3473,7 @@ function setCountValues() {
             /*Can't show the end-joined-file line when slices are treated as distinct files in join operations.*/
             if (!settings.splitOutExistingSlicesOnJoin) {
                 document.querySelectorAll('tr.checked').forEach(
-                  (row, i) => (i + 1) % sliceGrid === 0 ? row.classList.add(
+                  (row, i) => (i + 1) % sliceGridT === 0 ? row.classList.add(
                     'end-of-grid') : row.classList.remove('end-of-grid')
                 );
             }
@@ -3409,9 +3483,9 @@ function setCountValues() {
             let progress = {duration: 0, processed: [], skipped: [], count};
             let _items = items.filter(f => +f.meta.duration < secondsPerFile);
             let maxChainLength = (
-              targetContainer === 'a' ? 24 : (sliceGrid === 0
+              targetContainer === 'a' ? 24 : (sliceGridT === 0
                 ? 64
-                : sliceGrid));
+                : sliceGridT));
             while (_items.length > 0) {
                 progress = _items.reduce((a, f) => {
                     if (a.duration + +f.meta.duration <=
@@ -3447,7 +3521,7 @@ function setCountValues() {
         } catch (e) {}
     }
     clearModifiers();
-};
+}
 
 function reRenderListRow(id) {
     const item = getFileById(id);
@@ -4486,9 +4560,9 @@ const restoreSessionFile = async sessionFile => {
 
 const consumeFileInput = async (event, inputFiles) => {
     setLoadingText('Loading samples');
-    checkAndSetAudioContext();
     const isAudioCtxClosed = checkAudioContextState();
     if (isAudioCtxClosed) { return; }
+    checkAndSetAudioContext();
 
     inputFiles = [...inputFiles];
 
@@ -4784,13 +4858,17 @@ const dropHandler = (event) => {
                     total--;
                 } else if (item.isDirectory) {
                     const dirReader = item.createReader();
-                    dirReader.readEntries(entries => {
+                    const entryReaderFn = () => dirReader.readEntries(entries => {
                         total += entries.length;
                         for (const entry of entries) {
                             addItem(entry);
                         }
                         total--;
+                        if (entries.length > 0) {
+                            entryReaderFn();
+                        }
                     });
+                    entryReaderFn();
                 }
             };
             for (const entry of event.dataTransfer.items) {
@@ -5243,18 +5321,7 @@ async function storeState(onlyOpExport = false) {
             if (f === files.at(-1)) {
                 setTimeout(() => resolve(true), 2000);
             }
-            return {
-                file: f.file,
-                meta: f.meta,
-                buffer: {
-                    duration: f.buffer.duration,
-                    length: f.buffer.length,
-                    numberOfChannels: f.buffer.numberOfChannels,
-                    sampleRate: f.buffer.sampleRate,
-                    channel0: f.buffer.getChannelData(0),
-                    channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
-                }
-            };
+            return flattenFile(f);
         }), 'files');
     });
 }
@@ -5347,18 +5414,7 @@ function saveSession(sessionFileName = 'digichain_session', includeUnselected = 
             level: 9
         }
     };
-    const data = (includeUnselected ? files : files.filter(f => f.meta.checked)).map(f => ({
-        file: f.file,
-        meta: f.meta,
-        buffer: {
-            duration: f.buffer.duration,
-            length: f.buffer.length,
-            numberOfChannels: f.buffer.numberOfChannels,
-            sampleRate: f.buffer.sampleRate,
-            channel0: f.buffer.getChannelData(0),
-            channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
-        }
-    }));
+    const data = (includeUnselected ? files : files.filter(f => f.meta.checked)).map(f => flattenFile(f));
     const sessionSettings = {
         lastUsedAudioConfig: settings.lastUsedAudioConfig,
         workingSR: masterSR,
@@ -5383,7 +5439,7 @@ function saveSession(sessionFileName = 'digichain_session', includeUnselected = 
         el.href = URL.createObjectURL(blob);
         el.setAttribute('download', `${sessionFileName}.dcsd`);
         el.click();
-        dsetLoadingText('');
+        setLoadingText('');
         showToastMessage(`'${sessionFileName}.dcsd'<br>session file created.`, 10000);
     });
 }

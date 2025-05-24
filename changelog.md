@@ -24,6 +24,9 @@
  - Chains / Spaced Chains buttons now do not both display, they are toggled via the new Chain Type toggle icon.
  - Rendering created chains to the top of the list instead of out to a downloaded zip file (the Shift + Click button action), is now toggled from an icon.
  - XY preset rendering toggle icon, when enabled, chains are created as XY Preset folders in the output zip, max 24 slices and samples longer than 20 seconds will be automatically truncated.
+ - Invert phase selected action.
+ - Flip L/R selected action, switched the left and right channels around.
+ - Editor waveform height adjustment control (height retained as setting).
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
@@ -32,6 +35,7 @@
    - Where canvas element replacement threw an error when slicing to samples from the slice panel with skip render waveforms enabled.
    - Toggling the max-seconds per chain option de-selected all samples.
    - XY common configuration no longer sets the seconds time limit per chain to on.
+   - OP Export renders at the target sample rate for XY presets and 44.1kHz regardless of the target sample rate for OP-1 Field kits.
    - Play-head was not displayed when playing the highlighted sample in the list using the P key keyboard shortcut.
 
 2025.01.16 1.4.16

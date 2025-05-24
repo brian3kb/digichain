@@ -12,6 +12,8 @@ const defaultSettings = {
     updateResampleChainsToList: false,
     exportChainsAsXyPresets: false,
 
+    wavePanelHeight: 128,
+
     attemptToFindCrossingPoint: false,
     darkModeTheme: null,
     deClick: 0.4,

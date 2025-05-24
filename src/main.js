@@ -614,9 +614,6 @@ function closeSplitOptions(event) {
 const showEditPanel = (event, id, view = 'sample') => {
     let data, folderOptions;
     if (view === 'opExport') {
-        if (document.body.dataset.workingSr !== '44100') {
-            return showToastMessage('The Working Sample Rate must be set to 44100 in the audio configuration to use OP-Export.', 6000);
-        }
         lastOpKit = files.filter(f => f.meta.checked);
         data = lastOpKit;
     } else {
@@ -631,6 +628,7 @@ const showEditPanel = (event, id, view = 'sample') => {
       {
           audioCtx,
           masterSR,
+          targetSR,
           masterChannels,
           masterBitDepth,
           storeState: () => storeState(true)
@@ -1067,6 +1065,36 @@ function shiftSelected(event) {
         const selected = files.filter(f => f.meta.checked);
         selected.forEach((f, idx) => {
             editor.shift(event, f, false);
+            if (idx === selected.length - 1) {
+                setLoadingText('');
+            }
+        });
+        renderList();
+    }, 250);
+}
+
+function invertSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    setLoadingText('Processing');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach((f, idx) => {
+            editor.invert(event, f, false);
+            if (idx === selected.length - 1) {
+                setLoadingText('');
+            }
+        });
+        renderList();
+    }, 250);
+}
+
+function flipChannelsSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    setLoadingText('Processing');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach((f, idx) => {
+            editor.flipChannels(event, f, false);
             if (idx === selected.length - 1) {
                 setLoadingText('');
             }
@@ -1833,6 +1861,8 @@ function showExportSettingsPanel(page = 'settings') {
     }
 
     panelContentEl.innerHTML = panelMarkup;
+
+    document.getElementById('opExportPanel').classList.remove('show');
 
     if (!panelEl.open) {
         panelEl.showModal();
@@ -4313,10 +4343,9 @@ const parseWav = (
                 slices = slices || [];
                 cuePoints.forEach((cue, cueIdx) => slices.push({
                     s: Math.round((cue.cuePos / wavSr) * masterSR),
-                    e: Math.round((
-                      (cueIdx !== cuePoints.length - 1 ? cuePoints[cueIdx +
-                      1].cuePos : -1)
-                      / wavSr) * masterSR),
+                    e: cueIdx !== cuePoints.length - 1 ?
+                      Math.round((cuePoints[cueIdx + 1].cuePos / wavSr) * masterSR) :
+                      Math.round((audioArrayBuffer.length / wavSr) * masterSR),
                     l: -1,
                     n: `Slice ${cue.cueId + 1}`
                 }));
@@ -5478,6 +5507,8 @@ window.digichain = {
     normalizeSelected,
     reverseSelected,
     shiftSelected,
+    invertSelected,
+    flipChannelsSelected,
     pitchUpSelected,
     doubleSelected,
     pingPongSelected,

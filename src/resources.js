@@ -148,7 +148,7 @@ export function buildXyRegionFromSlice(slice, index) {
     return {
         'fade.in': 0,
         'fade.out': 0,
-        'framecount': slice.l || (slice.e - slice.s),
+        'framecount': slice.fc || (slice.e - slice.s),
         'gain': 0,
         'hikey': 53 + index,
         'lokey': 53 + index,
@@ -157,7 +157,7 @@ export function buildXyRegionFromSlice(slice, index) {
         'playmode': opToXyValues.playmode(slice.pm),
         'reverse': opToXyValues.reverse(slice.r),
         'sample': `${slice.name || 'slice_' + (index + 1)}.wav`,
-        'sample.end': slice.e || (slice.l || (slice.e - slice.s)),
+        'sample.end': slice.e,
         'sample.start': slice.s || 0,
         'transpose': opToXyValues.pitch(slice.st),
         'tune': 0
@@ -167,6 +167,7 @@ export function buildXyRegionFromSlice(slice, index) {
 export function buildXyDrumPatchData(file, slices = []) {
     const _slices = slices.map(slice => ({
         ...slice,
+        fc: slice.fc || (slice.e - slice .s),
         e: nudgeEndToZero(slice.s, slice.e, slice.buffer || file.buffer),
         name: (file.buffer ? file.kitName : slice.name)??''
     }));
@@ -321,8 +322,8 @@ export function flattenFile(f, cloneProperties) {
             length: f.buffer.length,
             numberOfChannels: f.buffer.numberOfChannels,
             sampleRate: f.buffer.sampleRate,
-            channel0: f.buffer.getChannelData(0),
-            channel1: f.buffer.numberOfChannels > 1 ? f.buffer.getChannelData(1) : false
+            channel0: new Float32Array(f.buffer.getChannelData(0)),
+            channel1: f.buffer.numberOfChannels > 1 ? new Float32Array(f.buffer.getChannelData(1)) : false
         }
     };
 }
@@ -745,7 +746,14 @@ export function encodeWAV(
         }*/
     }
 
-    return {buffer, sampleRate};
+    return {
+        buffer,
+        sampleRate,
+        slices: slices && _slices ? slices.map((s, sIdx) => ({
+            ...s,
+            ...(_slices[sIdx] || {})
+        })) : []
+    };
 }
 
 export function getAifSampleRate(input) {

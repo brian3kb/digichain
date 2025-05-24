@@ -25,7 +25,7 @@ const xyRxp = str =>
     replaceAll(/-{3,}/g, '-');
 
 let editing;
-let conf; // {audioCtx, masterSR, masterChannels, masterBitDepth}
+let conf; // {audioCtx, masterSR, targetSR, masterChannels, masterBitDepth}
 let multiplier = 1;
 let selection = {
     start: 0,
@@ -275,7 +275,7 @@ function renderOpKeyDetails() {
         </div>
         
         <div class="op-key-details-controls">
-            <a onclick="digichain.editor.changeOpParam(false, 'pab')" title="Only applicable to OP-1 Field Exports." style="padding-top: .75rem;">L/R ↔ A/B Toggle</a>
+            <a onclick="digichain.editor.changeOpParam(event, 'pab')" title="Only applicable to OP-1 Field Exports." style="padding-top: .75rem;">L/R ↔ A/B Toggle</a>
             <span></span>
         </div>
         <br>
@@ -320,10 +320,13 @@ function renderOpKeyDetails() {
 
 function changeOpParam(event, key, id) {
     const opKeyConfig = opDataConfig[id || samples.selected];
-    if (event && event.target.value) {
+    if (event?.target?.value) {
         opKeyConfig[key] = +event.target.value;
     } else {
         opKeyConfig[key] = !opKeyConfig[key];
+        if (event.shiftKey && key === 'pab') {
+            opDataConfig.forEach(opdc => opdc.pab = opKeyConfig[key]);
+        }
     }
     renderOpExport();
 }
@@ -577,7 +580,11 @@ function buildOpKit(type = 'aif', kitName) {
     const kit = serializeOpKitToSingleBuffer();
     kitName = kitName || samples.kitName || getKitName();
     const linkEl = document.querySelector('.aif-link-hidden');
-    const dataView = audioBufferToWav(kit.buffer, {slices: kit.slices.filter(s => !s.blank)}, '44100', 16, 2, false, (type === 'aif'));
+    const abtwMeta = {
+        slices: kit.slices.filter(s => !s.blank),
+        renderAt: type === 'aif' ? '44100' : conf.targetSR
+    };
+    const dataView = audioBufferToWav(kit.buffer, abtwMeta, conf.masterSR, 16, 2, false, (type === 'aif'));
     let blob = new window.Blob([dataView.buffer], {
         type: type === 'aif' ? 'audio/aiff' : 'audio/wav'
     });
@@ -585,7 +592,7 @@ function buildOpKit(type = 'aif', kitName) {
         return {
             buffer: kit.buffer,
             blob,
-            slices: kit.slices.filter(s => !s.blank)
+            slices: dataView.slices || kit.slices.filter(s => !s.blank)
         };
     }
     linkEl.href = URL.createObjectURL(blob);
@@ -609,14 +616,14 @@ function buildXyKit() {
                 slice.l = slice.length;
             }
             if (slice.buffer) {
-                const dataView = audioBufferToWav(slice.buffer, {slices: false}, '44100', 16, 2);
+                const dataView = audioBufferToWav(slice.buffer, {slices: false, renderAt: conf.targetSR}, conf.masterSR, 16, 2);
                 let blob = new window.Blob([dataView.buffer], {
                     type: 'audio/wav'
                 });
                 zip.file(`${slice.name}.wav`, blob, {binary: true});
                 slice.s = 0;
                 slice.e = slice.buffer.length;
-                slice.l = slice.length || slice.e;
+                slice.fc = slice.length || slice.e;
             }
         });
         kit.forEach(slice => {
@@ -624,7 +631,7 @@ function buildXyKit() {
                 const key = +slice.linkedTo;
                 slice.s = kit[key].s;
                 slice.e = kit[key].e;
-                slice.l = kit[key].l;
+                slice.fc = kit[key].fc;
             }
         });
         xyPatchData = buildXyDrumPatchData({kitName}, kit.filter(s => !s.blank));
@@ -767,13 +774,14 @@ export function renderEditor(item) {
     <button title="Stop playback" onpointerdown="digichain.editor.editorPlayFile(event, false, true);" class="button-clear check"><i class="gg-play-stop"></i></button>
   </div>
   <div class="zoom-level text-align-right float-right">
+    <button title="Toggle waveform width / height zooming"  class="zoom-waveform-height button-outline check" onpointerdown="digichain.editor.zoomLevel('editor-height', 1)"><i class="gg-arrows-v"></i><span>${settings.wavePanelHeight / 128}x</span></button>
     <button title="Zoom out waveform view." class="zoom-out button-outline check" style="width:2.5rem;" onpointerdown="digichain.editor.zoomLevel('editor', .5)">-</button>
     <button title="Reset zoom level waveform view."  class="zoom-reset button-outline check" onpointerdown="digichain.editor.zoomLevel('editor', 1)">1x</button>
     <button title="Zoom in on waveform view."  class="zoom-in button-outline check" style="width:2.5rem;" onpointerdown="digichain.editor.zoomLevel('editor', 2)">+</button>
   </div>
 
  </div>
-  <div class="waveform-container">
+  <div class="waveform-container" style="height: ${settings.wavePanelHeight}px;">
     <div>
     ${Array.from('.'.repeat(
         (
@@ -785,7 +793,7 @@ export function renderEditor(item) {
     ).
       reduce((a, v) => a += canvasMarkup, '')}
       <div id="editLines">
-        <div class="edit-line"></div>
+        <div class="edit-line" style="height: ${settings.wavePanelHeight}px; margin-top: -${settings.wavePanelHeight + 8}px;"></div>
       </div>
     </div>
   </div>
@@ -882,13 +890,13 @@ function renderEditPanelWaveform(multiplier = 1) {
         editPanelWaveformEls.forEach((editPanelWaveformEl, idx) => {
             drawWaveform(editing, editPanelWaveformEl, idx, {
                 width: waveformWidth,
-                height: (128 / editPanelWaveformEls.length),
+                height: (settings.wavePanelHeight / editPanelWaveformEls.length),
                 multiplier
             });
         });
     } else {
         drawWaveform(editing, editPanelWaveformEl, -1, {
-            width: waveformWidth, height: 128, multiplier
+            width: waveformWidth, height: settings.wavePanelHeight, multiplier
         });
     }
     if (durationIndicatorEl) {
@@ -1051,9 +1059,19 @@ function updateSelectionEl() {
 }
 
 function zoomLevel(view, level) {
-    if (view === 'editor') {
+    if (view === 'editor-height') {
+        const currentMultiple = settings.wavePanelHeight / 128;
+        if (currentMultiple >=4) {
+            settings.wavePanelHeight = 128;
+        } else {
+            settings.wavePanelHeight = 128 * (currentMultiple + 1);
+        }
+        level = multiplier;
+        renderEditor(editing);
+    }
+    if (view.startsWith('editor')) {
         const selectionEl = document.querySelector('#editLines .edit-line');
-        if (level !== 1) {
+        if (level !== 1 && view !== 'editor-height') {
             level = multiplier * level;
         }
         const step = editing.buffer.length / (1024 * level);
@@ -1459,6 +1477,49 @@ function shift(event, item, renderEditPanel = true) {
         })) : false;
     } else {
         //item.meta.slices = false;
+    }
+
+    if (renderEditPanel) {
+        renderEditPanelWaveform(multiplier);
+    }
+    item.waveform = false;
+}
+
+function flipChannels(event, item, renderEditPanel = true) {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = item.buffer.length;
+    }
+    item = item || editing;
+
+    if (item.buffer.numberOfChannels  === 1) {
+        return;
+    }
+
+    const channel0 = new Float32Array(item.buffer.getChannelData(0));
+    const channel1 = new Float32Array(item.buffer.getChannelData(1));
+
+    item.buffer.copyToChannel(channel0, 1);
+    item.buffer.copyToChannel(channel1, 0);
+
+    if (renderEditPanel) {
+        renderEditPanelWaveform(multiplier);
+    }
+    item.waveform = false;
+}
+
+function invert(event, item, renderEditPanel = true) {
+    if (!renderEditPanel && item) {
+        selection.start = 0;
+        selection.end = item.buffer.length;
+    }
+    item = item || editing;
+
+    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+        const data = item.buffer.getChannelData(channel);
+        for (let i = selection.start; i < selection.end; i++) {
+            data[i] = -data[i];
+        }
     }
 
     if (renderEditPanel) {
@@ -2228,6 +2289,8 @@ export const editor = {
     getLastItem: () => editing?.meta?.id,
     reverse,
     shift,
+    invert,
+    flipChannels,
     serialize,
     deserialize,
     sanitizeName

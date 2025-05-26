@@ -226,6 +226,69 @@ export function buildXyDrumPatchData(file, slices = []) {
     return template;
 }
 
+function buildXyMultiSamplerRegionFromSlice(slice, index) {
+    return {
+        'framecount': slice.fc,
+        'hikey': slice.hk, /* 0 - 92*/
+        'lokey': 0,
+        'loop.crossfade': 0,
+        'loop.end': slice.fc,
+        'loop.onrelease': false,
+        'loop.start': 0,
+        'pitch.keycenter': slice.pkc || slice.hk,
+        'reverse': false,
+        'sample': `${slice.name || 'slice_' + (index + 1)}.wav`,
+        'sample.end': slice.e,
+        'sample.start': slice.s || 0,
+        'tune': 0
+    };
+}
+
+export function buildXyMultiSamplePatchData(file, slices = []) {
+    return {
+        'engine': {
+            'bendrange': 13653,
+            'highpass': 1638,
+            'modulation': {
+                'aftertouch': { 'amount': 16383, 'target': 0 },
+                'modwheel': { 'amount': 16383, 'target': 0 },
+                'pitchbend': { 'amount': 16383, 'target': 0 },
+                'velocity': { 'amount': 32767, 'target': 17694 }
+            },
+            'params': [16384, 16384, 16384, 16384, 16384, 16384, 16384, 16384],
+            'playmode': 'poly',
+            'portamento.amount': 128,
+            'portamento.type': 32767,
+            'transpose': 0,
+            'tuning.root': 0,
+            'tuning.scale': 0,
+            'velocity.sensitivity': 26540,
+            'volume': 21295,
+            'width': 0
+        },
+        'envelope': {
+            'amp': { 'attack': 0, 'decay': 32767, 'release': 3276, 'sustain': 32767 },
+            'filter': { 'attack': 0, 'decay': 0, 'release': 3276, 'sustain': 32767 }
+        },
+        'fx': {
+            'active': false,
+            'params': [12697, 3440, 163, 0, 0, 32767, 0, 0],
+            'type': 'svf'
+        },
+        'lfo': {
+            'active': false,
+            'params': [23095, 16384, 15889, 16000, 0, 0, 0, 0],
+            'type': 'tremolo'
+        },
+        'octave': 0,
+        'platform': 'OP-XY',
+        'regions': slices.sort((a, b) => a.hk - b.hk).map(buildXyMultiSamplerRegionFromSlice),
+        'type': 'multisampler',
+        'version': 4
+    };
+
+}
+
 export function showToastMessage(messageString, duration = 3000) {
     const attachToEl = [...document.querySelectorAll('dialog')].find(d => d.open) || document.body;
     const toast = document.createElement('div');

@@ -27,6 +27,7 @@
  - Invert phase selected action.
  - Flip L/R selected action, switched the left and right channels around.
  - Editor waveform height adjustment control (height retained as setting).
+ - Crop keyboard shortcuts in the editor, Shift+Click to crop to a new sample, staying in the current sample; Shift+Ctrl+Click to crop to a new sample and open that new sample in the editor.
  - Bug fixes:
    - Delayed list rendering bug when removing all selected samples.
    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.

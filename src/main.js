@@ -2821,7 +2821,7 @@ const duplicate = (event, id, prepForEdit = false) => {
         const newChannelData = item.buffer.getChannelData(channel);
         newChannelData.set(ogChannelData);
     }
-    item.meta = JSON.parse(JSON.stringify(file.meta)); // meta sometimes contains a customSlices object.
+    item.meta = structuredClone(file.meta); // meta sometimes contains a customSlices object.
     item.waveform = false;
     item.meta.playing = false;
     item.meta.id = crypto.randomUUID();
@@ -2837,6 +2837,10 @@ const duplicate = (event, id, prepForEdit = false) => {
                   : _fileIdx), 0, _item);
                 unsorted.push(_item.meta.id);
                 renderList();
+            },
+            editorCallback : (_item, _fileIdx) => {
+                files.splice(_fileIdx, 0, _item);
+                unsorted.push(_item.meta.id);
             }
         };
     }

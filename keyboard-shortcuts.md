@@ -36,6 +36,7 @@
  - Trim Right : will trim  both left and right of the sample.
  - Pad With Zero : allow entering a custom value to pad the sample with in seconds.
  - L : Toggles hiding/showing of the rendered list of samples.
+ - Editor Crop : Crop selection to a new sample (but stay in the current sample).
 
 **Ctrl + Click**
  - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.
@@ -53,3 +54,4 @@
  - On the edit panel, when clicking the waveform, this will set the end point selection to the clicked position and move the start point to the previous end point value.
  - Sample Slice : In slicing panel, toggles the file loop start point to be from the start of the clicked slice, blue dotted line is loop on, yellow dashed line is loop ping-pong (for .ot exports).
  - Stretch Longest / Shortest : Value entered will be treated as samples instead of seconds when setting the stretch length.
+ - Editor Crop : Crop selection to a new sample and immediately edit that new sample in the editor.

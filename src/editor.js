@@ -804,7 +804,7 @@ export function renderEditor(item) {
   <button title="Normalize the volume of the sample." class="normalize button button-outline" onclick="digichain.editor.normalize(event)">Normalize</button>
 
   <button title="Reverses the sample playback" class="reverse button button-outline" onclick="digichain.editor.reverse(event)">Reverse</button>
-  <button title="Crop the sample to the selected area." class="trim-right button button-outline" onclick="digichain.editor.truncate(event)">Crop</button>
+  <button title="Crop the sample to the selected area. Shift+Click to crop selection to a new sample. Shift+(Ctrl/Cmd)+Click to crop selection to a new sample and open the new sample in the editor." class="trim-right button button-outline has-ctrl-mod has-shift-mod" onclick="digichain.editor.truncate(event)">Crop</button>
   <button title="Fade in the selected audio." class="fade-in button button-outline" onclick="digichain.editor.fade('in')">Fade In</button>
   <button title="Silence the selected audio." class="silence button button-outline" onclick="digichain.editor.fade()">Silence</button>
   <button title="Increase the gain of the selected audio." class="louder button button-outline" onclick="digichain.editor.adjustGain(event, 1.1)">Louder</button>
@@ -1945,12 +1945,17 @@ function stretch(event, item, renderEditPanel = true, targetLength, returnBuffer
 }
 
 function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
-
+    let duplicate;
     if (!renderEditPanel && item) {
         selection.start = 0;
         selection.end = conf.masterSR * lengthInSeconds;
     }
     item = item || editing;
+
+    if (event.shiftKey && renderEditPanel) {
+        duplicate = digichain.duplicate(event, item.meta.id, true);
+        item = duplicate.item;
+    }
 
     if (settings.attemptToFindCrossingPoint) {
         // match start and end sample values
@@ -1987,6 +1992,7 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
             x++;
         }
     }
+
     item.buffer = audioArrayBuffer;
     item.meta = {
         ...item.meta,
@@ -1998,10 +2004,20 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
         item.meta.slices = false;
     }
     digichain.removeMetaFile(item.meta.id);
-    if (renderEditPanel) {
+    if (renderEditPanel && !duplicate) {
         showEditor(editing, conf, 'sample', folders);
     }
     item.waveform = false;
+
+    if (duplicate) {
+        duplicate.editorCallback(item, duplicate.fileIdx);
+        if (event.ctrlKey || event.metaKey) {
+            showToastMessage(`Editing cropped duplicate, '${item.file.name}'`, 5000);
+            showEditor(item, conf, 'sample', folders);
+        } else {
+            showToastMessage(`Cropped duplicate saved to list as, '${item.file.name}'`, 5000);
+        }
+    }
 }
 
 function double(event, item, reverse = false, renderEditPanel = true) {

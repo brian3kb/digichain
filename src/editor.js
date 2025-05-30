@@ -1398,9 +1398,10 @@ function fade(
             }
         } else if (type === 'fuzz') {
             for (let i = selection.start; i < selection.end; i++) {
+                const dA = data[i] > 0 ? data[i] + 0.001 : data[i] - 0.001;
                 const x = ((fadeDuration + i) / fadeDuration) /
-                  (data[i] + 0.001) * Math.random();
-                data[i] = Math.abs(x) > 1 ? (data[i] + 0.001) : x;
+                  dA * Math.random();
+                data[i] = Math.abs(x) > 1 ? dA : x;
             }
         } else {
             for (let i = selection.end; i > selection.start; i--) {
@@ -1650,7 +1651,7 @@ function thresholdCondense(event, item, renderEditPanel = true, lower = 0.003, u
             const absValue = Math.abs(data[i]);
             const absValueNext = Math.abs(data[(i + 1 < item.buffer.length ? i + 1: item.buffer.length)]);
             if ((absValue > lower && absValue < upper) || absValueNext.toFixed(4) === 0|| absValueLast.toFixed(4) === 0) {
-                audioArrayBuffer.getChannelData(channel)[aabIndex] = absValue;
+                audioArrayBuffer.getChannelData(channel)[aabIndex] = data[i] < 0 ? -absValue : absValue;
                 aabIndex++;
             }
         }

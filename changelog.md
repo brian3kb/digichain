@@ -38,6 +38,8 @@
    - XY common configuration no longer sets the seconds time limit per chain to on.
    - OP Export renders at the target sample rate for XY presets and 44.1kHz regardless of the target sample rate for OP-1 Field kits.
    - Play-head was not displayed when playing the highlighted sample in the list using the P key keyboard shortcut.
+   - Only positive buffer values were being removed in the condense action.
+   - Smoothing on fuzz selected action caused peak spikes on some sample material.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

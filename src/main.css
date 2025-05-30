@@ -1832,6 +1832,7 @@ td.waveform-td span.play-head.play {
     overflow-y: hidden;
     margin-bottom: 16px;
     padding-top: 40px;
+    min-height: 168px;
 }
 .waveform-container::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.2);

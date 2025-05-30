@@ -39,8 +39,10 @@
    - OP Export renders at the target sample rate for XY presets and 44.1kHz regardless of the target sample rate for OP-1 Field kits.
    - Play-head was not displayed when playing the highlighted sample in the list using the P key keyboard shortcut.
    - Only positive buffer values were being removed in the condense action.
+   - Edit panel not consistently closing when using the Escape key.
    - Smoothing on fuzz selected action caused peak spikes on some sample material.
    - Setting DT / DT II / XY / M8 / OT did not toggle the spaced / xy settings and icons when using the common configurations options.
+   - Slice panel waveform did not show when no slices were set (regression fix from edit panel renderer changes).
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

@@ -461,6 +461,8 @@ const closePopUps = () => {
     lastSelectedRow?.focus();
     document.querySelectorAll('.pop-up').
       forEach(w => w.classList.remove('show'));
+    document.querySelectorAll('.dialog-pop-up').
+      forEach(w => w.open ? w.close() : false);
     stopPlayFile(false, editor.getLastItem());
     renderList();
     try {

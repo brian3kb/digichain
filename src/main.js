@@ -258,8 +258,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value || localStorage.getItem('workingSampleRate') || 48000);
 
     try {
-        const dither = JSON.parse(document.getElementById('ditherGroup').dataset.dither);
-        settings.ditherExports = dither;
+        settings.ditherExports = JSON.parse(document.getElementById('ditherGroup').dataset.dither);
     } catch(e) {}
 
     if (audioValuesFromCommonSelectEl) {
@@ -337,6 +336,17 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
         masterChannels,
         masterBitDepth
     });
+
+    if (commonSelectDevice) {
+        settings.exportChainsAsXyPresets = false;
+        if ('opxy' === commonSelectDevice) {
+            updateExportChainsAsXyPresets(true);
+        } else {
+            updateUiButtonAction('exportChainsAsXyPresets', '.toggle-op-xy-preset-bundling');
+            settings.spacedChainMode = 'dt' === commonSelectDevice;
+            updateSpacedChainMode();
+        }
+    }
 
     if (files.length > 0) {
         files.filter(f => f.buffer.numberOfChannels > 1).
@@ -1420,7 +1430,7 @@ function updateExportChainsAsXyPresets(toggleSetting) {
     if (!settings.exportChainsAsXyPresets && settings.spacedChainMode) {
         updateSpacedChainMode(true);
     }
-    updateUiButtonAction('exportChainsAsXyPresets', '.toggle-op-xy-preset-bundling', true);
+    updateUiButtonAction('exportChainsAsXyPresets', '.toggle-op-xy-preset-bundling', toggleSetting);
     setCountValues();
 }
 
@@ -1786,18 +1796,18 @@ function showExportSettingsPanel(page = 'settings') {
       <td style="border-bottom: none;">
         <select id="audioValuesFromCommonSelect" class="btn-audio-config" style="margin: 0 2rem; max-width: 25rem; float: right;" onchange="digichain.setAudioOptionsFromCommonConfig(event)">
             <option value="none" disabled selected>Common Configurations</option>
-            <option value="48000m16w0-4-8-16-32-64-128">Digitakt</option>
-            <option value="48000s16w0-4-8-16-32-64-128">Digitakt II</option>
+            <option value="48000m16w0-4-8-16-32-64-128" data-device="dt">Digitakt</option>
+            <option value="48000s16w0-4-8-16-32-64-128" data-device="dt">Digitakt II</option>
             <option value="44100s16w0-4-8-16-32-64-128" data-device="m8">Dirtywave M8</option>
-            <option value="48000m16w0-8-10-12-15-30-60">Model:Samples</option>
+            <option value="48000m16w0-8-10-12-15-30-60" data-device="dt">Model:Samples</option>
             <option value="44100s16w0-4-8-16-32-48-64" data-device="ot">Octatrack (16bit)</option>
             <option value="44100s24w0-4-8-16-32-48-64" data-device="ot">Octatrack (24bit)</option>
             <option value="44100s16a0-4-8-12-16-20-24" data-device="op1f">OP-1 Field</option>
             <option value="44100m16a0-4-8-12-16-20-24" data-device="opz">OP-1 / OP-Z</option>
             <option value="44100s16w0-4-8-12-16-20-24" data-device="opxy">OP-XY</option>
-            <option value="44100m16w0-4-8-16-24-32-48">Polyend Tracker</option>
-            <option value="44100s16w0-4-8-16-24-32-48">Polyend Tracker Mini</option>
-            <option value="48000m16w0-8-10-12-15-30-60">Rytm</option>
+            <option value="44100m16w0-4-8-16-24-32-48" data-device="pt">Polyend Tracker</option>
+            <option value="44100s16w0-4-8-16-24-32-48" data-device="pt">Polyend Tracker Mini</option>
+            <option value="48000m16w0-8-10-12-15-30-60" data-device="dt">Rytm</option>
             <option value="12000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 12kHz</option>
             <option value="24000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 24kHz</option>
             <option value="46875m16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (mono)</option>

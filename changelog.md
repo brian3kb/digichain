@@ -40,6 +40,7 @@
    - Play-head was not displayed when playing the highlighted sample in the list using the P key keyboard shortcut.
    - Only positive buffer values were being removed in the condense action.
    - Smoothing on fuzz selected action caused peak spikes on some sample material.
+   - Setting DT / DT II / XY / M8 / OT did not toggle the spaced / xy settings and icons when using the common configurations options.
 
 2025.01.16 1.4.16
  - Nudge Crossings selected action, nudges all zero crossings off from zero.

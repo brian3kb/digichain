@@ -1,8 +1,7 @@
-const cacheName = 'cache-v1416-20250116-1';
+const cacheName = 'cache-v150-20250530-1';
 const precacheResources = [
     './',
     'index.html',
-    'lib.css',
     'main.css',
     'main.js',
     'apple-touch-icon.png',

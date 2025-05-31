@@ -4,4 +4,5 @@
 node_modules/
 digichain-go/
 digichain-executable/
+latest/
 .editorconfig

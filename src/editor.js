@@ -1068,6 +1068,7 @@ function zoomLevel(view, level) {
         }
         level = multiplier;
         renderEditor(editing);
+        renderSliceList();
     }
     if (view.startsWith('editor')) {
         const selectionEl = document.querySelector('#editLines .edit-line');

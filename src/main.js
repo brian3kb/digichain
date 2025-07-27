@@ -3847,7 +3847,6 @@ const parseXml = (xml, fullPath) => {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xml, 'application/xml');
         const docType = doc.childNodes[0].tagName;
-
         if (docType === 'RenoiseSong' || docType === 'RenoiseInstrument') {
             const path = fullPath.replace('Song.xml', '').replace('Instrument.xml', '');
             const xmlSamples = [...doc.getElementsByTagName('Sample')];
@@ -3877,6 +3876,26 @@ const parseXml = (xml, fullPath) => {
                 unsorted.push(uuid);
             });
         }
+        if (docType === 'Ableton') {
+            [...doc.getElementsByTagName('MultiSamplePart')].forEach(part => {
+                const sampleName = (part.querySelector('SampleRef FileRef RelativePath')?.getAttribute('Value') ?? '').split('/').at(-1);
+                const fileSampleRate = +(part.querySelector('SampleRef DefaultSampleRate')?.getAttribute('Value') ?? '44100');
+                const fileLength = +(part.querySelector('SampleRef DefaultDuration')?.getAttribute('Value') ?? '0');
+                const sliceOrigin = +(part.querySelector('SlicingStyle')?.getAttribute('Value') ?? '0') === 3 ? 'ManualSlicePoints' : 'SlicePoints';
+                const sampleSlices = [...new Set([...part.querySelectorAll(`${sliceOrigin} SlicePoint`)].map(slice => +(slice.getAttribute('TimeInSeconds') || '0') * fileSampleRate))];
+                metaFiles.push({
+                    name: sampleName,
+                    path: fullPath,
+                    sliceCount: sampleSlices.length,
+                    loopEnd: fileLength,
+                    slices: sampleSlices.map((slice, idx, slices) => ({
+                        startPoint: slice,
+                        endPoint: slices[idx + 1] ?? fileLength,
+                        loopPoint: -1
+                    }))
+                });
+            });
+        } 
         return uuid;
     } catch (err) {
         return {uuid, failed: true};
@@ -4678,7 +4697,7 @@ const consumeFileInput = async (event, inputFiles) => {
         f?.name?.split('.')?.reverse()[0].toLowerCase())
     );
     let _mFiles = [...inputFiles].filter(
-      f => ['ot', 'xml'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
+      f => ['ot', 'xml', 'adv'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
     );
 
     if (event.shiftKey || modifierKeys.shiftKey) {
@@ -4690,7 +4709,21 @@ const consumeFileInput = async (event, inputFiles) => {
           (file, idx) => idx < importFileLimitValue || file.fromArchive);
     }
 
-    _mFiles.forEach((file, idx) => {
+    for (const file of _mFiles) {
+        const idx = _mFiles.indexOf(file);
+        if (file.name.endsWith('.adv')) {
+            try {
+                const [compressed] = await Promise.all([file.arrayBuffer()]);
+                const result = pako.inflate(compressed);
+                const decoder = new TextDecoder('utf-8');
+                const xmlString = decoder.decode(result);
+                parseXml(xmlString, file.fullPath);
+            } catch (err) {
+                loadingEl.textContent = `skipping unreadable file '${file.name}'.`;
+            }
+            continue;
+        }
+        
         const reader = new FileReader();
         reader.onload = function(e) {
             file.uuid = crypto.randomUUID();
@@ -4713,7 +4746,8 @@ const consumeFileInput = async (event, inputFiles) => {
         } else {
             reader.readAsText(file);
         }
-    });
+    }
+    
     if (_files.length === 0) {
         return renderList();
     }

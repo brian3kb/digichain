@@ -1,3 +1,7 @@
+1.5.1
+ - Added support for importing slice data from Ableton Simpler (supporting transient detected slices or manual slices depending on what was active when the .adv preset was saved).
+ - Additional changes toward desktop app support.
+
 2025.05.30 1.5.0
  - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.
  - Style tweaks to support rendering within itch.io windows.

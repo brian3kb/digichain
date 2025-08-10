@@ -1616,6 +1616,12 @@ function showExportSettingsPanel(page = 'settings') {
               : 'button-outline'}">${settings.exportWithOtFile ? 'YES' : 'NO'}</button></td>
     </tr>
     <tr>
+    <td><span>Use even numbered slices as loop point of prev slice on .ot exports?<br>(Applied only to .ot files created during chain creation) &nbsp;&nbsp;&nbsp;</span></td>
+    <td><button onpointerdown="digichain.toggleSetting('useNextEvenNumberedSliceAsLoopStartForOtFile')" class="check ${settings.useNextEvenNumberedSliceAsLoopStartForOtFile
+              ? 'button'
+              : 'button-outline'}">${settings.useNextEvenNumberedSliceAsLoopStartForOtFile ? 'YES' : 'NO'}</button></td>
+    </tr>
+    <tr>
     <td><span>Limit imports to maximum of 750 files?&nbsp;&nbsp;&nbsp;</span></td>
     <td><button title="Enforces a limit of 750 files per import, to help prevent crashes on nested folders of many files - disabling may result in slow-downs or timeouts." onpointerdown="digichain.toggleSetting('importFileLimit')" class="check ${settings.importFileLimit
               ? 'button'
@@ -3822,9 +3828,22 @@ async function createAndSetOtFileLink(slices, file, fileName, linkEl, skipExport
     if (checkShouldExportOtFile(skipExportWithCheck) && slices && slices.length > 0) {
         let bufferLength = file.buffer.length;
         const tempo = await detectTempo(file.buffer, fileName);
-        let _slices = slices.length > 64 ? slices.slice(0, 64) : slices;
+        let _slices = slices;
+        if (settings.useNextEvenNumberedSliceAsLoopStartForOtFile) {
+            _slices = slices.map((slice, idx) => {
+                if (idx % 2 === 0) {
+                  return {
+                      ...slice,
+                      l: slices.at(idx + 1)?.s ?? -1,
+                      e: slices.at(idx + 1)?.e ?? file.buffer.length
+                  };
+                }
+                return false;
+            }).filter(Boolean);
+        }
+        _slices = _slices.length > 64 ? _slices.slice(0, 64) : _slices;
         let data = encodeOt(_slices, bufferLength, tempo?.match??120, {
-            loop: file.meta.otLoop??0,
+            loop: settings.useNextEvenNumberedSliceAsLoopStartForOtFile ? 1 : (file.meta.otLoop??0),
             loopStart: file.meta.otLoopStart??0
         });
         let fName = fileName.replace(/\.[^.]*$/, '.ot')

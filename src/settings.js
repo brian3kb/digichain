@@ -22,6 +22,7 @@ const defaultSettings = {
     splitOutExistingSlicesOnJoin: true,
     embedOrslData: false,
     exportWithOtFile: false,
+    useNextEvenNumberedSliceAsLoopStartForOtFile: false,
     importFileLimit: true,
     normalizeContrast: false,
     reverseEvenSamplesInChains: false,

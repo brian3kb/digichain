@@ -933,6 +933,26 @@ function roughStretchSelected(event) {
     }, 250);
 }
 
+async function clearSlicesSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    const confirmClear = await dcDialog('confirm', `Clear slice data for all selected samples?`);
+    if (!confirmClear) {
+        return;
+    }
+    setLoadingText('Processing');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach(item => {
+            item.meta.slices = false;
+            if (item.meta.op1Json) {
+                item.meta.op1Json = false;
+            }
+            metaFiles.removeByName(item.file.name);
+        });
+        renderList();
+    }, 250);
+}
+
 function shortenNameSelected(event, restore = false) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     setLoadingText('Processing');
@@ -5591,6 +5611,7 @@ window.digichain = {
     deserializeSelected,
     condenseSelected,
     nudgeCrossingsSelected,
+    clearSlicesSelected,
     padWithZeroSelected,
     showMergePanel,
     showBlendPanel,

@@ -308,7 +308,7 @@ export function showToastMessage(messageString, duration = 3000) {
 
 export async function dcDialog(type = 'message', messageString = '', config = {}) {
     const msgTypes = {message: 'alert', ask: 'prompt', confirm: 'confirm', prompt: 'prompt'};
-
+    
     if (type === 'prompt' || type === 'confirm' || type === 'alert') {
         return await new Promise(resolve => {
             const dcDialogEl = document.querySelector('#dcDialog');

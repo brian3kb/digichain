@@ -739,7 +739,7 @@ async function downloadAll(event) {
     }
     setLoadingText('Processing');
 
-    if (settings.zipDownloads && _files.length > 1) {
+    if (settings.zipDownloads && (_files.length > 1 || window.__TAURI__)) {
         const zip = new JSZip();
         for (const file of _files) {
             const wav = await setWavLink(file, el, renderAsAif, true);
@@ -817,12 +817,29 @@ async function downloadFile(id, fireLink = false, event = {}) {
     const metaEl = getRowElementById(id).querySelector('.meta-link-hidden');
     const file = getFileById(id);
     const renderAsAif = targetContainer === 'a';
-    await setWavLink(file, el, renderAsAif, true);
+    const {blob: fileBlob} = await setWavLink(file, el, renderAsAif, true);
     let otFile = await createAndSetOtFileLink(
         file.meta.slices ?? [], file, file.file.name, metaEl);
     if (fireLink && (!settings.shiftClickForFileDownload || (settings.shiftClickForFileDownload && event.shiftKey))) {
-        el.click();
-        if (otFile) {metaEl.click(); }
+        if (window.__TAURI__) {
+            const audioData = await fileBlob.arrayBuffer();
+            await window.__TAURI__.fs.writeFile(file.file.name, audioData, {
+                baseDir: window.__TAURI__.fs.BaseDirectory.Download,
+                create: true
+            });
+            if (otFile && otFile.blob) {
+                const otData = await otFile.blob.arrayBuffer();
+                await window.__TAURI__.fs.writeFile(otFile.name, otData, {
+                    baseDir: window.__TAURI__.fs.BaseDirectory.Download,
+                    create: true
+                });
+            } 
+            setLoadingText('');
+            window.__TAURI__.dialog.message(`Saved to the Downloads folder as '${file.file.name}'.`);
+        } else {
+            el.click();
+            if (otFile) {metaEl.click(); }  
+        }
     }
     return [el, metaEl];
 }
@@ -5524,7 +5541,7 @@ function saveSessionUiCall() {
     }
 }
 
-function saveSession(sessionFileName = 'digichain_session', includeUnselected = false) {
+async function saveSession(sessionFileName = 'digichain_session', includeUnselected = false) {
     const zip = new JSZip();
     const zipFileOptions = {
         compression: "DEFLATE",
@@ -5549,17 +5566,29 @@ function saveSession(sessionFileName = 'digichain_session', includeUnselected = 
         zip.file('opExportData', window.msgpack.encode(opExportData), zipFileOptions);
     }
 
+    const sessionFileNameString = `${sessionFileName}.dcsd`
+    const zipCallback = window.__TAURI__ ? 
+      async blob => {
+          const sessionData = await blob.arrayBuffer();
+          await window.__TAURI__.fs.writeFile(sessionFileNameString, sessionData, {
+              baseDir: window.__TAURI__.fs.BaseDirectory.Download,
+              create: true
+          });
+          setLoadingText('');
+          showToastMessage(`'${sessionFileNameString}.dcsd'<br>session file created.`, 10000);
+      } : blob => {
+          const el = document.getElementById('getJoined');
+          el.href = URL.createObjectURL(blob);
+          el.setAttribute('download', sessionFileNameString);
+          el.click();
+          setLoadingText('');
+          showToastMessage(`'${sessionFileNameString}.dcsd'<br>session file created.`, 10000);
+      }
+    
     zip.generateAsync({
         type: "blob",
         compression: "DEFLATE"
-    }).then(blob => {
-        const el = document.getElementById('getJoined');
-        el.href = URL.createObjectURL(blob);
-        el.setAttribute('download', `${sessionFileName}.dcsd`);
-        el.click();
-        setLoadingText('');
-        showToastMessage(`'${sessionFileName}.dcsd'<br>session file created.`, 10000);
-    });
+    }).then(zipCallback);
 }
 
 if ('launchQueue' in window) {

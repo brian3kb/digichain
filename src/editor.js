@@ -575,11 +575,29 @@ function serializeOpKitToSingleBuffer() {
     };
 }
 
+async function triggerDownload(blob, filename) {
+    if (window.__TAURI__) {
+        const blobArrayBuffer = await blob.arrayBuffer();
+        await window.__TAURI__.fs.writeFile(filename, blobArrayBuffer, {
+            baseDir: window.__TAURI__.fs.BaseDirectory.Download,
+            create: true
+        });
+        setLoadingText('');
+        window.__TAURI__.dialog.message(`Saved to the Downloads folder as '${filename}'.`);
+    } else {
+        const linkEl = document.querySelector('.aif-link-hidden');
+        linkEl.href = URL.createObjectURL(blob);
+        linkEl.setAttribute('download', filename);
+        setLoadingText('');
+        linkEl.click();
+    } 
+}
+
 function buildOpKit(type = 'aif', kitName) {
     setLoadingText('Building Field Kit');
     const kit = serializeOpKitToSingleBuffer();
     kitName = kitName || samples.kitName || getKitName();
-    const linkEl = document.querySelector('.aif-link-hidden');
+    
     const abtwMeta = {
         slices: kit.slices.filter(s => !s.blank),
         renderAt: type === 'aif' ? '44100' : conf.targetSR
@@ -595,10 +613,7 @@ function buildOpKit(type = 'aif', kitName) {
             slices: dataView.slices || kit.slices.filter(s => !s.blank)
         };
     }
-    linkEl.href = URL.createObjectURL(blob);
-    linkEl.setAttribute('download', `${kitName}.aif`);
-    setLoadingText('');
-    linkEl.click();
+    triggerDownload(blob, `${kitName}.aif`);
 }
 
 function buildXyKit() {
@@ -642,11 +657,12 @@ function buildXyKit() {
     }
     zip.file('patch.json', JSON.stringify(xyPatchData));
     zip.generateAsync({type: 'blob'}).then(zipBlob => {
-        const el = document.getElementById('getJoined');
+        triggerDownload(zipBlob, `${kitName}.preset.zip`);
+        /*const el = document.getElementById('getJoined');
         el.href = URL.createObjectURL(zipBlob);
         el.setAttribute('download', `${kitName}.preset.zip`);
         setLoadingText('');
-        el.click();
+        el.click();*/
     });
 }
 

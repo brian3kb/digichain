@@ -1610,7 +1610,7 @@ function showExportSettingsPanel(page = 'settings') {
             0.75 ? 'button' : 'button-outline'}">&gt;75%</button>
       </td>
       </tr>
-    <tr>
+    <tr style="${window.__TAURI__ ? 'display: none;' : ''}">
     <td><span>Download multi-file/joined downloads as one zip file? &nbsp;&nbsp;&nbsp;</span></td>
     <td><button onpointerdown="digichain.toggleSetting('zipDownloads')" class="check ${settings.zipDownloads
               ? 'button'
@@ -2176,7 +2176,7 @@ async function joinAll(
     try {
         const joinedEl = document.getElementById('getJoined');
         if (
-          ((settings.zipDownloads && !toInternal) || settings.exportChainsAsXyPresets) &&
+          (((settings.zipDownloads || window.__TAURI__) && !toInternal) || settings.exportChainsAsXyPresets) &&
           files.filter(
           f => f.meta.checked).length > 1
         ) {
@@ -2435,11 +2435,25 @@ async function joinAll(
             joinAll(event, pad, filesRemaining, fileCount, toInternal, zip);
         } else {
             if (zip) {
-                zip.generateAsync({type: 'blob'}).then(blob => {
-                    joinedEl.href = URL.createObjectURL(blob);
-                    joinedEl.setAttribute('download', `digichain_${Date.now()}.zip`);
-                    joinedEl.click();
-                });
+                const zipName = `digichain_${Date.now()}.zip`;
+                if (window.__TAURI__) {
+                    zip.generateAsync({type: 'uint8array'}).then(async _data => {
+                        await window.__TAURI__.fs.writeFile(zipName, _data, {
+                            baseDir: window.__TAURI__.fs.BaseDirectory.Download,
+                            create: true
+                        });
+                        setLoadingText('');
+                        window.__TAURI__.dialog.message(`Saved to the Downloads folder as '${zipName}'.`);
+                    });
+                } else {
+                    zip.generateAsync({type: 'blob'}).then(blob => {
+                        const el = document.getElementById('getJoined');
+                        joinedEl.href = URL.createObjectURL(blob);
+                        joinedEl.setAttribute('download', zipName);
+                        joinedEl.click();
+                        setLoadingText('');
+                    });
+                }
             }
             renderList();
         }

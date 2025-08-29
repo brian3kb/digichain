@@ -45,7 +45,7 @@ export function setEditorConf(options) {
     conf = options;
 }
 
-export function showEditor(data, options, view = 'sample', folderOptions = []) {
+export function showEditor(data, options, view = 'sample', folderOptions = [], start, end) {
     conf = options;
     folders = folderOptions;
     if (view === 'sample') {
@@ -54,8 +54,8 @@ export function showEditor(data, options, view = 'sample', folderOptions = []) {
         }
         editing = data;
         multiplier = 1;
-        selection.end = editing.buffer.length;
-        selection.start = 0;
+        selection.end = end || editing.buffer.length;
+        selection.start = start || 0;
         selection.step = editing.buffer.length / (1024 * multiplier);
         selection.selStart = true;
         showStereoWaveform = conf.masterChannels > 1;
@@ -809,7 +809,9 @@ export function renderEditor(item) {
     ).
       reduce((a, v) => a += canvasMarkup, '')}
       <div id="editLines">
-        <div class="edit-line" style="height: ${settings.wavePanelHeight}px; margin-top: -${settings.wavePanelHeight + 8}px;"></div>
+        <div class="edit-line" style="height: ${settings.wavePanelHeight}px; margin-top: -${settings.wavePanelHeight + 8}px;">
+            <div class="edit-line-spacer" style="height: ${settings.wavePanelHeight}px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -823,8 +825,8 @@ export function renderEditor(item) {
   <button title="Crop the sample to the selected area. Shift+Click to crop selection to a new sample. Shift+(Ctrl/Cmd)+Click to crop selection to a new sample and open the new sample in the editor." class="trim-right button button-outline has-ctrl-mod has-shift-mod" onclick="digichain.editor.truncate(event)">Crop</button>
   <button title="Fade in the selected audio." class="fade-in button button-outline" onclick="digichain.editor.fade('in')">Fade In</button>
   <button title="Silence the selected audio." class="silence button button-outline" onclick="digichain.editor.fade()">Silence</button>
-  <button title="Increase the gain of the selected audio." class="louder button button-outline" onclick="digichain.editor.adjustGain(event, 1.1)">Louder</button>
-  <button title="Decrease the gain of the selected audio." class="quieter button button-outline" onclick="digichain.editor.adjustGain(event, 0.9)">Quieter</button>
+  <button title="Increase the gain of the selected audio. Shift+Click to Decrease the gain of the selected audio." class="sample-vol button button-outline has-shift-mod" onclick="digichain.editor.adjustGain(event, 1.1)"></button>
+  <button title="Remove the currently selected section of the sample. Shift+Click to paste at the current start position." class="invert-crop button button-outline has-shift-mod" onclick="digichain.editor.truncate(event, false, true, 0, true)"></button>
   <button title="Fade out the selected audio." class="fade-out button button-outline" onclick="digichain.editor.fade('out')">Fade Out</button>
 </div>
 <div class="edit-btn-group float-right">
@@ -1293,6 +1295,10 @@ function adjustGain(event, gain, item, renderEditPanel = true) {
         selection.end = item.buffer.length;
     }
     item = item || editing;
+    
+    if (event.shiftKey) {
+        gain = 0.9;
+    } 
 
     let maxSample = 0;
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
@@ -1962,7 +1968,7 @@ function stretch(event, item, renderEditPanel = true, targetLength, returnBuffer
 
 }
 
-function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
+function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3, invertCrop = false) {
     let duplicate;
     if (!renderEditPanel && item) {
         selection.start = 0;
@@ -1970,9 +1976,13 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
     }
     item = item || editing;
 
-    if (event.shiftKey && renderEditPanel) {
+    if (event.shiftKey && renderEditPanel && !invertCrop) {
         duplicate = digichain.duplicate(event, item.meta.id, true);
         item = duplicate.item;
+    }
+
+    if (event.shiftKey && renderEditPanel && invertCrop && !editPanelEl.clipboard) {
+        return;
     }
 
     if (settings.attemptToFindCrossingPoint) {
@@ -1991,24 +2001,72 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
     }
 
     let truncIndex = selection.end - selection.start;
-
+    
     if (truncIndex > item.buffer.length) {
         // don't need to truncate as sample is shorter than the trim length.
         return;
     }
 
+    const clipboardBuffer = invertCrop && !event.shiftKey ? conf.audioCtx.createBuffer(
+      item.buffer.numberOfChannels,
+      truncIndex,
+      conf.masterSR
+    ) : false;
+    
+    if (invertCrop) {
+        truncIndex = item.buffer.length - truncIndex;
+    }
+    
+    if (invertCrop && event.shiftKey && editPanelEl.clipboard?.length) {
+        truncIndex = item.buffer.length + editPanelEl.clipboard.length;
+        selection.end = selection.start;
+    }
+    
     const audioArrayBuffer = conf.audioCtx.createBuffer(
       item.buffer.numberOfChannels,
       truncIndex,
       conf.masterSR
     );
+    
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
         let x = 0;
-        for (let i = selection.start; i < selection.end; i++) {
-            audioArrayBuffer.getChannelData(
-              channel)[x] = item.buffer.getChannelData(channel)[i];
-            x++;
+        if (invertCrop) {
+            for (let i = 0; i < selection.start; i++) {
+                audioArrayBuffer.getChannelData(
+                  channel)[x] = item.buffer.getChannelData(channel)[i];
+                x++;
+            }
+            
+            if (event.shiftKey) {
+                if (editPanelEl.clipboard?.length) {
+                    for (let i = 0; i < editPanelEl.clipboard.length; i++) {
+                        audioArrayBuffer.getChannelData(
+                          channel)[x] = editPanelEl.clipboard.getChannelData(channel)[i];
+                        x++;
+                    }  
+                }
+            } else {
+                let y = 0;
+                for (let i = selection.start; i < selection.end; i++) {
+                    clipboardBuffer.getChannelData(
+                      channel)[y] = item.buffer.getChannelData(channel)[i];
+                    y++;
+                }
+            }
+            
+            for (let i = selection.end; i < item.buffer.length; i++) {
+                audioArrayBuffer.getChannelData(
+                  channel)[x] = item.buffer.getChannelData(channel)[i];
+                x++;
+            }
+        } else {
+            for (let i = selection.start; i < selection.end; i++) {
+                audioArrayBuffer.getChannelData(
+                  channel)[x] = item.buffer.getChannelData(channel)[i];
+                x++;
+            }  
         }
+        
     }
 
     item.buffer = audioArrayBuffer;
@@ -2023,7 +2081,11 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
     }
     digichain.removeMetaFile(item.meta.id);
     if (renderEditPanel && !duplicate) {
-        showEditor(editing, conf, 'sample', folders);
+        if (invertCrop) {
+            showEditor(editing, conf, 'sample', folders, selection.start, event.shiftKey && editPanelEl.clipboard?.length ? (selection.start + editPanelEl.clipboard.length) : selection.start);
+        }  else {
+            showEditor(editing, conf, 'sample', folders);
+        }
     }
     item.waveform = false;
 
@@ -2036,6 +2098,10 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3) {
             showToastMessage(`Cropped duplicate saved to list as, '${item.file.name}'`, 5000);
         }
     }
+    
+    if (invertCrop && !event.shiftKey) {
+        editPanelEl.clipboard = clipboardBuffer;
+    } 
 }
 
 function double(event, item, reverse = false, renderEditPanel = true) {
@@ -2222,7 +2288,7 @@ function editorPlayFile(event, loop = false, stop = false) {
         digichain.stopPlayFile(event, editing.meta.id);
         return;
     }
-    digichain.playFile({editor: true, file: editing}, editing.meta.id, false, start, end);
+    digichain.playFile({editor: true, file: editing, waveform: document.querySelector('.edit-panel-waveform'), loopSection: document.querySelector('.edit-line')}, editing.meta.id, false, start, end);
     if (loop) {
         editorPlayFile.nextLoop = setTimeout(() => editorPlayFile(event, loop),
           end * 1000);

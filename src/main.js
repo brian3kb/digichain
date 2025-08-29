@@ -2578,13 +2578,16 @@ const stopPlayFile = (event, id) => {
         file.meta.playing = false;
     }
     let playHead = file.playHead ||
-      file.waveform?.parentElement?.querySelector('.play-head');
-    if (playHead) { playHead.remove(); }
+      file.waveform?.parentElement?.querySelector('.play-head') || false;
+    if (playHead) {
+        playHead?.remove();
+    }
 };
 
-const playFile = (event, id, loop, start, end) => {
+const playFile = (event, id, loop, start = 0, end) => {
     const file = getFileById(id || lastSelectedRow.dataset.id) || (event.editor && event.file ? event.file : false);
     let playHead;
+    let waveform = event?.editor ? event.waveform : (file.waveform && file.waveform.nodeName !== 'BUTTON'? file.waveform : false);
     loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
 
     stopPlayFile(false, (id || file.meta.id));
@@ -2626,13 +2629,22 @@ const playFile = (event, id, loop, start, end) => {
 
     if (id && !event?.editor &&event.target && event.target !== file.waveform) {
         file.waveform = file.waveform?.tagName === 'CANVAS' ? file.waveform : event.target;
+        waveform = file.waveform && file.waveform.nodeName !== 'BUTTON' ? file.waveform : false;
     }
 
-    if (id && !event?.editor && file.waveform && file.waveform.nodeName !== 'BUTTON') {
+    if (id && waveform) {
         playHead = document.createElement('span');
         playHead.classList.add('play-head');
         playHead.style.animationDuration = `${file.meta.duration}s`;
-        file.waveform.parentElement.appendChild(playHead);
+        if (event?.editor) {
+            playHead.style.height = `${event.loopSection.style.height}`;
+            playHead.style.animationDuration = `${end}s`;
+            playHead.dataset.end = `${event.loopSection.style.width.replace('px', '')}`;
+            event.loopSection.appendChild(playHead);
+        } else {
+            waveform.parentElement.appendChild(playHead);
+        }
+        waveform.playHead = playHead;
         file.playHead = playHead;
     }
 
@@ -2642,10 +2654,10 @@ const playFile = (event, id, loop, start, end) => {
       end
     );
 
-    if (id && !event?.editor) {
-        file.waveform?.classList?.add('playing');
-        if (playHead) {
-            playHead.style.animationIterationCount = file.source.loop
+    if (id && waveform) {
+        waveform?.classList?.add('playing');
+        if (waveform.playHead) {
+            waveform.playHead.style.animationIterationCount = file.source.loop
               ? 'infinite'
               : 'unset';
 

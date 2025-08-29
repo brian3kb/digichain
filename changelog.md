@@ -3,6 +3,8 @@
  - Additional changes toward desktop app support.
  - New setting for Octatrack exports, "Use even numbered slices as loop point of prev slice on .ot exports?"; When this is set to YES, and the .ot file creation is set to YES, joined files are treated as pairs, with the first being the start (attack) part of the slice, and the second being the Octatrack (loop) part of the slice.
  - Clear slice data selected action so all slice data can be cleared at once if needed.
+ - Cut/Paste action button on sample editor panel.
+ - Show sample play head on sample editor panel.
 
 2025.05.30 1.5.0
  - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.

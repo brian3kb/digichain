@@ -1823,6 +1823,28 @@ td.waveform-td span.play-head.play {
     margin-left: 150px !important;
 }
 
+@keyframes waveformPlayHeadEditor {
+    from { margin-left: 0; }
+    to { margin-left: attr(data-end px); }
+}
+#editorPanelContent span.play-head {
+    display: none;
+    height: 56px;
+    width: 1px;
+    position: static;
+    background-color: #4a4032;
+    margin-left: 0;
+    margin-top: -5px;
+    animation-timing-function: linear;
+}
+#editorPanelContent span.play-head {
+    animation-name: waveformPlayHeadEditor;
+    display: block;
+}
+#editorPanelContent span.play-head.play {
+    margin-left: attr(data-end px) !important;
+}
+
 .waveform-container {
     width: auto;
     border-left: 1px solid #d79c4e30;
@@ -1873,6 +1895,20 @@ td.waveform-td span.play-head.play {
     float: right;
     margin-top: -6px;
 }
+.waveform-container:has(.play-head) .edit-line:after {
+    margin-top: -.75rem;
+}
+
+.edit-line-spacer {
+    width: 100%;
+    float: right;
+    margin-top: -.65rem;
+}
+
+.waveform-container:has(.play-head) .edit-line-spacer {
+    display: none;
+}
+
 .waveform-container .edit-line.start-is-zero-crossing:before,
 .waveform-container .edit-line.end-is-zero-crossing:after {
     visibility: visible;
@@ -1947,6 +1983,18 @@ td button { margin: 0.5rem; }
     left: 2.5rem;
     margin-top: -2rem;
     font-size: 1.2rem;
+}
+.sample-op-buttons .sample-vol::before {
+    content: 'Louder';
+}
+body.shiftKey-down .sample-op-buttons .sample-vol::before {
+    content: 'Quieter';
+}
+.sample-op-buttons .invert-crop::before {
+    content: 'Cut';
+}
+body.shiftKey-down .sample-op-buttons .invert-crop::before {
+    content: 'Paste';
 }
 .edit-btn-group {
     max-width: 35%;

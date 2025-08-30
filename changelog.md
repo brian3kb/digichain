@@ -5,6 +5,7 @@
  - Clear slice data selected action so all slice data can be cleared at once if needed.
  - Cut/Paste action button on sample editor panel.
  - Show sample play head on sample editor panel.
+ - FireFox support warning in header bar.
 
 2025.05.30 1.5.0
  - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.

@@ -16,7 +16,7 @@ const defaultSettings = {
 
     attemptToFindCrossingPoint: false,
     darkModeTheme: null,
-    deClick: 0.4,
+    deClick: 0,
     ditherExports: false,
     embedCuePoints: true,
     splitOutExistingSlicesOnJoin: true,

@@ -3531,10 +3531,31 @@ body:not(.light) #dcDialog .prompt {
 }
 
 body.latest .header-menu::after {
-    content: 'This is the active development build, things here may be broken!';
+    content: 'Development build, things here may be broken!';
     float: right;
     padding-right: 1rem;
     font-size: 1.25rem;
     color: #ff1c1c;
     margin-top: -.05rem;
+}
+
+@-moz-document url-prefix() {
+    /* CSS code specific to Firefox */
+    .header-menu::after {
+        content: ':: FireFox not fully supported ::';
+        float: right;
+        padding-right: 1rem;
+        font-size: 1.25rem;
+        color: #ff1c1c;
+        margin-top: -.05rem;
+    }
+    
+    body.latest .header-menu::after {
+        content: ':: FireFox not fully supported :: Dev build, things here may be broken!';
+        float: right;
+        padding-right: 1rem;
+        font-size: 1.25rem;
+        color: #ff1c1c;
+        margin-top: -.05rem;
+    }
 }

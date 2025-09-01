@@ -684,7 +684,7 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
 
     wav = audioBufferToWav(
       file.buffer, {...file.meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
-      masterChannels, settings.deClick,
+      masterChannels, settings.dePopClick,
       (renderAsAif && settings.pitchModifier === 1), settings.pitchModifier, embedSliceData,
       settings.embedCuePoints, settings.embedOrslData
     );
@@ -707,7 +707,7 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
         }));
         wav = audioBufferToWav(
           pitchedBuffer, {...meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
-          masterChannels, settings.deClick,
+          masterChannels, settings.dePopClick,
           renderAsAif, 1, embedSliceData, settings.embedCuePoints, settings.embedOrslData
         );
         wavSR = wav.sampleRate;
@@ -1390,8 +1390,11 @@ function toggleSetting(param, value, suppressRerender) {
         files.forEach(f => f.meta.peak = undefined);
     }
     if (param === 'deClick') {
-        settings.deClick = value;
+        settings.dePopClick = value;
     }
+    if (param === 'padSpacedChainsWith') {
+        settings.padSpacedChainsWith = value;
+     } 
     if (param === 'skipMiniWaveformRender') {
         renderList();
     }
@@ -1563,6 +1566,17 @@ function showExportSettingsPanel(page = 'settings') {
               : 'button-outline'}">${settings.reverseEvenSamplesInChains ? 'YES' : 'NO'}</button></td>
     </tr>
     <tr>
+    <td><span>Pad spaced chains with?&nbsp;&nbsp;&nbsp;</span></td>
+    <td>
+    <button title="Pads spaced chains with the last sample of the chain." onpointerdown="digichain.toggleSetting('padSpacedChainsWith', 'last')" class="check ${settings.padSpacedChainsWith ===
+        'last' ? 'button' : 'button-outline'}">Last</button>
+    <button title="Pads spaced chains with silent slices." onpointerdown="digichain.toggleSetting('padSpacedChainsWith', 'silence')" class="check ${settings.padSpacedChainsWith ===
+        'silence' ? 'button' : 'button-outline'}">Blnk</button>
+    <button title="Pads spaced chains with a random sample from within the chain." onpointerdown="digichain.toggleSetting('padSpacedChainsWith', 'random')" class="check ${settings.padSpacedChainsWith ===
+        'random' ? 'button' : 'button-outline'}">Rand</button>
+    </td>
+    </tr>
+    <tr>
     <td><span>Restore the last used Sample Rate/Bit Depth/Channel? &nbsp;&nbsp;&nbsp;</span></td>
     <td><button onpointerdown="digichain.toggleSetting('restoreLastUsedAudioConfig')" class="check ${settings.restoreLastUsedAudioConfig
               ? 'button'
@@ -1594,19 +1608,19 @@ function showExportSettingsPanel(page = 'settings') {
         <tr>
       <td><span>De-click exported samples?<br>Helps when importing non-wav files of a different<br>sample rate than the export file, or small buffered audio interfaces. &nbsp;&nbsp;&nbsp;</span></td>
       <td>
-      <button onpointerdown="digichain.toggleSetting('deClick', 0)" class="check ${+settings.deClick ===
+      <button onpointerdown="digichain.toggleSetting('deClick', 0)" class="check ${+settings.dePopClick ===
             0 ? 'button' : 'button-outline'}">OFF</button>
-      <button onpointerdown="digichain.toggleSetting('deClick', 0.1)" class="check ${+settings.deClick ===
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.1)" class="check ${+settings.dePopClick ===
             0.1 ? 'button' : 'button-outline'}">&gt;10%</button>
-      <button onpointerdown="digichain.toggleSetting('deClick', 0.2)" class="check ${+settings.deClick ===
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.2)" class="check ${+settings.dePopClick ===
             0.2 ? 'button' : 'button-outline'}">&gt;20%</button>
-      <button onpointerdown="digichain.toggleSetting('deClick', 0.3)" class="check ${+settings.deClick ===
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.3)" class="check ${+settings.dePopClick ===
             0.3 ? 'button' : 'button-outline'}">&gt;30%</button>
-      <button onpointerdown="digichain.toggleSetting('deClick', 0.4)" class="check ${+settings.deClick ===
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.4)" class="check ${+settings.dePopClick ===
             0.4 ? 'button' : 'button-outline'}">&gt;40%</button>
-      <button onpointerdown="digichain.toggleSetting('deClick', 0.5)" class="check ${+settings.deClick ===
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.5)" class="check ${+settings.dePopClick ===
             0.5 ? 'button' : 'button-outline'}">&gt;50%</button>
-      <button onpointerdown="digichain.toggleSetting('deClick', 0.75)" class="check ${+settings.deClick ===
+      <button onpointerdown="digichain.toggleSetting('deClick', 0.75)" class="check ${+settings.dePopClick ===
             0.75 ? 'button' : 'button-outline'}">&gt;75%</button>
       </td>
       </tr>
@@ -2157,6 +2171,39 @@ function performBlend(mFiles, blendLength) {
 
 }
 
+function generateBlankFile(){
+    const uuid = crypto.randomUUID();
+    const audioArrayBuffer = audioCtx.createBuffer(
+      masterChannels,
+      8,
+      masterSR
+    );
+    for (let channel = 0; channel < masterChannels; channel++) {
+        for (let i = 0; i < audioArrayBuffer.length; i++) {
+            audioArrayBuffer.getChannelData(channel)[i] = 0;
+        }
+    }
+    return {
+        file: {
+            lastModified: Date.now(),
+            name: getUniqueName(files, 'blank.wav'),
+            filename: 'blank.wav',
+            path: '',
+            size: 0
+        },
+        buffer: audioArrayBuffer, meta: {
+            length: audioArrayBuffer.length,
+            duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
+            startFrame: 0, endFrame: audioArrayBuffer.length,
+            checked: true, id: uuid,
+            channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
+            dualMono: false,
+            slices: false,
+            note: ''
+        }
+    };
+}
+
 function joinAllUICall(event, pad) {
     if (files.length === 0 || files.filter(f => f.meta.checked).length === 0) { return; }
     if (secondsPerFile !== 0) {
@@ -2233,7 +2280,16 @@ async function joinAll(
             _files = tempFiles;
             if (pad && sliceGridT !== 0 && _files.length !== 0) {
                 while (_files.length !== sliceGridT) {
-                    _files.push(_files[_files.length - 1]);
+                    switch (settings.padSpacedChainsWith) {
+                        case 'random':
+                            _files.push(_files[Math.floor(Math.random() * _files.length)]);
+                            break;
+                        case 'silence':
+                            _files.push(generateBlankFile());
+                            break;
+                        default: // 'last'
+                            _files.push(_files[_files.length - 1]);
+                    }
                 }
             }
             largest = _files.reduce(
@@ -2328,7 +2384,7 @@ async function joinAll(
                 if (f.buffer) {
                     const dataView = audioBufferToWav(
                       f.buffer, {...f.meta, renderAt: targetSR}, masterSR, masterBitDepth,
-                      masterChannels, settings.deClick,
+                      masterChannels, settings.dePopClick,
                       false, settings.pitchModifier, false,
                       false, false
                     );
@@ -4628,43 +4684,13 @@ const getRandomFileSelectionFrom = (fileCollection) => {
 };
 
 const addBlankFile = () => {
-    const uuid = crypto.randomUUID();
     checkAndSetAudioContext();
-    const audioArrayBuffer = audioCtx.createBuffer(
-      masterChannels,
-      8,
-      masterSR
-    );
-
-    for (let channel = 0; channel < masterChannels; channel++) {
-        for (let i = 0; i < audioArrayBuffer.length; i++) {
-            audioArrayBuffer.getChannelData(channel)[i] = 0;
-        }
-    }
-
+    const blankFile = generateBlankFile();
     const insertAt = lastSelectedRow ? getFileIndexById(
       lastSelectedRow.dataset.id) + 1 : files.length;
 
-    files.splice(insertAt, 0, {
-        file: {
-            lastModified: Date.now(),
-            name: getUniqueName(files, 'blank.wav'),
-            filename: 'blank.wav',
-            path: '',
-            size: 0
-        },
-        buffer: audioArrayBuffer, meta: {
-            length: audioArrayBuffer.length,
-            duration: Number(audioArrayBuffer.length / masterSR).toFixed(3),
-            startFrame: 0, endFrame: audioArrayBuffer.length,
-            checked: true, id: uuid,
-            channel: audioArrayBuffer.numberOfChannels > 1 ? 'L' : '',
-            dualMono: false,
-            slices: false,
-            note: ''
-        }
-    });
-    unsorted.push(uuid);
+    files.splice(insertAt, 0, blankFile);
+    unsorted.push(blankFile.meta.id);
     renderList();
 };
 

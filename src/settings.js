@@ -1,6 +1,6 @@
 const settingsStore = {};
 
-const isStringValue = ['lastUsedAudioConfig', 'defaultAudioConfigText'];
+const isStringValue = ['lastUsedAudioConfig', 'defaultAudioConfigText', 'padSpacedChainsWith'];
 
 const defaultSettings = {
     lastUsedAudioConfig: '48000m16w',
@@ -16,7 +16,7 @@ const defaultSettings = {
 
     attemptToFindCrossingPoint: false,
     darkModeTheme: null,
-    deClick: 0,
+    dePopClick: 0,
     ditherExports: false,
     embedCuePoints: true,
     splitOutExistingSlicesOnJoin: true,
@@ -26,6 +26,7 @@ const defaultSettings = {
     importFileLimit: true,
     normalizeContrast: false,
     reverseEvenSamplesInChains: false,
+    padSpacedChainsWith: 'last', // last, silence, random
     pitchModifier: 1,
     playWithPopMarker: 0,
     showTouchModifierKeys: false,

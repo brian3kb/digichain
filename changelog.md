@@ -6,6 +6,7 @@
  - Cut/Paste action button on sample editor panel.
  - Show sample play head on sample editor panel.
  - FireFox support warning in header bar.
+ - When creating spaced chains, a new setting in the settings panel allows the pad to be set to repeat the last sample in the chain (the default setting), pad with silent slices, or pad with a random slice from the current chain.
 
 2025.05.30 1.5.0
  - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.

@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
     <meta name="author" content="Brian Barnett [ brian3kb ]">
-    <meta name="version" content="2591">
+    <meta name="version" content="2592">
     <meta
             name="description"
             content="DigiChain makes the creation of sample chains as easy as possible; Edit, trim, reverse, crush, join, slice, convert; Drag-and-drop uncompressed wav, aif (OP-1 Field/OP-Z), flac, or syx (MachineDrum) audio files and converts them to wav files for transfer via the Elektron Transfer app, or to aif files for use on Teenage Engineering OP-1 Field / OP-Z, or record from direct playback with pop markers.--Include slice data as cue markers for use on Dirtywave M8, or export with a .ot file for direct use on Octatrack. Converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids (icluding Digitakt II).--Files are generated at the chosen session sample rate and bit depth with all processing done in the browser, on *your* computer, no user/audio data is sent to a server.----The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
@@ -41,7 +41,7 @@
 </dialog>
 
 <dialog id="welcomePanelMd" class="dialog-pop-up">
-    <a class="float-right" onclick="document.getElementById('welcomePanelMd').close();"><i class="gg-close"></i></a>
+    <a class="float-right sticky-top-0" onclick="document.getElementById('welcomePanelMd').close();"><i class="gg-close"></i></a>
     <div class="content">
         <h3>Welcome to DigiChain</h3>
         <p>Before importing samples, open the <a onclick="digichain.showExportSettingsPanel('audio');">Audio Config Panel</a> and configure the export and chain settings, try using the 'Common Configurations' drop-down options in the bottom right!</p>
@@ -63,7 +63,7 @@
 </dialog>
 
 <dialog id="keyboardShortcuts" class="dialog-pop-up">
-    <a class="float-right" onclick="document.getElementById('keyboardShortcuts').close();"><i
+    <a class="float-right sticky-top-0" onclick="document.getElementById('keyboardShortcuts').close();"><i
             class="gg-close"></i></a>
     <div class="content">
         <h4>Keyboard Shortcuts</h4>
@@ -165,18 +165,18 @@
 </dialog>
 
 <dialog id="exportSettingsPanel" data-page="export-options" class="dialog-pop-up">
-    <a class="float-right" onpointerdown="document.getElementById('exportSettingsPanel').close();"><i
+    <a class="float-right sticky-top-0" onpointerdown="document.getElementById('exportSettingsPanel').close();"><i
             class="gg-close"></i></a>
     <div class="content"></div>
 </dialog>
 
 <dialog id="chainFileNameListPanel" class="dialog-pop-up">
-    <a class="float-right" onpointerdown="document.getElementById('chainFileNameListPanel').close();"><i class="gg-close"></i></a>
+    <a class="float-right sticky-top-0" onpointerdown="document.getElementById('chainFileNameListPanel').close();"><i class="gg-close"></i></a>
     <div class="content"></div>
 </dialog>
 
 <dialog id="splitOptions" class="dialog-pop-up">
-    <a class="float-right" onpointerdown="digichain.closeSplitOptions(event)"><i class="gg-close"></i></a>
+    <a class="float-right sticky-top-0" onpointerdown="digichain.closeSplitOptions(event)"><i class="gg-close"></i></a>
     <p>
         Choose how many slices to make from<br>'<span id="splitFileName"></span>'
     </p>
@@ -266,7 +266,7 @@
 </dialog>
 
 <dialog id="editPanel" class="dialog-pop-up" data-id="" onclose="digichain.closeEditPanel();">
-    <a class="float-right"
+    <a class="float-right sticky-top-0"
        onpointerdown="digichain.closeEditPanel();"><i
             class="gg-close"></i></a>
     <fieldset id="editableItems"></fieldset>
@@ -274,7 +274,7 @@
 </dialog>
 
 <div id="opExportPanel" class="op-export-side-panel-options" data-id="">
-    <a class="float-right"
+    <a class="float-right sticky-top-0"
        onpointerdown="document.getElementById('opExportPanel').classList.remove('show');document.querySelector('.right-buttons').classList.remove('fade');"><i
             class="gg-close"></i></a>
     <div id="opExportPanelContent"></div>
@@ -282,7 +282,7 @@
 </div>
 
 <dialog id="mergePanel" class="dialog-pop-up">
-    <a class="float-right" onpointerdown="document.getElementById('mergePanel').close(); digichain.renderList();"><i
+    <a class="float-right sticky-top-0" onpointerdown="document.getElementById('mergePanel').close(); digichain.renderList();"><i
             class="gg-close"></i></a>
     <div id="mergePanelContent"></div>
 </dialog>

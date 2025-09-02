@@ -1540,6 +1540,12 @@ img {
     float: right;
 }
 
+.sticky-top-0 {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
 body .container {
     max-width: 1280px;
 }
@@ -2134,6 +2140,23 @@ body.shiftKey-down .sample-op-buttons .invert-crop::before {
     border-bottom: 1px solid;
     border-color: #d79c4e;
     display: flex;
+    width: 100%;
+    transform: translateY(-22px);
+    position: sticky;
+    top: 22px;
+    z-index: 1;
+    background-color: inherit;
+}
+#exportSettingsPanel .export-options::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 22px;
+    background-color: inherit;
+    position: absolute;
+    top: -22px;
+    left: 0;
+    z-index: -1;
 }
 #exportSettingsPanel .export-options span {
     padding: .65rem 1rem;
@@ -2258,6 +2281,11 @@ dialog {
     transition: opacity .33s ease-in;
     max-height: 89vh;
     outline: none;
+}
+
+dialog .content {
+    width: 100%;
+    background-color: inherit;
 }
 
 #welcomePanelMd .tip-header {

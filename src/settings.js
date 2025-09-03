@@ -26,7 +26,7 @@ const defaultSettings = {
     importFileLimit: true,
     normalizeContrast: false,
     reverseEvenSamplesInChains: false,
-    padSpacedChainsWith: 'last', // last, silence, random
+    padSpacedChainsWith: 'last', // last, silence, random, repeat
     pitchModifier: 1,
     playWithPopMarker: 0,
     showTouchModifierKeys: false,

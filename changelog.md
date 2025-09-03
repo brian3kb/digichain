@@ -6,7 +6,7 @@
  - Cut/Paste action button on sample editor panel.
  - Show sample play head on sample editor panel.
  - FireFox support warning in header bar.
- - When creating spaced chains, a new setting in the settings panel allows the pad to be set to repeat the last sample in the chain (the default setting), pad with silent slices, or pad with a random slice from the current chain.
+ - When creating spaced chains, a new setting in the settings panel allows the pad to be set to repeat the last sample in the chain (the default setting), pad with silent slices, pad with a random slice from the current chain, or pad with reversed version of the samples in the chain starting from slice 1.
  - Fixed position of header toolbar on settings panel; Fixed position of x close icon on all dialogs.
 
 2025.05.30 1.5.0

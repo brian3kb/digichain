@@ -1574,6 +1574,8 @@ function showExportSettingsPanel(page = 'settings') {
         'silence' ? 'button' : 'button-outline'}">Blnk</button>
     <button title="Pads spaced chains with a random sample from within the chain." onpointerdown="digichain.toggleSetting('padSpacedChainsWith', 'random')" class="check ${settings.padSpacedChainsWith ===
         'random' ? 'button' : 'button-outline'}">Rand</button>
+    <button title="Pads spaced chains with a reversed repeat of the sample within the chain at the offset position from the start." onpointerdown="digichain.toggleSetting('padSpacedChainsWith', 'repeat')" class="check ${settings.padSpacedChainsWith ===
+            'repeat' ? 'button' : 'button-outline'}">Rcsr</button>
     </td>
     </tr>
     <tr>
@@ -2277,12 +2279,17 @@ async function joinAll(
               (sliceGridT > 0 ? sliceGridT : _files.length));
 
             filesRemaining = Array.from(_files);
-            _files = tempFiles;
+            _files = [...tempFiles];
             if (pad && sliceGridT !== 0 && _files.length !== 0) {
                 while (_files.length !== sliceGridT) {
                     switch (settings.padSpacedChainsWith) {
                         case 'random':
                             _files.push(_files[Math.floor(Math.random() * _files.length)]);
+                            break;
+                        case 'repeat':
+                            const _dupeFile = duplicate({},_files[_files.length - tempFiles.length], false, true);
+                            await editor.reverse({}, _dupeFile, false);
+                            _files.push(_dupeFile);
                             break;
                         case 'silence':
                             _files.push(generateBlankFile());
@@ -2944,8 +2951,8 @@ const selectSliceAmount = (event, size) => {
     }
 };
 
-const duplicate = (event, id, prepForEdit = false) => {
-    const file = getFileById(id);
+const duplicate = (event, id, prepForEdit = false, returnFile = false) => {
+    const file = id?.buffer ? id : getFileById(id);
     const fileIdx = getFileIndexById(id) + 1;
     const item = {file: {...file.file}};
     item.buffer = new AudioBuffer({
@@ -2982,6 +2989,9 @@ const duplicate = (event, id, prepForEdit = false) => {
         };
     }
     item.meta.dupeOf = id;
+    if (returnFile) {
+        return item;
+    }
     files.splice(
       ((event.shiftKey || modifierKeys.shiftKey) ? files.length : fileIdx), 0,
       item);

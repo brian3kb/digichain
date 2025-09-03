@@ -5255,7 +5255,13 @@ function init() {
             ...numberKeys
         ];
         if (keyboardShortcutsDisabled) { return; }
-
+        if (document.body.classList.contains('show-help')) {
+            document.body.dataset.keysPressed = [
+              event.shiftKey ? 'shift' : '',
+              event.ctrlKey || event.metaKey ? 'ctrl/cmd' : '',
+              event.key.length === 1 ? event.key : ''
+            ].filter(Boolean).join(' + ');
+        }
         if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
         if (event.ctrlKey || event.metaKey) {
             document.body.classList.add('ctrlKey-down');

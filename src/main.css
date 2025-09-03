@@ -3461,6 +3461,31 @@ body.light.show-help .help-text {
     background-color: #ede5d8;
 }
 
+body.show-help[data-keys-pressed]::after {
+    content: attr(data-keys-pressed);
+    position: fixed;
+    bottom: 4rem;
+    font-size: 3rem;
+    width: fit-content;
+    color: #606c76;
+    transition: all 1s ease;
+    z-index: 105;
+    text-align: center;
+    text-transform: uppercase;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #bebebe1a;
+    padding: 0.5rem 1.5rem;
+    border-radius: 12px;
+    opacity: .85;
+    height: 5.5rem;
+    vertical-align: middle;
+}
+body.show-help[data-keys-pressed=""]::after, body.show-help[data-keys-pressed=" "]::after {
+    opacity: 0;
+    padding: 0.5rem 0;
+}
+
 body.light .op-key {
     background-color: transparent;
 }

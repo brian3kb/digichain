@@ -338,11 +338,11 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     });
 
     if (commonSelectDevice) {
-        settings.exportChainsAsXyPresets = false;
+        settings.exportChainsAsPresets = false;
         if ('opxy' === commonSelectDevice) {
-            updateExportChainsAsXyPresets(true);
+            updateExportChainsAsPresets({device: 'xy', length: 24});
         } else {
-            updateUiButtonAction('exportChainsAsXyPresets', '.toggle-op-xy-preset-bundling');
+            updateUiButtonAction('exportChainsAsPresets', '.toggle-xy-preset-bundling');
             settings.spacedChainMode = 'dt' === commonSelectDevice;
             updateSpacedChainMode();
         }
@@ -1452,7 +1452,7 @@ function updateSpacedChainMode(toggleSetting) {
     const spacedEl = document.querySelector('button.dl-spaced');
     const chainEl = document.querySelector('button.dl-chain');
     const spacedToggleEl = document.querySelector('.toggle-spaced-chain-mode')
-    if (toggleSetting && !settings.exportChainsAsXyPresets) {
+    if (toggleSetting && !settings.exportChainsAsPresets) {
         settings.spacedChainMode = !settings.spacedChainMode;
     }
     spacedToggleEl.classList[settings.spacedChainMode ? 'remove' : 'add']('fade');
@@ -1468,11 +1468,12 @@ function updateUiButtonAction(param, buttonClass, toggleSetting, forceValue) {
     buttonEl.classList[settings[param]? 'remove' : 'add']('fade');
 }
 
-function updateExportChainsAsXyPresets(toggleSetting) {
-    if (!settings.exportChainsAsXyPresets && settings.spacedChainMode) {
+function updateExportChainsAsPresets(presetConfig) {
+    if (!settings.exportChainsAsPresets && settings.spacedChainMode) {
         updateSpacedChainMode(true);
     }
-    updateUiButtonAction('exportChainsAsXyPresets', '.toggle-op-xy-preset-bundling', toggleSetting);
+    const _presetConfig = presetConfig.device === settings.exportChainsAsPresets?.device ? undefined : presetConfig;
+    updateUiButtonAction('exportChainsAsPresets', `.toggle-${presetConfig.device}-preset-bundling`, true, _presetConfig);
     setCountValues();
 }
 
@@ -2221,11 +2222,11 @@ async function joinAll(
   toInternal = false, zip = false) {
     if (files.length === 0) { return; }
     if ((toInternal || settings.updateResampleChainsToList ||
-      (event.shiftKey || modifierKeys.shiftKey)) && !settings.exportChainsAsXyPresets) { toInternal = true; }
+      (event.shiftKey || modifierKeys.shiftKey)) && !settings.exportChainsAsPresets) { toInternal = true; }
     try {
         const joinedEl = document.getElementById('getJoined');
         if (
-          (((settings.zipDownloads || window.__TAURI__) && !toInternal) || settings.exportChainsAsXyPresets) &&
+          (((settings.zipDownloads || window.__TAURI__) && !toInternal) || settings.exportChainsAsPresets) &&
           files.filter(
           f => f.meta.checked).length > 1
         ) {
@@ -2250,7 +2251,7 @@ async function joinAll(
         }
 
         /*If exporting as XY presets, truncate files to be 20 seconds or less.*/
-        if (filesRemaining.length === 0 && settings.exportChainsAsXyPresets) {
+        if (filesRemaining.length === 0 && settings.exportChainsAsPresets?.device === 'xy') {
             const _filesLongerThanTwentySeconds = [];
             _files.forEach(
               (f, fIdx) => +(f.meta?.duration??0) >= 20 ? _filesLongerThanTwentySeconds.push(fIdx) : false
@@ -2272,7 +2273,7 @@ async function joinAll(
 
         let tempFiles, slices, largest;
         let totalLength = 0;
-        let sliceGridT = settings.exportChainsAsXyPresets ? ((sliceGrid > 24 || !sliceGrid) ? 24 : sliceGrid) : sliceGrid;
+        let sliceGridT = settings.exportChainsAsPresets ? ((sliceGrid > settings.exportChainsAsPresets.length || !sliceGrid) ? settings.exportChainsAsPresets.length : sliceGrid) : sliceGrid;
 
         if (secondsPerFile === 0) { /*Using slice grid file lengths*/
             tempFiles = _files.splice(0,
@@ -2306,10 +2307,10 @@ async function joinAll(
                 return total;
             }, 0);
 
-        } else { /*Using max length in seconds (if aif also limit upto 24 files per chain)*/
+        } else { /*Using max length in seconds (if aif also limit up to device length files per chain)*/
             _files = _files.filter(f => f.meta.duration < secondsPerFile);
             let maxChainLength = (
-              (targetContainer === 'a' || settings.exportChainsAsXyPresets) ? 24 : (sliceGrid === 0
+              (targetContainer === 'a' || settings.exportChainsAsPresets?.device === 'xy') ? (settings.exportChainsAsPresets?.length || 24) : (sliceGrid === 0
                 ? 64
                 : sliceGrid));
             const processing = _files.reduce((a, f) => {
@@ -2376,7 +2377,7 @@ async function joinAll(
               `${path}chain-${pad ? 'spaced-' : ''}${fileCount + 1}--${_files.length}`
           );
 
-        if (settings.exportChainsAsXyPresets) {
+        if (settings.exportChainsAsPresets) {
             const xySlices = [];
             const xyFileName = `${sanitizeFileName(_fileName).substring(0, 14)}${fileCount + 1}`.replaceAll(/([-.])/gi, '');
             _files.forEach((f, idx) => {
@@ -3614,7 +3615,7 @@ const setFileNumTicker = () => {
 function setCountValues() {
     const filesSelected = files.filter(f => f.meta.checked);
     const selectionCount = filesSelected.length;
-    let sliceGridT = settings.exportChainsAsXyPresets ? ((sliceGrid > 24 || !sliceGrid) ? 24 : sliceGrid) : sliceGrid;
+    let sliceGridT = settings.exportChainsAsPresets ? ((sliceGrid > settings.exportChainsAsPresets.length || !sliceGrid) ? settings.exportChainsAsPresets.length : sliceGrid) : sliceGrid;
     const selectionSlicesCount = settings.splitOutExistingSlicesOnJoin ? filesSelected.reduce(
       (a, f) => a + (f.meta?.slices?.length ? (f.meta.slices.length - 1) : 0), 0
     ) : 0;
@@ -3624,7 +3625,7 @@ function setCountValues() {
       (a, f) => a += +f.meta.duration, 0);
     const joinCount = chainCount === 0 ? 0 : (chainCount > 0 &&
     sliceGridT > 0 ? Math.ceil(chainCount / sliceGridT) : 1);
-    const chainText = settings.exportChainsAsXyPresets ? ' Preset' : ' Chain';
+    const chainText = settings.exportChainsAsPresets ? ' Preset' : ' Chain';
     document.getElementById(
       'fileNum').textContent = `${files.length}/${selectionCount}` + (selectionSlicesCount ?
       ` (+${selectionSlicesCount} slices)`: '');
@@ -5464,7 +5465,7 @@ function init() {
     }
     updateSpacedChainMode();
     updateUiButtonAction('updateResampleChainsToList', '.toggle-top-list');
-    updateUiButtonAction('exportChainsAsXyPresets', '.toggle-op-xy-preset-bundling');
+    updateUiButtonAction('exportChainsAsPresets', '.toggle-xy-preset-bundling');
     setTimeout(() => toggleOptionsPanel(), 250);
     configDb();
     document.getElementById('modifierKeyctrlKey').textContent= navigator.userAgent.indexOf('Mac') !== -1 ? 'CMD' : 'CTRL';
@@ -5753,7 +5754,7 @@ window.digichain = {
     toggleSecondsPerFile,
     updateSpacedChainMode,
     updateUiButtonAction,
-    updateExportChainsAsXyPresets,
+    updateExportChainsAsPresets,
     changeOpParam,
     toggleHelp,
     toggleChainNamePanel,

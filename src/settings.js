@@ -10,7 +10,7 @@ const defaultSettings = {
 
     spacedChainMode: true,
     updateResampleChainsToList: false,
-    exportChainsAsXyPresets: false,
+    exportChainsAsPresets: false, // false, { device: string, length: number }
 
     wavePanelHeight: 128,
 

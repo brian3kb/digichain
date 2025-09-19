@@ -144,6 +144,23 @@ export function buildOpData(slices = [], numChannels, audioBuffer = false, retur
     return opData;
 }
 
+export function buildElMultiMarkup(presetName = '', slices = []) {
+    return `# ELEKTRON MULTI-SAMPLE MAPPING FORMAT
+version = 0
+name = '${presetName}'
+
+` + slices.map((slice, idx) => `[[key-zones]]
+pitch = ${24 + idx}
+key-center = ${24 + idx}.0
+
+[[key-zones.velocity-layers]]
+velocity = 0.49411765
+strategy = 'Forward'
+
+[[key-zones.velocity-layers.sample-slots]]
+sample = '${slice.name}'`).join('\n\n');
+}
+
 export function buildXyRegionFromSlice(slice, index) {
     return {
         'fade.in': 0,
@@ -164,12 +181,12 @@ export function buildXyRegionFromSlice(slice, index) {
     };
 }
 
-export function buildXyDrumPatchData(file, slices = []) {
+export function buildXyDrumPatchData(file, slices = [], useNamesFromSlices = false) {
     const _slices = slices.map(slice => ({
         ...slice,
         fc: slice.fc || (slice.e - slice .s),
         e: nudgeEndToZero(slice.s, slice.e, slice.buffer || file.buffer),
-        name: (file.buffer ? file.kitName : slice.name)??''
+        name: (useNamesFromSlices ? (slice.name || file.kitName) : (file.buffer ? file.kitName : slice.name))??''
     }));
     const modulationDefault = () => ({'amount': 16384, 'target': 0});
     const template = {

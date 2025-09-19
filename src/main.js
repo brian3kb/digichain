@@ -8,7 +8,7 @@ import {
     joinToStereo,
     bufferToFloat32Array,
     detectTempo, dcDialog, showToastMessage, setLoadingText,
-    flattenFile, buildXyDrumPatchData
+    flattenFile, buildXyDrumPatchData, buildElMultiMarkup
 } from './resources.js';
 import {
     editor,
@@ -188,7 +188,7 @@ function getSlicesFromMetaFile(file) {
     return metaFiles.getByFileInDcFormat(file);
 }
 
-function checkAndSetAudioContext() {
+async function checkAndSetAudioContext() {
     if (!audioCtx || audioCtx.sampleRate !== masterSR || audioCtx.state === 'closed') {
         audioCtx = new AudioContext(
           {sampleRate: masterSR, latencyHint: 'interactive'});
@@ -200,7 +200,7 @@ function checkAndSetAudioContext() {
         });
     }
     if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        return await audioCtx.resume();
     }
 }
 
@@ -318,13 +318,16 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
     setSliceOptionsFromArray(sliceOptions);
 
     if (!onloadRestore) {
-        checkAndSetAudioContext();
+        const contextPromise = checkAndSetAudioContext();
+        if (contextPromise) {
+            await contextPromise;
+        }
     }
 
     secondsPerFile = 0;
     secondsPerFile = 'opz' === commonSelectDevice ? 12 : secondsPerFile;
     secondsPerFile = 'op1f' === commonSelectDevice ? 20 : secondsPerFile;
-    /*secondsPerFile = 'opxy' === commonSelectDevice ? 20 : secondsPerFile;*/
+    /*secondsPerFile = 'xy' === commonSelectDevice ? 20 : secondsPerFile;*/
 
     toggleSecondsPerFile(false,
       !secondsPerFile ? 0 :
@@ -339,10 +342,13 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 
     if (commonSelectDevice) {
         settings.exportChainsAsPresets = false;
-        if ('opxy' === commonSelectDevice) {
+        if ('xy' === commonSelectDevice) {
             updateExportChainsAsPresets({device: 'xy', length: 24});
+        } else if ('tv' === commonSelectDevice) {
+            updateExportChainsAsPresets({device: 'tv', length: 84});    
         } else {
-            updateUiButtonAction('exportChainsAsPresets', '.toggle-xy-preset-bundling');
+            updateUiButtonAction('exportChainsAsPresets', '.toggle-preset-bundling-xy');
+            updateUiButtonAction('exportChainsAsPresets', '.toggle-preset-bundling-tv');
             settings.spacedChainMode = 'dt' === commonSelectDevice;
             updateSpacedChainMode();
         }
@@ -506,7 +512,8 @@ function getNextChainFileName(length) {
       : ''}`;
     chainNameBtnEl.classList[chainNameBtnEl.dataset.count ? 'remove' : 'add'](
       'fade');
-    return `${item.name}--[${length}].wav`;
+    //return `${item.name}--[${length}]`;
+    return item.name;
 }
 
 function generateChainNames() {
@@ -1452,12 +1459,15 @@ function updateSpacedChainMode(toggleSetting) {
     const spacedEl = document.querySelector('button.dl-spaced');
     const chainEl = document.querySelector('button.dl-chain');
     const spacedToggleEl = document.querySelector('.toggle-spaced-chain-mode')
-    if (toggleSetting && !settings.exportChainsAsPresets) {
+    if (toggleSetting) {
         settings.spacedChainMode = !settings.spacedChainMode;
     }
     spacedToggleEl.classList[settings.spacedChainMode ? 'remove' : 'add']('fade');
     spacedEl.style.display = settings.spacedChainMode ? 'block' : 'none';
     chainEl.style.display = settings.spacedChainMode ? 'none' : 'block';
+    if (settings.spacedChainMode && settings.exportChainsAsPresets) {
+        updateExportChainsAsPresets(false);
+    }
 }
 
 function updateUiButtonAction(param, buttonClass, toggleSetting, forceValue) {
@@ -1465,7 +1475,7 @@ function updateUiButtonAction(param, buttonClass, toggleSetting, forceValue) {
     if (toggleSetting) {
         settings[param] = forceValue === undefined ? !settings[param] : forceValue;
     }
-    buttonEl.classList[settings[param]? 'remove' : 'add']('fade');
+    buttonEl?.classList[settings[param]? 'remove' : 'add']('fade');
 }
 
 function updateExportChainsAsPresets(presetConfig) {
@@ -1473,7 +1483,9 @@ function updateExportChainsAsPresets(presetConfig) {
         updateSpacedChainMode(true);
     }
     const _presetConfig = presetConfig.device === settings.exportChainsAsPresets?.device ? undefined : presetConfig;
-    updateUiButtonAction('exportChainsAsPresets', `.toggle-${presetConfig.device}-preset-bundling`, true, _presetConfig);
+    const buttonElements = document.querySelectorAll('button[class^=toggle-preset-bundling]');
+    buttonElements.forEach(el => el.classList.add('fade'));
+    updateUiButtonAction('exportChainsAsPresets', `.toggle-preset-bundling-${presetConfig.device}`, (settings.exportChainsAsPresets !== presetConfig), _presetConfig);
     setCountValues();
 }
 
@@ -1866,7 +1878,7 @@ function showExportSettingsPanel(page = 'settings') {
             <option value="44100s24w0-4-8-16-32-48-64" data-device="ot">Octatrack (24bit)</option>
             <option value="44100s16a0-4-8-12-16-20-24" data-device="op1f">OP-1 Field</option>
             <option value="44100m16a0-4-8-12-16-20-24" data-device="opz">OP-1 / OP-Z</option>
-            <option value="44100s16w0-4-8-12-16-20-24" data-device="opxy">OP-XY</option>
+            <option value="44100s16w0-4-8-12-16-20-24" data-device="xy">OP-XY</option>
             <option value="44100m16w0-4-8-16-24-32-48" data-device="pt">Polyend Tracker</option>
             <option value="44100s16w0-4-8-16-24-32-48" data-device="pt">Polyend Tracker Mini</option>
             <option value="48000m16w0-8-10-12-15-30-60" data-device="dt">Rytm</option>
@@ -1874,6 +1886,8 @@ function showExportSettingsPanel(page = 'settings') {
             <option value="24000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 24kHz</option>
             <option value="46875m16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (mono)</option>
             <option value="46875s16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (stereo)</option>
+            <option value="48000s16w0-4-8-12-24-48-84" data-device="tv">Tonverk (16bit)</option>
+            <option value="48000s24w0-4-8-12-24-48-84" data-device="tv">Tonverk (24bit)</option>
         </select>
       </td>
       </tr>
@@ -2378,17 +2392,19 @@ async function joinAll(
           );
 
         if (settings.exportChainsAsPresets) {
-            const xySlices = [];
-            const xyFileName = `${sanitizeFileName(_fileName).substring(0, 14)}${fileCount + 1}`.replaceAll(/([-.])/gi, '');
+            const presetSlices = [];
+            const presetFileName = settings.exportChainsAsPresets.device === 'xy' ?
+              `${sanitizeFileName(_fileName).substring(0, 14)}${fileCount + 1}`.replaceAll(/([-.])/gi, '') :
+              _fileName;
             _files.forEach((f, idx) => {
-                let sNum = `${idx + 1}`;
-                sNum = sNum.length === 1 ? `0${sNum}` : sNum;
+                //let sNum = `${idx + 1}`;
+                //sNum = sNum.length === 1 ? `0${sNum}` : sNum;
 
                 if (f.buffer.channel0) {
                     f = bufferRateResampler(f);
                 }
 
-                f.name = `${xyFileName}${sNum}`;
+                //f.name = `${f.name || presetFileName}${sNum}`;
                 if (f.buffer) {
                     const dataView = audioBufferToWav(
                       f.buffer, {...f.meta, renderAt: targetSR}, masterSR, masterBitDepth,
@@ -2400,19 +2416,34 @@ async function joinAll(
                     let blob = new window.Blob([dataView.buffer], {
                         type: 'audio/wav'
                     });
+                    
+                    const sliceName = getUniqueName(_files.filter(_f => _f !== f),f?.file?.name?.replace(/\.wav$/i, targetContainer === 'a' ? '.aif' : '.wav') || f.name).replace(/(\s-\s|\s)/g, '-');
+                    
+                    if (settings.exportChainsAsPresets.device === 'xy') {
+                        zip.file(`${presetFileName}.preset/${sliceName}`, blob, {binary: true});  
+                    } else {
+                        zip.file(`${presetFileName}/${sliceName}`, blob, {binary: true});  
+                    }
 
-                    zip.file(`${xyFileName}.preset/${f.name}.wav`, blob, {binary: true});
-                    xySlices.push({
+                    presetSlices.push({
                         s: 0,
                         e: f.buffer.length,
                         l: f.buffer.length,
                         buffer: f.buffer,
-                        name: f.name
+                        name: sliceName
                     });
                 }
             });
-            const xyPatchData = buildXyDrumPatchData({}, xySlices);
-            zip.file(`${xyFileName}.preset/patch.json`, JSON.stringify(xyPatchData));
+            if (settings.exportChainsAsPresets.device === 'xy') {
+                const xyPatchData = buildXyDrumPatchData({}, presetSlices.map(s => {
+                     s.name = s.name.replace(/\.(wav|aif)$/i, '');
+                     return s;
+                }), true);
+                zip.file(`${presetFileName}.preset/patch.json`, JSON.stringify(xyPatchData));
+            } else {
+                const elMultiMarkup = buildElMultiMarkup(presetFileName,presetSlices);
+                zip.file(`${presetFileName}/${presetFileName}.elmulti`, elMultiMarkup);
+            }
         } else {
 
             const audioArrayBuffer = audioCtx.createBuffer(
@@ -4694,8 +4725,11 @@ const getRandomFileSelectionFrom = (fileCollection) => {
     //return selection.slice(0, (sliceGrid > 0 ? sliceGrid : 256));
 };
 
-const addBlankFile = () => {
-    checkAndSetAudioContext();
+const addBlankFile = async () => {
+    const contextPromise = checkAndSetAudioContext();
+    if (contextPromise) {
+        await contextPromise;
+    }
     const blankFile = generateBlankFile();
     const insertAt = lastSelectedRow ? getFileIndexById(
       lastSelectedRow.dataset.id) + 1 : files.length;
@@ -4745,7 +4779,10 @@ const consumeFileInput = async (event, inputFiles) => {
     setLoadingText('Loading samples');
     const isAudioCtxClosed = checkAudioContextState();
     if (isAudioCtxClosed) { return; }
-    checkAndSetAudioContext();
+    const contextPromise = checkAndSetAudioContext();
+    if (contextPromise) {
+        await contextPromise;
+    }
 
     inputFiles = [...inputFiles];
 
@@ -5010,9 +5047,12 @@ const consumeFileInput = async (event, inputFiles) => {
     }, 10000);
 };
 
-const dropHandler = (event) => {
+const dropHandler = async (event) => {
     event.preventDefault();
-    checkAndSetAudioContext();
+    const contextPromise = checkAndSetAudioContext();
+    if (contextPromise) {
+        await contextPromise;
+    }
     if (!lastSelectedRow?.classList?.contains('is-dragging')) {
         if (event?.dataTransfer?.items?.length &&
           event?.dataTransfer?.items[0].kind === 'string') {
@@ -5146,8 +5186,8 @@ function init() {
 
     uploadInput.addEventListener(
       'change',
-      () => consumeFileInput({shiftKey: modifierKeys.shiftKey},
-        uploadInput.files),
+      async () => await consumeFileInput({shiftKey: modifierKeys.shiftKey},
+                uploadInput.files),
       false
     );
     uploadInput.addEventListener(
@@ -5465,7 +5505,7 @@ function init() {
     }
     updateSpacedChainMode();
     updateUiButtonAction('updateResampleChainsToList', '.toggle-top-list');
-    updateUiButtonAction('exportChainsAsPresets', '.toggle-xy-preset-bundling');
+    updateExportChainsAsPresets(settings.exportChainsAsPresets);
     setTimeout(() => toggleOptionsPanel(), 250);
     configDb();
     document.getElementById('modifierKeyctrlKey').textContent= navigator.userAgent.indexOf('Mac') !== -1 ? 'CMD' : 'CTRL';
@@ -5484,9 +5524,12 @@ function configDb(skipLoad = false, callback) {
         return clearIndexedDb();
     }
     dbReq = indexedDB.open('digichain', 1);
-    dbReq.onsuccess = () => {
+    dbReq.onsuccess = async () => {
         db = dbReq.result;
-        checkAndSetAudioContext();
+        const contextPromise = checkAndSetAudioContext();
+        if (contextPromise) {
+            await contextPromise;
+        }
         if (!skipLoad) {
             setLoadingText('Restoring Session');
             loadState();

@@ -8,6 +8,9 @@
  - FireFox support warning in header bar.
  - When creating spaced chains, a new setting in the settings panel allows the pad to be set to repeat the last sample in the chain (the default setting), pad with silent slices, pad with a random slice from the current chain, or pad with reversed version of the samples in the chain starting from slice 1.
  - Fixed position of header toolbar on settings panel; Fixed position of x close icon on all dialogs.
+ - Fixed custom chain names having double file extension, removed slice count append from custom chain names.
+ - Add Tonverk common configurations in audio settings panel.
+ - Added support for generating basic .elmulti Tonverk multi-sampler presets to act as slice chains.
 
 2025.05.30 1.5.0
  - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.

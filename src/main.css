@@ -1698,7 +1698,7 @@ input, .btn-audio-config { color: #a8a8a8; }
 #getJoined, .wav-link-hidden, .meta-link-hidden, .hidden { visibility: hidden; }
 .hide { display: none !important; }
 .fade { opacity: .15 !important; }
-.chain-action-icons:has(.toggle-xy-preset-bundling:not(.fade)) .toggle-top-list {
+.chain-action-icons:has(button[class^=toggle-preset-bundling]:not(.fade)) .toggle-top-list {
     opacity: .15 !important;
 }
 .slice-loop {
@@ -2371,8 +2371,8 @@ dialog .content {
     padding: 0;
 }
 
-.toggle-xy-preset-bundling {
-    width: 3rem;
+button[class^=toggle-preset-bundling] {
+    width: 1.75rem;
     display: flex;
     height: 4rem;
     align-content: center;
@@ -2418,7 +2418,7 @@ button:has(.join-count[data-join-count="0"]) {
     transition: color .2s;
 }
 .button-clear:has(i):focus,
-.button-clear.toggle-xy-preset-bundling {
+.button-clear[class^=toggle-preset-bundling] {
     color: #d79c4e;
 }
 .button-clear.remove:hover,

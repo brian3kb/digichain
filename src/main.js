@@ -1451,7 +1451,11 @@ function toggleSecondsPerFile(event, value) {
             shiftKey: false,
             target: document.querySelector('.slice-grid-off')
         }, 0);
+        if (settings.spacedChainMode) {
+            updateSpacedChainMode(true);
+        }
     }
+    
     setCountValues();
 }
 

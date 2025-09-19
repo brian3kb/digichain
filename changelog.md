@@ -11,6 +11,7 @@
  - Fixed custom chain names having double file extension, removed slice count append from custom chain names.
  - Add Tonverk common configurations in audio settings panel.
  - Added support for generating basic .elmulti Tonverk multi-sampler presets to act as slice chains.
+ - Fixes bug where turning seconds per file on, did not turn off spaced chain mode resulting in no chain download button being shown to the user.
 
 2025.05.30 1.5.0
  - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.

@@ -201,6 +201,7 @@ async function checkAndSetAudioContext() {
         });
     }
     if (audioCtx.state === 'suspended') {
+        await dcDialog('alert', 'Click "OK" allow DigiChain to use the audio device.', {kind: 'info', okLabel: 'OK'});
         return await audioCtx.resume();
     }
 }
@@ -5523,8 +5524,8 @@ function init() {
 }
 
 async function clearIndexedDb() {
-    await db.close();
-    await indexedDB.deleteDatabase('digichain');
+    await db?.close();
+    await indexedDB?.deleteDatabase('digichain');
     if (settings.retainSessionState) {
         configDb(true);
     }
@@ -5532,15 +5533,12 @@ async function clearIndexedDb() {
 
 function configDb(skipLoad = false, callback) {
     if (!settings.retainSessionState) {
-        return clearIndexedDb();
+        clearIndexedDb();
+        return showWelcome();
     }
     dbReq = indexedDB.open('digichain', 1);
     dbReq.onsuccess = async () => {
         db = dbReq.result;
-        const contextPromise = checkAndSetAudioContext();
-        if (contextPromise) {
-            await contextPromise;
-        }
         if (!skipLoad) {
             setLoadingText('Restoring Session');
             loadState();
@@ -5632,6 +5630,11 @@ function loadState(skipConfirm = false) {
                 }
             }
 
+            const contextPromise = checkAndSetAudioContext();
+            if (contextPromise) {
+                await contextPromise;
+            }
+            
             files = requestFiles.result.map(f => bufferRateResampler(f));
 
             renderList(true);

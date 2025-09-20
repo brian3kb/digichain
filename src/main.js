@@ -45,6 +45,7 @@ let metaFiles = [];
 let mergeFiles = [];
 let chainFileNames = []; //{ name: '', used: false }
 let lastSort = '';
+let joinCount = 0;
 let lastSelectedRow;
 let lastDragOverRow;
 let lastLastSelectedRow;
@@ -1618,13 +1619,22 @@ function showExportSettingsPanel(page = 'settings') {
             2 ? 'button' : 'button-outline'}">Peak</button>
       </td>
       </tr>
-      <td><span>Try to match start/end sample when cropping/truncating?&nbsp;&nbsp;&nbsp;</span></td>
-    <td><button title="Could give shorter length samples than specified but can help
+      <tr>
+        <td><span>Use a Date Number in place of a file name for exported chain files?&nbsp;&nbsp;&nbsp;</span></td>
+        <td><button title="When set to NO, the first filename in the chain will be used to name the chain, if set to YES, the epoch number at the time of processing will be used. " onpointerdown="digichain.toggleSetting('useDateNumberInPlaceOfFileName')" class="check ${settings.useDateNumberInPlaceOfFileName
+              ? 'button'
+              : 'button-outline'}">${settings.useDateNumberInPlaceOfFileName ? 'YES' : 'NO'}</button>
+       </td>
+    </tr>
+      <tr>
+        <td><span>Try to match start/end sample when cropping/truncating?&nbsp;&nbsp;&nbsp;</span></td>
+        <td><button title="Could give shorter length samples than specified but can help
        reduce clicks on looping cropped/truncated samples" onpointerdown="digichain.toggleSetting('attemptToFindCrossingPoint')" class="check ${settings.attemptToFindCrossingPoint
               ? 'button'
-              : 'button-outline'}">${settings.attemptToFindCrossingPoint ? 'YES' : 'NO'}</button></td>
+              : 'button-outline'}">${settings.attemptToFindCrossingPoint ? 'YES' : 'NO'}</button>
+       </td>
     </tr>
-        <tr>
+    <tr>
       <td><span>De-click exported samples?<br>Helps when importing non-wav files of a different<br>sample rate than the export file, or small buffered audio interfaces. &nbsp;&nbsp;&nbsp;</span></td>
       <td>
       <button onpointerdown="digichain.toggleSetting('deClick', 0)" class="check ${+settings.dePopClick ===
@@ -1642,7 +1652,7 @@ function showExportSettingsPanel(page = 'settings') {
       <button onpointerdown="digichain.toggleSetting('deClick', 0.75)" class="check ${+settings.dePopClick ===
             0.75 ? 'button' : 'button-outline'}">&gt;75%</button>
       </td>
-      </tr>
+    </tr>
     <tr style="${window.__TAURI__ ? 'display: none;' : ''}">
     <td><span>Download multi-file/joined downloads as one zip file? &nbsp;&nbsp;&nbsp;</span></td>
     <td><button onpointerdown="digichain.toggleSetting('zipDownloads')" class="check ${settings.zipDownloads
@@ -2386,19 +2396,19 @@ async function joinAll(
 
         const path = _files[0].file.path ? `${(_files[0].file.path || '').replace(
           /\//gi, '-')}` : '';
+        const fileCountText = `${fileCount + 1}`.padStart(`${joinCount}`.length, '0');
         const _fileName = chainFileNamesAvailable() ?
           getNextChainFileName(_files.length) :
           (
-            _files.length === 1 ?
-              `${path}chain-${pad ? 'spaced-' : ''}${getNiceFileName('', _files[0], true)}-${fileCount +
-          1}--${_files.length}` :
-              `${path}chain-${pad ? 'spaced-' : ''}${fileCount + 1}--${_files.length}`
+            settings.useDateNumberInPlaceOfFileName ?
+              `${path}dc-${pad ? 'sp-' : ''}${Date.now()}-${fileCountText}--${_files.length}` :
+              `${path}dc-${pad ? 'sp-' : ''}${getNiceFileName('', _files[0], true)}-${fileCountText}--${_files.length}`
           );
 
         if (settings.exportChainsAsPresets) {
             const presetSlices = [];
             const presetFileName = settings.exportChainsAsPresets.device === 'xy' ?
-              `${sanitizeFileName(_fileName).substring(0, 14)}${fileCount + 1}`.replaceAll(/([-.])/gi, '') :
+              `${sanitizeFileName(_fileName).substring(0, 14)}${fileCountText}`.replaceAll(/([-.])/gi, '') :
               _fileName;
             _files.forEach((f, idx) => {
                 //let sNum = `${idx + 1}`;
@@ -3658,7 +3668,7 @@ function setCountValues() {
     const filesDuration = files.reduce((a, f) => a += +f.meta.duration, 0);
     const filesSelectedDuration = filesSelected.reduce(
       (a, f) => a += +f.meta.duration, 0);
-    const joinCount = chainCount === 0 ? 0 : (chainCount > 0 &&
+    joinCount = chainCount === 0 ? 0 : (chainCount > 0 &&
     sliceGridT > 0 ? Math.ceil(chainCount / sliceGridT) : 1);
     const chainText = settings.exportChainsAsPresets ? ' Preset' : ' Chain';
     document.getElementById(

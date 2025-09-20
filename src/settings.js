@@ -34,7 +34,8 @@ const defaultSettings = {
     shiftClickForFileDownload: false,
     skipMiniWaveformRender: false,
     treatDualMonoStereoAsMono: true,
-    zipDownloads: true
+    zipDownloads: true,
+    useDateNumberInPlaceOfFileName: false
 };
 
 const getDefaultSetting = function(prop) {

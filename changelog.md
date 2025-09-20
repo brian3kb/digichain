@@ -1,217 +1,234 @@
+1.5.1
+ - Added support for importing slice data from Ableton Simpler (supporting transient detected slices or manual slices depending on what was active when the .adv preset was saved).
+ - Additional changes toward desktop app support.
+ - New setting for Octatrack exports, "Use even numbered slices as loop point of prev slice on .ot exports?"; When this is set to YES, and the .ot file creation is set to YES, joined files are treated as pairs, with the first being the start (attack) part of the slice, and the second being the Octatrack (loop) part of the slice.
+ - Clear slice data selected action so all slice data can be cleared at once if needed.
+ - Cut/Paste action button on sample editor panel.
+ - Show sample play head on sample editor panel.
+ - FireFox support warning in header bar.
+ - When creating spaced chains, a new setting in the settings panel allows the pad to be set to repeat the last sample in the chain (the default setting), pad with silent slices, pad with a random slice from the current chain, or pad with reversed version of the samples in the chain starting from slice 1.
+ - Fixed position of header toolbar on settings panel; Fixed position of x close icon on all dialogs.
+ - Fixed custom chain names having double file extension, removed slice count append from custom chain names.
+ - Add Tonverk common configurations in audio settings panel.
+ - Added support for generating basic .elmulti Tonverk multi-sampler presets to act as slice chains.
+ - Fixes bug where turning seconds per file on, did not turn off spaced chain mode resulting in no chain download button being shown to the user.
+ - Changed the default naming convention for chain names to be shorter text and correctly pad the chain number when creating many chains at once.
+ - New option in the settings to use the date epoch at time of creation number instead of the name of the first sample in the chain.
+
 2025.05.30 1.5.0
-- Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.
-- Style tweaks to support rendering within itch.io windows.
-- Enhanced waveform rendering accuracy and performance (thanks to github.com/boourns for the pull request).
-- Dither exports option when outputting 8/16/24 bit wav or 16 bit aif files.
-- Added user feedback on sample load processing.
-- Improved responsiveness of list with large numbers of samples loaded.
-- Reduced file processing load times.
-- Added a welcome screen with some usage guidance, tips, and link out to documentation page.
-- Show the length in seconds of the sample being edited on the editor.
-- Support importing samples and slices from Renoise Instrument files (.xrni) in addition to sample data from Renoise Project files (.xrnx).
-- Mini-waveform renderer no longer builds waveform cache when skip render is enabled.
-- Prevent default event bubbling on keydown events for handled keyboard shortcuts, stops 'funk' noise on macOS for valid shortcuts.
-- Improved creation of OP-1 Field / OP-Z chains, nudging end to zero crossing per slice if one is present in the last 256 samples.
-- OP-1 Field / OP-Z exports now default to one-shot play mode.
-- Shift + click on Pad With Zero selected action allows entering a custom value to pad the sample(s) with in seconds.
-- Config option, treat slice data in files as distinct files on join - defaults to YES, when set to YES, if a file contains slice data or has had slice data configured those slices will be represented as distinct files when creating new chains that include those selected slices; when set to NO, the per-file slices will be discarded when joined to new chains.
-- Moved about pop-up into unified audio config, settings, about panel.
-- Supporting the import and export of digichain session files.
-- Using a custom dialog instead of the browser built-ins to handle user prompts/confirmations.
-- Moved browser based alert messaging into a toast style notification that displays at the top center of the active window or dialog.
-- OP Export UI for creating drum kits for OP-1 Field and OP-XY via a drag and drop key layout.
-- OP Export supports combining samples on Left / Right / Center to more easily create A/B kits for use on the Field.
-- Chains / Spaced Chains buttons now do not both display, they are toggled via the new Chain Type toggle icon.
-- Rendering created chains to the top of the list instead of out to a downloaded zip file (the Shift + Click button action), is now toggled from an icon.
-- XY preset rendering toggle icon, when enabled, chains are created as XY Preset folders in the output zip, max 24 slices and samples longer than 20 seconds will be automatically truncated.
-- Invert phase selected action.
-- Flip L/R selected action, switched the left and right channels around.
-- Editor waveform height adjustment control (height retained as setting).
-- Crop keyboard shortcuts in the editor, Shift+Click to crop to a new sample, staying in the current sample; Shift+Ctrl+Click to crop to a new sample and open that new sample in the editor.
-- Bug fixes:
-    - Delayed list rendering bug when removing all selected samples.
-    - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
-    - Sanitize name selected action.
-    - When restore last used audio config is set to off, the text label of the audio config indicator was blank.
-    - Where canvas element replacement threw an error when slicing to samples from the slice panel with skip render waveforms enabled.
-    - Toggling the max-seconds per chain option de-selected all samples.
-    - XY common configuration no longer sets the seconds time limit per chain to on.
-    - OP Export renders at the target sample rate for XY presets and 44.1kHz regardless of the target sample rate for OP-1 Field kits.
-    - Play-head was not displayed when playing the highlighted sample in the list using the P key keyboard shortcut.
-    - Only positive buffer values were being removed in the condense action.
-    - Edit panel not consistently closing when using the Escape key.
-    - Smoothing on fuzz selected action caused peak spikes on some sample material.
-    - Setting DT / DT II / XY / M8 / OT did not toggle the spaced / xy settings and icons when using the common configurations options.
-    - Slice panel waveform did not show when no slices were set (regression fix from edit panel renderer changes).
+ - Show loading overlay until async sample processing has completed to prevent multiple calls to renderList before the list is ready.
+ - Style tweaks to support rendering within itch.io windows.
+ - Enhanced waveform rendering accuracy and performance (thanks to github.com/boourns for the pull request).
+ - Dither exports option when outputting 8/16/24 bit wav or 16 bit aif files.
+ - Added user feedback on sample load processing.
+ - Improved responsiveness of list with large numbers of samples loaded.
+ - Reduced file processing load times.
+ - Added a welcome screen with some usage guidance, tips, and link out to documentation page.
+ - Show the length in seconds of the sample being edited on the editor.
+ - Support importing samples and slices from Renoise Instrument files (.xrni) in addition to sample data from Renoise Project files (.xrnx).
+ - Mini-waveform renderer no longer builds waveform cache when skip render is enabled.
+ - Prevent default event bubbling on keydown events for handled keyboard shortcuts, stops 'funk' noise on macOS for valid shortcuts.
+ - Improved creation of OP-1 Field / OP-Z chains, nudging end to zero crossing per slice if one is present in the last 256 samples.
+ - OP-1 Field / OP-Z exports now default to one-shot play mode.
+ - Shift + click on Pad With Zero selected action allows entering a custom value to pad the sample(s) with in seconds.
+ - Config option, treat slice data in files as distinct files on join - defaults to YES, when set to YES, if a file contains slice data or has had slice data configured those slices will be represented as distinct files when creating new chains that include those selected slices; when set to NO, the per-file slices will be discarded when joined to new chains.
+ - Moved about pop-up into unified audio config, settings, about panel.
+ - Supporting the import and export of digichain session files.
+ - Using a custom dialog instead of the browser built-ins to handle user prompts/confirmations.
+ - Moved browser based alert messaging into a toast style notification that displays at the top center of the active window or dialog.
+ - OP Export UI for creating drum kits for OP-1 Field and OP-XY via a drag and drop key layout.
+ - OP Export supports combining samples on Left / Right / Center to more easily create A/B kits for use on the Field.
+ - Chains / Spaced Chains buttons now do not both display, they are toggled via the new Chain Type toggle icon.
+ - Rendering created chains to the top of the list instead of out to a downloaded zip file (the Shift + Click button action), is now toggled from an icon.
+ - XY preset rendering toggle icon, when enabled, chains are created as XY Preset folders in the output zip, max 24 slices and samples longer than 20 seconds will be automatically truncated.
+ - Invert phase selected action.
+ - Flip L/R selected action, switched the left and right channels around.
+ - Editor waveform height adjustment control (height retained as setting).
+ - Crop keyboard shortcuts in the editor, Shift+Click to crop to a new sample, staying in the current sample; Shift+Ctrl+Click to crop to a new sample and open that new sample in the editor.
+ - Bug fixes:
+   - Delayed list rendering bug when removing all selected samples.
+   - When a waveform is too short to render a valid mini-waveform, the renderer replaced the parent dom node, causing a dom tree layout issue, this is now fixed.
+   - Sanitize name selected action.
+   - When restore last used audio config is set to off, the text label of the audio config indicator was blank.
+   - Where canvas element replacement threw an error when slicing to samples from the slice panel with skip render waveforms enabled.
+   - Toggling the max-seconds per chain option de-selected all samples.
+   - XY common configuration no longer sets the seconds time limit per chain to on.
+   - OP Export renders at the target sample rate for XY presets and 44.1kHz regardless of the target sample rate for OP-1 Field kits.
+   - Play-head was not displayed when playing the highlighted sample in the list using the P key keyboard shortcut.
+   - Only positive buffer values were being removed in the condense action.
+   - Edit panel not consistently closing when using the Escape key.
+   - Smoothing on fuzz selected action caused peak spikes on some sample material.
+   - Setting DT / DT II / XY / M8 / OT did not toggle the spaced / xy settings and icons when using the common configurations options.
+   - Slice panel waveform did not show when no slices were set (regression fix from edit panel renderer changes).
 
 2025.01.16 1.4.16
-- Nudge Crossings selected action, nudges all zero crossings off from zero.
-- Pad with Zero selected action, adds a zero sample to the beginning and end of each file.
-- Shift selected action, moves the sample start position over 50%.
-- Fixed bug where resampling the list when changing the working sample-rate caused the loop point to bet set on .ot slice metadata.
-- Support for reading slice data from the Sonicware LoFi-12 XT custom header data.
-- Added common configurations for Sonicware LoFi-12 XT (12/24 kHz target sample rate).
-- Added common configurations for Teenage Engineering EP-133 / EP-1320 mono/stereo.
-- Fixed some browser specific UI element positioning quirks.
-- Added de-serialize from mono L/R back to a stereo sample selected action (halves a mono sample and puts the first half on the left channel, second half on the right).
-- Prevent slicing by transient assigning an ot meta loop point flag.
-- Added button to set a custom slice count on the slices panel.
-- Change default chain names to not contain _ or [ ] chars.
-- Turn off embed slice data config option by default.
-- Use Cue markers as preferred slice data storage within the wav file data.
-- Turn on/off .ot file export options when choosing the ot common configuration on the audio config panel.
-- Add OP-XY to common configurations, as this uses wav files as the primary file type.
-- Sanitize Names selected action to format file names to align with the guidelines for successful MTP transfer to Teenage Engineering OP-XY filesystem.
-- Minor wav encode bug, the cue chunk size property should be 8 bytes less than the total chunk byte length, not 4.
+ - Nudge Crossings selected action, nudges all zero crossings off from zero.
+ - Pad with Zero selected action, adds a zero sample to the beginning and end of each file.
+ - Shift selected action, moves the sample start position over 50%.
+ - Fixed bug where resampling the list when changing the working sample-rate caused the loop point to bet set on .ot slice metadata.
+ - Support for reading slice data from the Sonicware LoFi-12 XT custom header data.
+ - Added common configurations for Sonicware LoFi-12 XT (12/24 kHz target sample rate).
+ - Added common configurations for Teenage Engineering EP-133 / EP-1320 mono/stereo.
+ - Fixed some browser specific UI element positioning quirks.
+ - Added de-serialize from mono L/R back to a stereo sample selected action (halves a mono sample and puts the first half on the left channel, second half on the right).
+ - Prevent slicing by transient assigning an ot meta loop point flag.
+ - Added button to set a custom slice count on the slices panel.
+ - Change default chain names to not contain _ or [ ] chars.
+ - Turn off embed slice data config option by default.
+ - Use Cue markers as preferred slice data storage within the wav file data.
+ - Turn on/off .ot file export options when choosing the ot common configuration on the audio config panel.
+ - Add OP-XY to common configurations, as this uses wav files as the primary file type.
+ - Sanitize Names selected action to format file names to align with the guidelines for successful MTP transfer to Teenage Engineering OP-XY filesystem.
+ - Minor wav encode bug, the cue chunk size property should be 8 bytes less than the total chunk byte length, not 4.
 
 2024.05.28 1.4.15
-- Amplitude threshold condense selected action, enter an upper and lower amplitude value (between 0 and 1), the sample will be modified to only include amplitudes within the given range, gaps between the audio is removed condensing the sample size.
-- Ctrl + Click on Filename column header to sort the list by numeric filename content only.
-- Improved drop file order consistency.
-- Allow dropping mp3 files.
-- If sample has slice information, the slices will be shown on the waveform when the slice panel opens.
-- Support multi-touch for selecting/deselecting samples.
+ - Amplitude threshold condense selected action, enter an upper and lower amplitude value (between 0 and 1), the sample will be modified to only include amplitudes within the given range, gaps between the audio is removed condensing the sample size.
+ - Ctrl + Click on Filename column header to sort the list by numeric filename content only.
+ - Improved drop file order consistency.
+ - Allow dropping mp3 files.
+ - If sample has slice information, the slices will be shown on the waveform when the slice panel opens.
+ - Support multi-touch for selecting/deselecting samples.
 
 2024.05.14 1.4.14
-- Added basic error catch in the joinAll method to help surface chain build errors.
-- User alert for userAgent version checks to inform users if their browser is of a minimum supported version for the browser API's used.
-- Fixes bug when in the sample editor, and snap to zero was enabled, if no zero crossing could be found on the end point, then browser tab would hang on short samples.
-- Fixes bug where an end point selected before the current non-zero start point with snap to zero crossing enabled, would result in a negative preview playback value causing looped playback preview in the editor to not play any audio.
-- Defaulting to 48kHz as the working sample rate for broader compatibility with built-in audio devices (continues to be user configurable in Audio Settings Panel, does not change if DigiChain has been used before as this is a restored setting).
-- If the sample list is empty, choosing an option from the 'Common Configurations' list will set both the Working Sample Rate and the Target Sample Rate to the same value.
-- When no samples are selected, clicking the chain buttons showed the processing overlay but did not remove it.
-- Selections won't clear when changing the slice-grid values via the audio config panel (grid choice will still be set to OFF).
-- The download buttons will now visually indicate their clickable state.
+ - Added basic error catch in the joinAll method to help surface chain build errors.
+ - User alert for userAgent version checks to inform users if their browser is of a minimum supported version for the browser API's used.
+ - Fixes bug when in the sample editor, and snap to zero was enabled, if no zero crossing could be found on the end point, then browser tab would hang on short samples.
+ - Fixes bug where an end point selected before the current non-zero start point with snap to zero crossing enabled, would result in a negative preview playback value causing looped playback preview in the editor to not play any audio.
+ - Defaulting to 48kHz as the working sample rate for broader compatibility with built-in audio devices (continues to be user configurable in Audio Settings Panel, does not change if DigiChain has been used before as this is a restored setting).
+ - If the sample list is empty, choosing an option from the 'Common Configurations' list will set both the Working Sample Rate and the Target Sample Rate to the same value.
+ - When no samples are selected, clicking the chain buttons showed the processing overlay but did not remove it.
+ - Selections won't clear when changing the slice-grid values via the audio config panel (grid choice will still be set to OFF).
+ - The download buttons will now visually indicate their clickable state.
 
 2024.04.30 1.4.13
-- Option to skip rendering of the mini waveform display in the sample list.
-- Fix regression bug on trim-right selected action.
+ - Option to skip rendering of the mini waveform display in the sample list.
+ - Fix regression bug on trim-right selected action.
 
 2024.04.24 1.4.12
-- Added Double selected action to add a copy of a sample to the end of itself for the selected samples.
-- Prev / Next buttons on the edit panel to navigate between samples without needing to close the edit panel and re-select from the list.
-- Cleaned up selected actions list, added overflow so list can scroll on mobile and flex to the width of the panel.
-- Shift + Ctrl/Cmd click stretch longest/shortest selected action to set the stretch length in samples instead of seconds.
-- Shift + Click on Trim Right button in editor, or selected actions, to also trim silence from the start (left) of the sample.
-- Changed the behavior of the grid size buttons, clicking will now set the grid size and keep the selection, to also change the selection is now the shift+click action; This is inverted from other versions, but has been a requested change by several users.
-- Shift + L will toggle the lists visibility, useful for simple chaining/conversion if loading a large number of files that can cause the browser dom rendering to slow.
-- Hide 'Create .OT' button on sample panel if target SR is not 44100.
-- Added common configuration for Digitakt II.
+ - Added Double selected action to add a copy of a sample to the end of itself for the selected samples.
+ - Prev / Next buttons on the edit panel to navigate between samples without needing to close the edit panel and re-select from the list.
+ - Cleaned up selected actions list, added overflow so list can scroll on mobile and flex to the width of the panel.
+ - Shift + Ctrl/Cmd click stretch longest/shortest selected action to set the stretch length in samples instead of seconds.
+ - Shift + Click on Trim Right button in editor, or selected actions, to also trim silence from the start (left) of the sample.
+ - Changed the behavior of the grid size buttons, clicking will now set the grid size and keep the selection, to also change the selection is now the shift+click action; This is inverted from other versions, but has been a requested change by several users.
+ - Shift + L will toggle the lists visibility, useful for simple chaining/conversion if loading a large number of files that can cause the browser dom rendering to slow.
+ - Hide 'Create .OT' button on sample panel if target SR is not 44100.
+ - Added common configuration for Digitakt II.
 
 2024.02.20 1.4.11
-- Fixes bug where saving slice data from imported slice file did not apply slice markers consistently.
-- Bug fix where parsing wav file headers contains multiple fmt chunks, where the first fmt chunk does not contain the samples format data.
+ - Fixes bug where saving slice data from imported slice file did not apply slice markers consistently.
+ - Bug fix where parsing wav file headers contains multiple fmt chunks, where the first fmt chunk does not contain the samples format data.
 
 2023.12.13 1.4.10
-- .xrns file contents parsing (useful for getting the samples out of a Renoise project file).
-- Parse the Renoise song data from within project files and extract slice markers.
-- When slicing from OP-1 Field tape.json, prevent the ot slice loop point CSS class being applied.
-- Drag-out single file from list (Chrome).
-- Option in settings to reverse all even samples in an exported chain (back-to-back mode).
-- Snap to zero-crossing toggle option on selections on edit panel.
-- Visual zero-crossing indicator on edit panel selection start and end points.
-- Surface tempo detection method to the edit panel to detect from the currently selected section of the waveform.
-- Fixed regression on .ot file generation not correctly setting the quantize value default to 'direct' instead of 'pattern length'.
-- Fixed bug when setting slice-grid options from the audio settings panel.
-- Added keyboard shortcuts info pop-up (Shift + ? / Shift + K).
+ - .xrns file contents parsing (useful for getting the samples out of a Renoise project file).
+ - Parse the Renoise song data from within project files and extract slice markers.
+ - When slicing from OP-1 Field tape.json, prevent the ot slice loop point CSS class being applied.
+ - Drag-out single file from list (Chrome).
+ - Option in settings to reverse all even samples in an exported chain (back-to-back mode).
+ - Snap to zero-crossing toggle option on selections on edit panel.
+ - Visual zero-crossing indicator on edit panel selection start and end points.
+ - Surface tempo detection method to the edit panel to detect from the currently selected section of the waveform.
+ - Fixed regression on .ot file generation not correctly setting the quantize value default to 'direct' instead of 'pattern length'.
+ - Fixed bug when setting slice-grid options from the audio settings panel.
+ - Added keyboard shortcuts info pop-up (Shift + ? / Shift + K).
 
 2023.11.04 1.4.9
-- Store list in indexedDb for optional restoring of the last session on next load.
-- Map the Ctrl key to the Cmd key for macOS keyboard shortcuts.
-- Automatically ignore empty or nonsense cue markers (e.g. zero length or start/end greater than file length, end greater than start).
-- Improve handling of joining chains with other chains/files and slice types.
-- Normalize the slice-type to the common format when processing internally.
-- Show the number of slices if the file has any on the slice-grid icon instead of OT/DC/OP text.
-- Improved the speed of conversion between spaced/none-spaced chains from the slice panel.
-- Allow users to change audio context when files are loaded without emptying list; An advisory message to confirm the action is shown, as the sample rates of all files in the list are internally resampled to the new context.
-- Decoupled the working audio sample rate from the export audio sample rate. This allows users to work at 44.1kHz, but export to 48kHz for example without destructively resampling the list source buffers.
-- Audio context options are now an audio config panel, allowing arbitrary sample rates, and choice of bit depth and channel combinations.
-- A list of common configurations by hardware name are available in the audio config panel.
-- Audio config panel has slice grid options inputs so last used values are remembered. These values are also updated as part of the common configs list options.
-- 'Retain session data between browser refreshes?' setting on settings panel.
-- Gain adjustment on the edit panel (Thanks to eljeff).
-- Option in settings panel to download single files when Shift+Clicked to prevent accidental downloads being triggered.
-- Added rough stretch to selected actions list, this attempts to retain pitch while doubling the duration of the sample.
-- Importing of Polyend Tracker (OG) .pti instrument files (mono only).
-- Toggle slice looping from the slice panel (useful for .ot exports).
-- Toggle file looping point from the slice panel (useful for .ot exports).
-- Correctly calculate the tempo and bar values on .ot exports.
-- Create .ot button on slice panel to create a .ot metadata file independently of downloading of the audio file.
+ - Store list in indexedDb for optional restoring of the last session on next load.
+ - Map the Ctrl key to the Cmd key for macOS keyboard shortcuts.
+ - Automatically ignore empty or nonsense cue markers (e.g. zero length or start/end greater than file length, end greater than start).
+ - Improve handling of joining chains with other chains/files and slice types.
+ - Normalize the slice-type to the common format when processing internally.
+ - Show the number of slices if the file has any on the slice-grid icon instead of OT/DC/OP text.
+ - Improved the speed of conversion between spaced/none-spaced chains from the slice panel.
+ - Allow users to change audio context when files are loaded without emptying list; An advisory message to confirm the action is shown, as the sample rates of all files in the list are internally resampled to the new context.
+ - Decoupled the working audio sample rate from the export audio sample rate. This allows users to work at 44.1kHz, but export to 48kHz for example without destructively resampling the list source buffers.
+ - Audio context options are now an audio config panel, allowing arbitrary sample rates, and choice of bit depth and channel combinations.
+ - A list of common configurations by hardware name are available in the audio config panel.
+ - Audio config panel has slice grid options inputs so last used values are remembered. These values are also updated as part of the common configs list options.
+ - 'Retain session data between browser refreshes?' setting on settings panel.
+ - Gain adjustment on the edit panel (Thanks to eljeff).
+ - Option in settings panel to download single files when Shift+Clicked to prevent accidental downloads being triggered.
+ - Added rough stretch to selected actions list, this attempts to retain pitch while doubling the duration of the sample.
+ - Importing of Polyend Tracker (OG) .pti instrument files (mono only).
+ - Toggle slice looping from the slice panel (useful for .ot exports).
+ - Toggle file looping point from the slice panel (useful for .ot exports).
+ - Correctly calculate the tempo and bar values on .ot exports.
+ - Create .ot button on slice panel to create a .ot metadata file independently of downloading of the audio file.
 
 2023.10.15 1.4.8
-- New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.
-- Dual mono exports setting error.
-- Prevent find crossing point on edit panel.
-- Issue with auto-naming of duplicate files/same file imported multiple times.
-- Trim-right on sample that had slices removed threw unhandled error.
-- Merge/Blend panel mono/pan controls not consistently updating UI when clicked.
-- Fixed rendering bugs with Firefox 118.x when page zoom higher than 100%.
-- Removed arcs in svg for better representation of the waveform graphics.
-- Ctrl + Click on the 'add samples' icon will add a blank sample (8 samples in length) to the list to use for padding chains.
+ - New serialize selected action, any selected samples that are stereo files, will have their stereo channels serialized to mono, by Left/Right, Side/Mid, or Left/Right/Side/Mid.
+ - Dual mono exports setting error.
+ - Prevent find crossing point on edit panel.
+ - Issue with auto-naming of duplicate files/same file imported multiple times.
+ - Trim-right on sample that had slices removed threw unhandled error.
+ - Merge/Blend panel mono/pan controls not consistently updating UI when clicked.
+ - Fixed rendering bugs with Firefox 118.x when page zoom higher than 100%.
+ - Removed arcs in svg for better representation of the waveform graphics.
+ - Ctrl + Click on the 'add samples' icon will add a blank sample (8 samples in length) to the list to use for padding chains.
 
 2023-08-31 1.4.7
-- Load samples from within zip files and Digitakt project files. (if max file limit setting is off, all files in the zip will be decompressed to memory, so be careful with zip sizes if setting that to off! If the zipped supported file count + file count already loaded is larger than the limit, the whole zip gets skipped).
-- Allow * and / on the stretch action shifted user input.
-- Hold shift on pitch buttons to use stretch instead of the resample method to affect the pitch.
-- Break-word on blend filenames to help prevent column width issues.
-- Fixed bug where keyboard shortcuts activated in name editing on edit panel.
-- Ctrl + Shift + Click On the edit panel, when clicking the waveform, this will set the end point selection to the clicked position and move the start point to the previous end point value.
-- Edit Panel, N : Create new slice.
-- Edit Panel, U : Update current slice.
-- Edit Panel, X : Remove current slice.
-- Option to export dual mono stereo files as a mono file (toggle in settings, on by default).
-- Shorten file path and names selected actions (and restore names).
-- Tweaks to note detection from filename.
-- Visual indicator on row name left-border if file path and name will be longer than 127 chars from root of the exported zip file.
-- Fixed bug (issue#2) where looped playback on edit panel spawned multiple audio playbacks when clicked repeatedly.
-- Changed behavior when removing all slices to default to whole waveform selected. (issue#3)
-- Fixed issue where duplicate samples inherited the filename instead of the name property. (issue#4)
-- Fixed padding issue on panel info text, and blend dropdown control.
-- Ignore multiple data chunk headers in the wav files to prevent instability when importing wav files. Fixes bug where tab might hang on import of some oddly structured wav file chunks.
+ - Load samples from within zip files and Digitakt project files. (if max file limit setting is off, all files in the zip will be decompressed to memory, so be careful with zip sizes if setting that to off! If the zipped supported file count + file count already loaded is larger than the limit, the whole zip gets skipped).
+ - Allow * and / on the stretch action shifted user input.
+ - Hold shift on pitch buttons to use stretch instead of the resample method to affect the pitch.
+ - Break-word on blend filenames to help prevent column width issues.
+ - Fixed bug where keyboard shortcuts activated in name editing on edit panel.
+ - Ctrl + Shift + Click On the edit panel, when clicking the waveform, this will set the end point selection to the clicked position and move the start point to the previous end point value.
+ - Edit Panel, N : Create new slice.
+ - Edit Panel, U : Update current slice.
+ - Edit Panel, X : Remove current slice.
+ - Option to export dual mono stereo files as a mono file (toggle in settings, on by default).
+ - Shorten file path and names selected actions (and restore names).
+ - Tweaks to note detection from filename.
+ - Visual indicator on row name left-border if file path and name will be longer than 127 chars from root of the exported zip file.
+ - Fixed bug (issue#2) where looped playback on edit panel spawned multiple audio playbacks when clicked repeatedly.
+ - Changed behavior when removing all slices to default to whole waveform selected. (issue#3)
+ - Fixed issue where duplicate samples inherited the filename instead of the name property. (issue#4)
+ - Fixed padding issue on panel info text, and blend dropdown control.
+ - Ignore multiple data chunk headers in the wav files to prevent instability when importing wav files. Fixes bug where tab might hang on import of some oddly structured wav file chunks.
 
 2023-08-09 1.4.6
-- Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data. When converted to a spaced chain, if the grid-size is set to a value, the new chain will be padded to this number.
-- Ctrl+Click to preview slices before slicing a sample.
-- Slice editing on sample edit panel, create/update/remove slice markers.
-- Playback/looped playback on the sample edit panel follows the selected region on the waveform.
-- Show stereo waveform if available on sample edit panel.
-- Update the row waveform when changing the mono rendering method.
-- Moved around the edit panel UI.
-- Added LRSD controls to the edit panel.
-- Remembering slice position/selection when changing options on edit panel.
-- Edit panel LRSD / play/stop keyboard shortcuts on edit panel.
-- Allow generating .ot metadata file on 16/24 44.1 mono exports.
-- Option in settings to match the end sample with the start sample (if possible), to help reduce clicks for samples that will be played looped. (can result in shorter than specified samples).
-- Read/write wav file cue point markers into DigiChain slice data (adds compatibility for DirtyWave M8 to read chains, and to import the slices from M8 to DigiChain).
-- Added basic sample stretching (which does affect pitch), stretch selected samples to shortest or longest sample in the list, or hold shift to set a custom length in seconds. (this will remove any slice data for the modified samples).
+ - Convert chains between evenly spaced and unspaced chains from the slice panel. Works with DC, Octatrack, and OP-x slice data. When converted to a spaced chain, if the grid-size is set to a value, the new chain will be padded to this number.
+ - Ctrl+Click to preview slices before slicing a sample.
+ - Slice editing on sample edit panel, create/update/remove slice markers.
+ - Playback/looped playback on the sample edit panel follows the selected region on the waveform.
+ - Show stereo waveform if available on sample edit panel.
+ - Update the row waveform when changing the mono rendering method.
+ - Moved around the edit panel UI.
+ - Added LRSD controls to the edit panel.
+ - Remembering slice position/selection when changing options on edit panel.
+ - Edit panel LRSD / play/stop keyboard shortcuts on edit panel.
+ - Allow generating .ot metadata file on 16/24 44.1 mono exports.
+ - Option in settings to match the end sample with the start sample (if possible), to help reduce clicks for samples that will be played looped. (can result in shorter than specified samples).
+ - Read/write wav file cue point markers into DigiChain slice data (adds compatibility for DirtyWave M8 to read chains, and to import the slices from M8 to DigiChain).
+ - Added basic sample stretching (which does affect pitch), stretch selected samples to shortest or longest sample in the list, or hold shift to set a custom length in seconds. (this will remove any slice data for the modified samples).
 
 2023-07-27 1.4.5
-- Improved the note from filename detection and sorting.
-- 44.1/48K 8bit mono/stereo file exports.
-- Crush selected actions action to add some crush/distortion to the sample.
-- Pitch up/down in cents in sample editor panel. (click the 'Pitch (semi-tones)' link to toggle between semi-tones and cents.)
+ - Improved the note from filename detection and sorting.
+ - 44.1/48K 8bit mono/stereo file exports.
+ - Crush selected actions action to add some crush/distortion to the sample.
+ - Pitch up/down in cents in sample editor panel. (click the 'Pitch (semi-tones)' link to toggle between semi-tones and cents.)
 
 2023-07-16 1.4.4
-- Minimizes reported click/pops on exported chains when importing wav files of differing sample rate to the target sample rate, or when using audio interfaces configured with small sample buffers. On by default at a 40% threshold, user configurable thresholds and can be disabled via settings panel.
-- Resolves issue where running in the Brave browser caused an unexpected error modifying an existing audio array buffer.
-- Added fuzz selected actions action to add fuzz/noise into the selected samples.
-- Added fade-in fade-out selected actions to fade in/out the first/last 256 samples of each selected sample.
-- Blend panel to blend/interpolate between the selected samples (works best when the samples are similar in duration).
+ - Minimizes reported click/pops on exported chains when importing wav files of differing sample rate to the target sample rate, or when using audio interfaces configured with small sample buffers. On by default at a 40% threshold, user configurable thresholds and can be disabled via settings panel.
+ - Resolves issue where running in the Brave browser caused an unexpected error modifying an existing audio array buffer.
+ - Added fuzz selected actions action to add fuzz/noise into the selected samples.
+ - Added fade-in fade-out selected actions to fade in/out the first/last 256 samples of each selected sample.
+ - Blend panel to blend/interpolate between the selected samples (works best when the samples are similar in duration).
 
 2023-07-02 1.4.3
-- Added a ping-pong selected actions action to add a reversed copy of the sample to the end of the sample.
-- Fixed issue where generated AIF files did not load slice data accurately into the new TE drum utility tool.
+ - Added a ping-pong selected actions action to add a reversed copy of the sample to the end of the sample.
+ - Fixed issue where generated AIF files did not load slice data accurately into the new TE drum utility tool.
 
 2023-06-01 1.4.2
-- Hold shift key while dragging in samples to import randomly up to the currently chosen grid-size.
-- Default to limit the number of imported samples to 750, to reduce risk of timeouts - can be disabled in the settings panel.
-- Limiting the max chain length to 64 slices when using the timed chain length in non-aif audio context, Aif context stays at max 24 slices.
-- Setting the default Shift import random drop value to 256 if no slice grid value is selected (this prevents accidental import of large numbers of files, Ctrl+click a slice-grid number and set a custom value to import more than 256 samples randomly).
-- Ctrl + Click on the Selected header text will toggle all the samples selection to all selected / all de-selected.
-- Changed load files to an icon.
-- Expanded width of the audio config selection.
-- Updated the drop-zone style when list is empty.
-- Added content-visibility to list body.
+ - Hold shift key while dragging in samples to import randomly up to the currently chosen grid-size.
+ - Default to limit the number of imported samples to 750, to reduce risk of timeouts - can be disabled in the settings panel.
+ - Limiting the max chain length to 64 slices when using the timed chain length in non-aif audio context, Aif context stays at max 24 slices.
+ - Setting the default Shift import random drop value to 256 if no slice grid value is selected (this prevents accidental import of large numbers of files, Ctrl+click a slice-grid number and set a custom value to import more than 256 samples randomly).
+ - Ctrl + Click on the Selected header text will toggle all the samples selection to all selected / all de-selected.
+ - Changed load files to an icon.
+ - Expanded width of the audio config selection.
+ - Updated the drop-zone style when list is empty.
+ - Added content-visibility to list body.
 
 2023-05-22 1.4.1
 - Added truncate selected action (shift+click to set a custom length), and crop to selection in the editor panel.
@@ -287,9 +304,9 @@
     - Don't mute samples when toggling selection.
 
 2023-04-07 1.3.1
-- Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)
-- Simplified the transient detection method, enabled it for longer sample lengths as this approach is better suited to longer samples.
-- Trim right is more aggressive with what it trims (to 0.003 amplitude).
+ - Fixed bug where a duplicate sample shared the sources audio-buffer in specific situations (e.g. when reversing the sample.)
+ - Simplified the transient detection method, enabled it for longer sample lengths as this approach is better suited to longer samples.
+ - Trim right is more aggressive with what it trims (to 0.003 amplitude).
 
 2023-04-05 1.3.0
 - Importing of folders - recursive search for wav/syx files (be careful with filesize/depth of folders with this!).

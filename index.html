@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale = 1.0, user-scalable = no">
     <meta name="author" content="Brian Barnett [ brian3kb ]">
-    <meta name="version" content="1.5.0">
+    <meta name="version" content="1.5.1">
     <meta
             name="description"
             content="DigiChain makes the creation of sample chains as easy as possible; Edit, trim, reverse, crush, join, slice, convert; Drag-and-drop uncompressed wav, aif (OP-1 Field/OP-Z), flac, or syx (MachineDrum) audio files and converts them to wav files for transfer via the Elektron Transfer app, or to aif files for use on Teenage Engineering OP-1 Field / OP-Z, or record from direct playback with pop markers.--Include slice data as cue markers for use on Dirtywave M8, or export with a .ot file for direct use on Octatrack. Converted files can also be joined together without, or with padding to work better with the 1.5 firmware Digitakt slice grids (icluding Digitakt II).--Files are generated at the chosen session sample rate and bit depth with all processing done in the browser, on *your* computer, no user/audio data is sent to a server.----The app is provided for use as is, with no warranty and no accountability if *you* choose to overwrite source files with those generated."
@@ -41,7 +41,7 @@
 </dialog>
 
 <dialog id="welcomePanelMd" class="dialog-pop-up">
-    <a class="float-right" onclick="document.getElementById('welcomePanelMd').close();"><i class="gg-close"></i></a>
+    <a class="float-right sticky-top-0" onclick="document.getElementById('welcomePanelMd').close();"><i class="gg-close"></i></a>
     <div class="content">
         <h3>Welcome to DigiChain</h3>
         <p>Before importing samples, open the <a onclick="digichain.showExportSettingsPanel('audio');">Audio Config Panel</a> and configure the export and chain settings, try using the 'Common Configurations' drop-down options in the bottom right!</p>
@@ -53,6 +53,7 @@
             Double-click a slice to toggle it on or off to be included/excluded in the new chain.</p>
             <p class="tip">Holding <code>Shift</code> / <code>Ctrl / Cmd</code> will show which buttons / icons have alternate actions with the modifier key held down, hover over to see tooltip descriptions.</p>
             <p class="tip">By default, files that contain slice information will have their slices treated as distinct files when building new chains; this behavior can be changed to ignore the slices when including in new chains in the Settings Panel.</p>
+            <p class="tip">If you are experiencing clicks/pops in exported samples, try turning on the de-click threshold in the settings; this is off by default as it can slightly change the outputted audio smoothing out the click/pop artifacts.</p>
         </div>
         <p>For documentation, see <a style="outline: none;" href="https://brianbar.net/docs/digichain/" target="_blank">https://brianbar.net/docs/digichain/</a></p>
         <br>
@@ -62,7 +63,7 @@
 </dialog>
 
 <dialog id="keyboardShortcuts" class="dialog-pop-up">
-    <a class="float-right" onclick="document.getElementById('keyboardShortcuts').close();"><i
+    <a class="float-right sticky-top-0" onclick="document.getElementById('keyboardShortcuts').close();"><i
             class="gg-close"></i></a>
     <div class="content">
         <h4>Keyboard Shortcuts</h4>
@@ -164,18 +165,18 @@
 </dialog>
 
 <dialog id="exportSettingsPanel" data-page="export-options" class="dialog-pop-up">
-    <a class="float-right" onpointerdown="document.getElementById('exportSettingsPanel').close();"><i
+    <a class="float-right sticky-top-0" onpointerdown="document.getElementById('exportSettingsPanel').close();"><i
             class="gg-close"></i></a>
     <div class="content"></div>
 </dialog>
 
 <dialog id="chainFileNameListPanel" class="dialog-pop-up">
-    <a class="float-right" onpointerdown="document.getElementById('chainFileNameListPanel').close();"><i class="gg-close"></i></a>
+    <a class="float-right sticky-top-0" onpointerdown="document.getElementById('chainFileNameListPanel').close();"><i class="gg-close"></i></a>
     <div class="content"></div>
 </dialog>
 
 <dialog id="splitOptions" class="dialog-pop-up">
-    <a class="float-right" onpointerdown="digichain.closeSplitOptions(event)"><i class="gg-close"></i></a>
+    <a class="float-right sticky-top-0" onpointerdown="digichain.closeSplitOptions(event)"><i class="gg-close"></i></a>
     <p>
         Choose how many slices to make from<br>'<span id="splitFileName"></span>'
     </p>
@@ -265,7 +266,7 @@
 </dialog>
 
 <dialog id="editPanel" class="dialog-pop-up" data-id="" onclose="digichain.closeEditPanel();">
-    <a class="float-right"
+    <a class="float-right sticky-top-0"
        onpointerdown="digichain.closeEditPanel();"><i
             class="gg-close"></i></a>
     <fieldset id="editableItems"></fieldset>
@@ -273,7 +274,7 @@
 </dialog>
 
 <div id="opExportPanel" class="op-export-side-panel-options" data-id="">
-    <a class="float-right"
+    <a class="float-right sticky-top-0"
        onpointerdown="document.getElementById('opExportPanel').classList.remove('show');document.querySelector('.right-buttons').classList.remove('fade');"><i
             class="gg-close"></i></a>
     <div id="opExportPanelContent"></div>
@@ -281,7 +282,7 @@
 </div>
 
 <dialog id="mergePanel" class="dialog-pop-up">
-    <a class="float-right" onpointerdown="document.getElementById('mergePanel').close(); digichain.renderList();"><i
+    <a class="float-right sticky-top-0" onpointerdown="document.getElementById('mergePanel').close(); digichain.renderList();"><i
             class="gg-close"></i></a>
     <div id="mergePanelContent"></div>
 </dialog>
@@ -308,7 +309,7 @@
 
             <div class="row">
                 <label class="button button-clear load-file-label" for="uploadInput" aria="Load files..."
-                       title="Load files..."><i class="gg-file-add has-ctrl-mod-i"></i></label>
+                       title="Load files... (Ctrl/Cmd + Click to add a blank sample to the end of the list)."><i class="gg-file-add has-ctrl-mod-i"></i></label>
                 <input id="uploadInput" type="file" multiple/>
                 <input title="Change audio file export settings." onpointerdown="digichain.showExportSettingsPanel('audio');"
                         class="btn-audio-config gg-calibrate" name="audioConfigOptions"
@@ -435,6 +436,10 @@
                             onclick="digichain.shortenNameSelected(event, true)"
                             class="button-outline">Restore Names
                     </button>
+                    <button title="Clear any existing slice data for the selected."
+                            onclick="digichain.clearSlicesSelected(event)"
+                            class="button-outline">Clear Slices
+                    </button>
                     <div class="button-clear"></div>
                     <div class="button-clear"></div>
                 </div>
@@ -519,8 +524,10 @@
                         <button title="When enabled, created chains will be added to the top of the sample list instead of producing a zip file to download (the same as holding the Shift key will pressing the Chain button)."
                                 class="button-clear toggle-top-list fade" onclick="digichain.updateUiButtonAction('updateResampleChainsToList', '.toggle-top-list', true)"><i class="gg-top-list"></i>
                         </button>
+                        <button title="Tonverk Preset bundling, chains will be limited to 128, and have an .elmulti preset for accessing the samples; When active, only zip downloads will be available."
+                                onclick="digichain.updateExportChainsAsPresets({device: 'tv', length: 84})" class="toggle-preset-bundling-tv button-clear">TV</button>
                         <button title="OP-XY Preset bundling, chains will be limited to 24, samples longer than 20 seconds will be truncated to allow playback on the Xy (be mindful that the XY has a total 64mb of memory per project loaded for samples). When active, only zip downloads will be available."
-                                onclick="digichain.updateExportChainsAsXyPresets(true)" class="button-clear toggle-op-xy-preset-bundling">XY</button>
+                                onclick="digichain.updateExportChainsAsPresets({device: 'xy', length: 24})" class="toggle-preset-bundling-xy button-clear">XY</button>
                     </div>
                 </div>
                 <a id="getJoined">_</a>

@@ -5063,10 +5063,7 @@ const consumeFileInput = async (event, inputFiles) => {
 
 const dropHandler = async (event) => {
     event.preventDefault();
-    const contextPromise = checkAndSetAudioContext();
-    if (contextPromise) {
-        await contextPromise;
-    }
+    checkAndSetAudioContext();
     if (!lastSelectedRow?.classList?.contains('is-dragging')) {
         if (event?.dataTransfer?.items?.length &&
           event?.dataTransfer?.items[0].kind === 'string') {
@@ -5200,17 +5197,17 @@ function init() {
 
     uploadInput.addEventListener(
       'change',
-      async () => await consumeFileInput({shiftKey: modifierKeys.shiftKey},
+      async () => consumeFileInput({shiftKey: modifierKeys.shiftKey},
                 uploadInput.files),
       false
     );
     uploadInput.addEventListener(
       'click',
-      (event) => {
+      async (event) => {
           if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
               event.preventDefault();
               event.stopPropagation();
-              addBlankFile();
+              await addBlankFile();
           }
       },
       false

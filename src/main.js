@@ -1955,6 +1955,7 @@ function showExportSettingsPanel(page = 'settings') {
             panelMarkup += `
               <h3 style="padding-top: 2rem;">DigiChain (${document.querySelector('meta[name=version]').content})</h3>
               <p>${document.querySelector('meta[name=description]').content.replaceAll('--', '<br>')}</p>
+              <p>${document.querySelector('.tip-desktop-app').innerHTML}</p>
               <p class="float-left"><a href="https://github.com/brian3kb/digichain/releases/tag/v1.5.0" target="_blank">Change log</a></p>
               <p class="float-right"><a href="https://brianbar.net/" target="_blank">Brian Barnett</a>
               (<a href="https://github.com/brian3kb" target="_blank">brian3kb</a>) </p>

@@ -1,6 +1,8 @@
-**DigiChain**
+![DigiChain](https://img.itch.zone/aW1nLzE5NDEyMzIwLnBuZw==/360x286%23c/slVBl4.png)
 
-DigiChain is a web app made to make the creation of sample chains as easy as possible for use on the Digitakt (and any other sampler that can slice up samples).
+DigiChain is an app made to make the creation of sample chains as easy as possible for use on the Digitakt (and any other sampler that can slice up samples).
+
+Run in the browser at https://digichain.brianbar.net/ or download offline executables for Windows and macOS from [itch.io](https://brian3kb.itch.io/digichain).
 
 Split the slices out of Octatrack, OP-1/OP-1 Field/OP-Z, or DigiChains own exported files.
 
@@ -35,11 +37,14 @@ Each sample can also be sliced into new samples, or edited with a selection of b
 
 Shift+clicking on either of the join buttons will resample back into the list rather than out to a file.
 
-By default, the app will open in the 48k/16bit mono context – great for the Digitakt! – but if you want to create chains for other samplers, switch up the context, the 44.1k/24bit stereo is perfect for the Octatrack, if you have a bunch of samples and want to just convert them to what the OT expects, set the context, drop them in the list, hit the download button – you will get out a zip file containing all the processed files with their folder structure intact ready to drop on the OT’s CF card.
+> [!NOTE]
+> By default, the app will open in the 48k/16bit mono context – great for the Digitakt! – but if you want to create chains for other samplers, switch up the context, the 44.1k/24bit stereo is perfect for the Octatrack, if you have a bunch of samples and want to just convert them to what the OT expects, set the context, drop them in the list, hit the download button – you will get out a zip file containing all the processed files with their folder structure intact ready to drop on the OT’s CF card.
 
-If you want to move a sample around before exporting, change its folder path value in the sample edit panel.
+> [!TIP]
+> If you want to move a sample around before exporting, change its folder path value in the sample edit panel.
 
-While it is a web app, once loaded, there is no connection required, and can be installed as an app on most OSs.
+> [!IMPORTANT]
+> While it is a web app, once loaded, there is no connection required, and can be installed as an app on most OSs.
 
 There is a full complement of keyboard shortcuts to help navigate through things quickly.
 

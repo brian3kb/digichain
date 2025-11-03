@@ -2305,7 +2305,10 @@ async function joinAll(
         let totalLength = 0;
         let sliceGridT = settings.exportChainsAsPresets ? ((sliceGrid > settings.exportChainsAsPresets.length || !sliceGrid) ? settings.exportChainsAsPresets.length : sliceGrid) : sliceGrid;
 
-        if (secondsPerFile === 0) { /*Using slice grid file lengths*/
+        // For OP-1F tape export, skip the slice grid processing and use all selected files
+        if (settings.exportChainsAsPresets?.device === 'op1f') {
+            // Don't process through slice grid, just use all files as-is
+        } else if (secondsPerFile === 0) { /*Using slice grid file lengths*/
             tempFiles = _files.splice(0,
               (sliceGridT > 0 ? sliceGridT : _files.length));
 
@@ -2362,39 +2365,44 @@ async function joinAll(
             _files = processing.processed;
         }
 
-        slices = [];
-        let offset = 0;
-        for (let x = 0; x < _files.length; x++) {
-            const fileSliceData = _files[x].meta.slices || metaFiles.getByFileInDcFormat(_files[x]);
-            if (fileSliceData.length && settings.splitOutExistingSlicesOnJoin) {
-                if (slices.length > 0) {
-                    const _slices = JSON.parse(
-                      JSON.stringify(fileSliceData));
-                    _slices.forEach(slice => {
-                        slice.s = slice.s + offset;
-                        slice.e = slice.e + offset;
-                    });
-                    slices = [...slices, ..._slices];
+        // Skip slice processing for OP-1F tape export
+        if (!(settings.exportChainsAsPresets?.device === 'op1f')) {
+            slices = [];
+            let offset = 0;
+            for (let x = 0; x < _files.length; x++) {
+                const fileSliceData = _files[x].meta.slices || metaFiles.getByFileInDcFormat(_files[x]);
+                if (fileSliceData.length && settings.splitOutExistingSlicesOnJoin) {
+                    if (slices.length > 0) {
+                        const _slices = JSON.parse(
+                          JSON.stringify(fileSliceData));
+                        _slices.forEach(slice => {
+                            slice.s = slice.s + offset;
+                            slice.e = slice.e + offset;
+                        });
+                        slices = [...slices, ..._slices];
+                    } else {
+                        slices = [...slices, ...fileSliceData];
+                    }
                 } else {
-                    slices = [...slices, ...fileSliceData];
+                    slices.push({
+                        s: offset,
+                        e: offset + (pad ? largest : +_files[x].buffer.length),
+                        n: _files[x].file.name,
+                        p: _files[x].meta.opPan ?? 16384,
+                        pab: _files[x].meta.opPanAb ?? false,
+                        st: _files[x].meta.opPitch ?? 0
+                    });
                 }
-            } else {
-                slices.push({
-                    s: offset,
-                    e: offset + (pad ? largest : +_files[x].buffer.length),
-                    n: _files[x].file.name,
-                    p: _files[x].meta.opPan ?? 16384,
-                    pab: _files[x].meta.opPanAb ?? false,
-                    st: _files[x].meta.opPitch ?? 0
-                });
+                offset += (pad ? largest : +_files[x].buffer.length);
             }
-            offset += (pad ? largest : +_files[x].buffer.length);
+            slices.forEach(s => {
+                s.s = s.s > totalLength ? totalLength : s.s;
+                s.e = s.e > totalLength ? totalLength : s.e;
+            });
+            slices = slices.filter(s => s.s < s.e);
+        } else {
+            slices = [];
         }
-        slices.forEach(s => {
-            s.s = s.s > totalLength ? totalLength : s.s;
-            s.e = s.e > totalLength ? totalLength : s.e;
-        });
-        slices = slices.filter(s => s.s < s.e);
 
         const path = _files[0].file.path ? `${(_files[0].file.path || '').replace(
           /\//gi, '-')}` : '';
@@ -2408,6 +2416,42 @@ async function joinAll(
           );
 
         if (settings.exportChainsAsPresets) {
+            // Handle OP-1F tape export
+            if (settings.exportChainsAsPresets.device === 'op1f') {
+                if (!op1fTapeConfig) {
+                    setLoadingText('');
+                    showToastMessage('Please configure OP-1F tape export first');
+                    return;
+                }
+
+                const op1fFiles = await exportToOp1fTape(_files);
+                zip = zip || new JSZip();
+                op1fFiles.files.forEach(file => {
+                    zip.file(file.name, file.blob, {binary: true});
+                });
+
+                setLoadingText('');
+                const zipBlob = await zip.generateAsync({type: 'blob'});
+                const zipUrl = URL.createObjectURL(zipBlob);
+                const link = document.createElement('a');
+                link.href = zipUrl;
+                link.download = `op1f-tape-${new Date().getTime()}.zip`;
+                link.click();
+                URL.revokeObjectURL(zipUrl);
+
+                showToastMessage('OP-1F tape exported');
+                op1fTapeConfig = null;
+                // Keep OP-1F mode active after export, ensure other preset buttons are faded
+                document.querySelectorAll('button[class^=toggle-preset-bundling]').forEach(el => {
+                    if (el.classList.contains('toggle-preset-bundling-op1f')) {
+                        el.classList.remove('fade'); // OP-1F stays active
+                    } else {
+                        el.classList.add('fade'); // TV/XY are faded
+                    }
+                });
+                return;
+            }
+
             const presetSlices = [];
             const presetFileName = settings.exportChainsAsPresets.device === 'xy' ?
               `${sanitizeFileName(_fileName).substring(0, 14)}${fileCountText}`.replaceAll(/([-.])/gi, '') :
@@ -5718,6 +5762,266 @@ async function saveSession(sessionFileName = 'digichain_session', includeUnselec
     }).then(zipCallback);
 }
 
+/*OP-1F Tape Export Functions - Must be defined before init()*/
+let op1fTapeMode = 'new';
+let op1fTapeConfig = null;
+let op1fDialogOpenedByUser = false;
+
+function toggleOp1fMode(event) {
+    // Handle OP-1F button click
+    const isCurrentlyActive = settings.exportChainsAsPresets?.device === 'op1f';
+
+    if (isCurrentlyActive) {
+        // Deactivating OP-1F
+        updateExportChainsAsPresets({device: 'op1f', length: 0});
+    } else {
+        // Activating OP-1F - set audio config and show configuration dialog
+        updateExportChainsAsPresets({device: 'op1f', length: 0});
+
+        // Set OP-1 Field audio configuration automatically
+        // Format: "44100s16a0-4-8-12-16-20-24" (44.1kHz, stereo, 16-bit, audio, slice sizes)
+        const op1fConfig = '44100s16a0-4-8-12-16-20-24';
+        changeAudioConfig(op1fConfig);
+
+        openOp1fTapeExportDialog();
+    }
+}
+
+function openOp1fTapeExportDialog(event) {
+    // Dialog is opened from the button click
+    // Just show the configuration dialog
+    document.querySelector('#op1fTapeExportPanel input[value="new"]').checked = true;
+    document.querySelector('#op1fTapeExportPanel input[value="load"]').checked = false;
+    document.getElementById('tapeJsonLoadContainer').style.display = 'none';
+    document.getElementById('tapeJsonFileInput').value = '';
+    document.getElementById('op1fTrackSelect').value = '0';
+    op1fTapeMode = 'new';
+    op1fTapeConfig = null;
+    document.getElementById('op1fTapeExportPanel').showModal();
+}
+
+function updateOp1fTapeMode(mode) {
+    op1fTapeMode = mode;
+    const container = document.getElementById('tapeJsonLoadContainer');
+    if (mode === 'load') {
+        container.classList.add('show');
+    } else {
+        container.classList.remove('show');
+        document.getElementById('tapeJsonFileInput').value = '';
+    }
+}
+
+async function configureOp1fTapeExport(event) {
+    event.preventDefault();
+
+    try {
+        const selectedTrack = parseInt(document.getElementById('op1fTrackSelect').value);
+        let tapeJson = null;
+
+        // Load existing tape.json if selected
+        if (op1fTapeMode === 'load') {
+            const fileInput = document.getElementById('tapeJsonFileInput');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showToastMessage('Please select a tape.json file');
+                return;
+            }
+
+            const reader = new FileReader();
+            tapeJson = await new Promise((resolve, reject) => {
+                reader.onload = (e) => {
+                    try {
+                        const loadedTape = JSON.parse(e.target.result);
+                        // Ensure all required fields exist with defaults
+                        resolve({
+                            clips: loadedTape.clips || [],
+                            loop: loadedTape.loop !== undefined ? loadedTape.loop : false,
+                            loop_in: loadedTape.loop_in !== undefined ? loadedTape.loop_in : 0,
+                            loop_out: loadedTape.loop_out !== undefined ? loadedTape.loop_out : 0,
+                            mixer_params: loadedTape.mixer_params || [0.91806031250, 0.80960081250, 0.29885865630, 0.91702268750, -0.1093750, 0.1250, 0.0, 0.0],
+                            pos: loadedTape.pos !== undefined ? loadedTape.pos : 0,
+                            tape_type: loadedTape.tape_type !== undefined ? loadedTape.tape_type : 0,
+                            tempobpmdecimal: loadedTape.tempobpmdecimal !== undefined ? loadedTape.tempobpmdecimal : 1200,
+                            tempometronomelevel: loadedTape.tempometronomelevel !== undefined ? loadedTape.tempometronomelevel : 0.0,
+                            tempometronometype: loadedTape.tempometronometype !== undefined ? loadedTape.tempometronometype : 0,
+                            temposyncout: loadedTape.temposyncout !== undefined ? loadedTape.temposyncout : 1,
+                            temposynctype: loadedTape.temposynctype !== undefined ? loadedTape.temposynctype : 0,
+                            track: loadedTape.track !== undefined ? loadedTape.track : 1
+                        });
+                    } catch (err) {
+                        reject(new Error('Invalid JSON file'));
+                    }
+                };
+                reader.onerror = () => reject(reader.error);
+                reader.readAsText(fileInput.files[0]);
+            });
+        } else {
+            // Create new tape.json with neutral default values
+            // mixer_params: [track1_level, track2_level, track3_level, track4_level, track1_pan, track2_pan, track3_pan, track4_pan]
+            tapeJson = {
+                clips: [],
+                loop: false,
+                loop_in: 0,
+                loop_out: 0,
+                mixer_params: [0.9, 0.9, 0.9, 0.9, 0.0, 0.0, 0.0, 0.0],
+                pos: 0,
+                tape_type: 0,
+                tempobpmdecimal: 1200,
+                tempometronomelevel: 0.0,
+                tempometronometype: 0,
+                temposyncout: 1,
+                temposynctype: 0,
+                track: 1
+            };
+        }
+
+        // Store the configuration for later use when CHAIN button is pressed
+        op1fTapeConfig = {
+            mode: op1fTapeMode,
+            tapeJson: tapeJson,
+            selectedTrack: selectedTrack
+        };
+
+        document.getElementById('op1fTapeExportPanel').close();
+        showToastMessage('OP-1F tape configuration saved. Now click the CHAIN button to export.');
+    } catch (err) {
+        showToastMessage(`Error configuring OP-1F tape: ${err.message}`);
+        console.error(err);
+    }
+}
+
+async function exportToOp1fTape(selectedFiles) {
+    if (!op1fTapeConfig) {
+        throw new Error('OP-1F tape configuration not set');
+    }
+
+    const tapeJson = op1fTapeConfig.tapeJson;
+    const selectedTrack = op1fTapeConfig.selectedTrack;
+
+    // Join the selected files
+    setLoadingText('Creating joined sample for OP-1F tape...');
+    const joinedBuffer = await createJoinedBuffer(selectedFiles, false, selectedTrack, tapeJson);
+
+    setLoadingText('Generating tape.json and WAV file...');
+
+    // Create WAV file with proper metadata
+    const wavMeta = {
+        editing: false,
+        renderAt: false,
+        bypassStereoAsDualMono: false,
+        float32: false,
+        channel: ''
+    };
+    const wavResult = audioBufferToWav(
+        joinedBuffer.buffer,
+        wavMeta,
+        masterSR,
+        16,
+        2,
+        false,
+        false,
+        1,
+        false,
+        true,
+        false
+    );
+
+    // Extract buffer from result and convert to Blob
+    const wavBuffer = wavResult.buffer;
+    const wavBlob = new window.Blob([new DataView(wavBuffer)], {
+        type: 'audio/wav'
+    });
+
+    const fileName = `track_${selectedTrack + 1}.wav`;
+
+    // Return the files to be added to the zip
+    return {
+        files: [
+            {name: fileName, blob: wavBlob},
+            {name: 'tape.json', blob: new window.Blob([JSON.stringify(tapeJson, null, 2)], {type: 'application/json'})}
+        ]
+    };
+}
+
+async function createJoinedBuffer(selectedFiles, pad, trackIndex, tapeJson) {
+    if (!selectedFiles || selectedFiles.length === 0) {
+        throw new Error('No files selected for joining');
+    }
+
+    let currentPosition = 0; // Start clips at position 0 with no gaps
+    const clips = [];
+
+    // Calculate total length and create clip entries (all in 44.1kHz samples)
+    for (const file of selectedFiles) {
+        if (!file.meta || !file.meta.duration) {
+            throw new Error('Invalid file: missing metadata or duration');
+        }
+        const durationFrames = Math.round(file.meta.duration * 44100);
+        clips.push({
+            ch: trackIndex,
+            id: clips.length,
+            start: currentPosition,
+            stop: currentPosition + durationFrames
+        });
+        currentPosition += durationFrames;
+    }
+
+    const totalLength = currentPosition;
+
+    // Create the joined buffer at master sample rate
+    const totalLengthAtMasterSR = Math.round(totalLength * (masterSR / 44100));
+    const joinedBuffer = audioCtx.createBuffer(2, totalLengthAtMasterSR, masterSR);
+
+    let offsetAtMasterSR = 0;
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        if (!file.buffer) {
+            throw new Error(`File ${i} has no audio buffer`);
+        }
+        const channels = [file.buffer.getChannelData(0)];
+        if (file.buffer.numberOfChannels > 1) {
+            channels.push(file.buffer.getChannelData(1));
+        }
+
+        // Copy channels to joined buffer
+        for (let ch = 0; ch < joinedBuffer.numberOfChannels; ch++) {
+            const sourceData = channels[Math.min(ch, channels.length - 1)];
+            const targetData = joinedBuffer.getChannelData(ch);
+            for (let j = 0; j < sourceData.length; j++) {
+                if (offsetAtMasterSR + j < targetData.length) {
+                    targetData[offsetAtMasterSR + j] = sourceData[j];
+                }
+            }
+        }
+
+        // Calculate the length of this file in master sample rate samples
+        const fileLengthAtMasterSR = Math.round(file.meta.duration * masterSR);
+        offsetAtMasterSR += fileLengthAtMasterSR;
+    }
+
+    // Clips are already in 44.1kHz samples, no conversion needed for tape.json
+    // (they were calculated at 44.1kHz from the start)
+
+    // Merge with existing clips in tape.json (remove clips from the same track)
+    if (tapeJson.clips && tapeJson.clips.length > 0) {
+        tapeJson.clips = tapeJson.clips.filter(c => c.ch !== trackIndex);
+        tapeJson.clips.push(...clips);
+        // Re-assign IDs to all clips
+        tapeJson.clips.forEach((c, idx) => c.id = idx);
+    } else {
+        tapeJson.clips = clips;
+    }
+
+    // Set loop points based on first sample duration for new tapes
+    if (!tapeJson.loop) {
+        const firstClipDuration = clips[0] ? (clips[0].stop - clips[0].start) : 0;
+        tapeJson.loop_in = clips[0]?.start || 0;
+        tapeJson.loop_out = clips[0]?.stop || firstClipDuration;
+    }
+
+    return {buffer: joinedBuffer, clips};
+}
+
 if ('launchQueue' in window) {
     window.launchQueue.setConsumer((launchParams) => {
         if (launchParams.files && launchParams.files.length) {
@@ -5823,5 +6127,8 @@ window.digichain = {
     setAudioOptionsFromCommonConfig,
     bufferRateResampler,
     showWelcome,
-    editor
+    editor,
+    toggleOp1fMode,
+    updateOp1fTapeMode,
+    configureOp1fTapeExport
 };

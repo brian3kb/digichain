@@ -288,6 +288,43 @@
     <div id="mergePanelContent"></div>
 </dialog>
 
+<dialog id="op1fTapeExportPanel" class="dialog-pop-up">
+    <a class="float-right sticky-top-0" onpointerdown="document.getElementById('op1fTapeExportPanel').close();"><i class="gg-close"></i></a>
+    <div class="content">
+        <h3>OP-1F Tape Export</h3>
+        <div class="op1f-help-text">
+            <p>With this functionality, you can export the selected samples to an OP-1F track. The slice information will be exported in a separate tape.json file. If you are creating an OP-1F tape from scratch, you can put the samples on any track. If you are exporting the samples into an existing tape, you need to upload the existing tape.json file first. It is recommended that you export the samples to a track with no existing content. The export process removes the existing clip information from the selected track.</p>
+        </div>
+        <div class="op1f-tape-mode-section">
+            <label class="op1f-radio-label">
+                <input type="radio" name="tapeMode" value="new" checked onchange="digichain.updateOp1fTapeMode('new')">
+                Create new tape.json
+            </label>
+            <label class="op1f-radio-label">
+                <input type="radio" name="tapeMode" value="load" onchange="digichain.updateOp1fTapeMode('load')">
+                Load existing tape.json
+            </label>
+            <div id="tapeJsonLoadContainer" class="op1f-file-input-section">
+                <label for="tapeJsonFileInput" class="op1f-file-label">Select tape.json file:</label>
+                <input id="tapeJsonFileInput" type="file" accept=".json">
+            </div>
+        </div>
+        <div class="op1f-track-section">
+            <label for="op1fTrackSelect" class="op1f-track-label">Export to track:</label>
+            <select id="op1fTrackSelect">
+                <option value="0">Track 1</option>
+                <option value="1">Track 2</option>
+                <option value="2">Track 3</option>
+                <option value="3">Track 4</option>
+            </select>
+        </div>
+        <div class="op1f-button-group">
+            <button onpointerdown="document.getElementById('op1fTapeExportPanel').close();" class="button-outline">Cancel</button>
+            <button onpointerdown="digichain.configureOp1fTapeExport(event)" class="button">OK</button>
+        </div>
+    </div>
+</dialog>
+
 <div class="pop-up-blind"></div>
 
 <div class="header-menu">
@@ -529,6 +566,8 @@
                                 onclick="digichain.updateExportChainsAsPresets({device: 'tv', length: 84})" class="toggle-preset-bundling-tv button-clear">TV</button>
                         <button title="OP-XY Preset bundling, chains will be limited to 24, samples longer than 20 seconds will be truncated to allow playback on the Xy (be mindful that the XY has a total 64mb of memory per project loaded for samples). When active, only zip downloads will be available."
                                 onclick="digichain.updateExportChainsAsPresets({device: 'xy', length: 24})" class="toggle-preset-bundling-xy button-clear">XY</button>
+                        <button title="Export the files as an OP-1F tape track. When active, only zip downloads will be available."
+                                onclick="digichain.toggleOp1fMode(event)" class="toggle-preset-bundling-op1f button-clear">OP-1F</button>
                     </div>
                 </div>
                 <a id="getJoined">_</a>

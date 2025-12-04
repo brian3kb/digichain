@@ -3,6 +3,7 @@
 - Changed sort by filename header sort to include the folder path value in sort, this results in folders being grouped together in the list.
 - Set Folder selected action to change the folder path for the selected files, starting the new path with / will prepend the new path to the existing path of each file.
 - Added support for data list options on dcDialog modal input.
+- Fixed bug where for shift+click input for crush, stretch, and pad actions, when the user clicked the cancel button, the default non-shift action was applied to the selected samples.
 
 2025.09.19 1.5.1
  - Added support for importing slice data from Ableton Simpler (supporting transient detected slices or manual slices depending on what was active when the .adv preset was saved).

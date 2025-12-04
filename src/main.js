@@ -1103,7 +1103,9 @@ async function stretchSelected(event, shortest = false) {
             } else if (!isNaN(userResponse)) {
                 stretchLength = Math.floor(Math.abs(+userResponse) * (unitOfMeasure === 'seconds' ? masterSR : 1));
             }
-        }
+        } else if (userResponse === false) {
+            return;
+        } 
     }
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     setLoadingText('Processing');
@@ -1205,6 +1207,9 @@ async function padWithZeroSelected(event, shortest = false) {
           `Please enter a custom length in seconds to pad the selected samples to...`);
         if (userResponse && !isNaN(userResponse)) {
             customPadLength = Math.floor(Math.abs(+userResponse) * masterSR);
+        }
+        if (userResponse === false) {
+            return;
         }
     }
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
@@ -1309,6 +1314,9 @@ async function crushSelected(event) {
           `Please enter a custom crush amount (25 is the default, above 127 will sound the same)...`);
         if (userResponse && !isNaN(userResponse)) {
             crushAmount = Math.abs(+userResponse);
+        }
+        if (userResponse === false) {
+            return;
         }
     }
     crushAmount = Math.min(Math.floor(Math.abs(crushAmount)), 127);

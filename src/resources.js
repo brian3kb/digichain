@@ -338,8 +338,14 @@ export async function dcDialog(type = 'message', messageString = '', config = {}
                         type="${config.inputType??'text'}"
                         class="prompt-input"
                         value="${config.defaultValue??''}"
+                    ` + (config.dataList && Array.isArray(config.dataList) ? `
+                        list="dcDialogDataList"
                     >
-                    <div class="buttons-group">
+                    <datalist id="dcDialogDataList">
+                        ${config.dataList.map(f => '<option value="' + f + '">').join('')}
+                    </datalist>
+                    ` : '>') +
+                    `<div class="buttons-group">
                         <button type="submit" class="prompt-ok">${config.okLabel??'OK'}</button>` +
               (config.centerLabel ? `<button class="prompt-center button-outline" style="margin-left: 2rem;">${config.centerLabel}</button>` : '') +
                         `<button class="prompt-cancel button-outline ${type === 'alert' ? 'hidden' : ''}">${config.cancelLabel??'Cancel'}</button>

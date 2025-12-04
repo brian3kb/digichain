@@ -979,6 +979,28 @@ async function clearSlicesSelected(event) {
     }, 250);
 }
 
+async function assignFolder(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    let newPath = await dcDialog('prompt', `Set folder path for all selected to: (start the path with / to prepend new path to existing path)`, {
+        dataList: [...new Set(files.map(f => f.file.path))]
+    });
+    if (newPath === false) {
+        return;
+    }
+    if (!newPath.endsWith('/')) {
+        newPath = `${newPath}/`;
+    } 
+    setLoadingText('Processing');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach(item => {
+            item.file.path = newPath && newPath.startsWith('/') ? `${newPath.substring(1)}${item.file.path}` : newPath;
+            item.file.fullPath = newPath ? `${item.file.path}${item.file.name}` : item.file.name;
+        });
+        renderList();
+    }, 250);
+}
+
 function shortenNameSelected(event, restore = false) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     setLoadingText('Processing');
@@ -5772,6 +5794,7 @@ window.digichain = {
     stretchSelected,
     shortenNameSelected,
     sanitizeNameSelected,
+    assignFolder,
     serializeSelected,
     deserializeSelected,
     condenseSelected,

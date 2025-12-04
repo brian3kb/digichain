@@ -40,7 +40,7 @@ let secondsPerFile = 0;
 let audioCtx;
 let files = [];
 let unsorted = [];
-let importOrder = [];
+let importOrder = new Set();
 let metaFiles = [];
 let mergeFiles = [];
 let chainFileNames = []; //{ name: '', used: false }
@@ -877,13 +877,13 @@ function removeSelected() {
     files.filter(f => f.meta.checked).forEach(f => remove(f.meta.id, true));
     files = files.filter(f => !f.meta.checked);
     unsorted = unsorted.filter(id => files.find(f => f.meta.id === id));
-    importOrder = importOrder.filter(id => unsorted.includes(id));
+    importOrder = new Set([...importOrder].filter(id => unsorted.includes(id)));
     setCountValues();
     if (files.length === 0 || unsorted.length === 0) {
         files.forEach(f => f.buffer ? delete f.buffer : false);
         files = [];
         unsorted = [];
-        importOrder = [];
+        importOrder = new Set();
     }
     renderList();
     return storeState();
@@ -3396,7 +3396,7 @@ const move = (event, id, direction) => {
 };
 const sort = (event, by, prop = 'meta') => {
     const groupByChecked = (event.shiftKey || modifierKeys.shiftKey);
-    const forLocaleCompare = ['name'];
+    const forLocaleCompare = ['name', 'fullPath'];
     const mapOrder = (order, prop, by) => (a, b) => {
         let oA = order.indexOf(a[prop][by]);
         let oB = order.indexOf(b[prop][by]);
@@ -3407,9 +3407,9 @@ const sort = (event, by, prop = 'meta') => {
             files.sort(
               () => crypto.randomUUID().localeCompare(crypto.randomUUID()));
         } else {
-            const newImports = unsorted.filter(u => !importOrder.includes(u));
-            importOrder = [...importOrder, ...newImports];
-            files.sort(mapOrder(importOrder, prop, by));
+            const newImports = unsorted.filter(u => !importOrder.has(u));
+            importOrder = new Set([...importOrder, ...newImports]);
+            files.sort(mapOrder([...importOrder], prop, by));
             lastSort = '';
         }
     } else if (by === 'note') {
@@ -4321,6 +4321,7 @@ const parseAif = async (
                 name: getUniqueName(files, file.name),
                 filename: file.name,
                 path: fullPath.replace(file.name, ''),
+                fullPath: fullPath,
                 size: file.size,
                 type: file.type
             },
@@ -4401,6 +4402,7 @@ const parseSds = (fd, file, fullPath = '', pushToTop = false) => {
                 name: getUniqueName(files, file.name),
                 filename: file.name,
                 path: fullPath.replace(file.name, ''),
+                fullPath: fullPath,
                 size: file.size,
                 type: file.type
             },
@@ -4484,7 +4486,8 @@ const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
                 name: getUniqueName(files, file.name),
                 filename: file.name,
                 path: fullPath.replace(file.name, ''),
-                size: file.size,
+                fullPath: fullPath,
+                ize: file.size,
                 type: file.type
             },
             buffer: (resampleBuffer ||audioArrayBuffer), meta: {
@@ -4676,6 +4679,7 @@ const parseWav = (
                 name: getUniqueName(files, file.name),
                 filename: file.name,
                 path: fullPath.replace(file.name, ''),
+                fullPath: fullPath,
                 size: file.size,
                 type: file.type
             },
@@ -4713,7 +4717,6 @@ const parseWav = (
 
 const renderListWhenReady = (count, fileCount) => {
     count = count.filter(c => c !== false);
-    importOrder = [...new Set(importOrder)];
     if (count.every(c => unsorted.includes(c))) {
         sort({skipRender: true}, 'id');
         processedCount = 0;
@@ -4773,7 +4776,7 @@ const restoreSessionFile = async sessionFile => {
 
     let sessionImportOrder = await zip.file('importOrder')?.async('uint8array');
     sessionImportOrder = window.msgpack.decode(sessionImportOrder);
-    importOrder = sessionImportOrder;
+    importOrder = new Set(sessionImportOrder);
 
     let opExportData = await zip.file('opExportData')?.async('uint8array');
     if (opExportData) {
@@ -4836,7 +4839,7 @@ const consumeFileInput = async (event, inputFiles) => {
                       zf.split('.').at(-1).toLowerCase())
                   ).length;
                 if (supportedFileCount + files.length > importFileLimitValue) {
-                    loadingEl.textContent = `skipping zip '${archive.name}', files (${supportedFileCount}) will exceed ${importFileLimitValue} file import limit...`;
+                    setLoadingText(`skipping zip '${archive.name}', files (${supportedFileCount}) will exceed ${importFileLimitValue} file import limit...`);
                     if (zidx === _zips.length - 1) {
                         setTimeout(() => consumeFileInput(event, inputFiles),
                           3000);
@@ -4851,7 +4854,7 @@ const consumeFileInput = async (event, inputFiles) => {
                         inputFiles.push(blobData);
                         blobData.uuid = crypto.randomUUID();
                         if (supportedAudioTypes.some(ext => blobData.name.toLowerCase().endsWith(ext))) {
-                            importOrder.push(blobData.uuid);
+                            importOrder.add(blobData.uuid);
                         }
                         if (zidx === _zips.length - 1 && prog === fileCount) {
                             consumeFileInput(event, inputFiles);
@@ -4891,7 +4894,7 @@ const consumeFileInput = async (event, inputFiles) => {
                 const xmlString = decoder.decode(result);
                 parseXml(xmlString, file.fullPath);
             } catch (err) {
-                loadingEl.textContent = `skipping unreadable file '${file.name}'.`;
+                setLoadingText(`skipping unreadable file '${file.name}'.`);
             }
             continue;
         }
@@ -4943,7 +4946,7 @@ const consumeFileInput = async (event, inputFiles) => {
             try {
                 file.uuid = file.uuid || crypto.randomUUID();
                 if (supportedAudioTypes.some(ext => file.name.toLowerCase().endsWith(ext))) {
-                    importOrder.push(file.uuid);
+                    importOrder.add(file.uuid);
                 }
                 file.fullPath = file.fullPath || '';
                 const buffer = e.target.result;
@@ -5094,13 +5097,15 @@ const dropHandler = async (event) => {
             let total = event.dataTransfer.items.length;
             toConsume.count = 0;
             const addItem = item => {
+                item.uuid = crypto.randomUUID();
+                importOrder.add(item.uuid);
                 if (item.isFile) {
                     item.file(
                       (file) => {
                           file.fullPath = item.fullPath.replace('/', '');
-                          file.uuid = crypto.randomUUID();
+                          file.uuid = item.uuid || crypto.randomUUID();
                           if (supportedAudioTypes.some(ext => file.name.toLowerCase().endsWith(ext))) {
-                              importOrder.push(file.uuid);
+                              importOrder.add(file.uuid);
                           }
                           toConsume.push(file);
                       }
@@ -5570,9 +5575,9 @@ async function storeState(onlyOpExport = false) {
         return;
     }
 
-    importOrder = importOrder.filter(id => unsorted.includes(id));
+    importOrder = new Set([...importOrder].filter(id => unsorted.includes(id)));
     objectStore.put(unsorted, 'unsorted');
-    objectStore.put(importOrder, 'importOrder');
+    objectStore.put([...importOrder], 'importOrder');
     return new Promise(resolve => {
         objectStore.put(files.map(f => {
             if (f === files.at(-1)) {
@@ -5587,62 +5592,66 @@ function loadState(skipConfirm = false) {
     if (!settings.retainSessionState) {
         return showWelcome();
     }
-    const transaction = db.transaction(['state'], 'readonly');
-    const objectStore = transaction.objectStore('state');
-    let requestUnsorted = objectStore.get('unsorted');
-    let requestImportOrder = objectStore.get('importOrder');
+    try {
+        const transaction = db.transaction(['state'], 'readonly');
+        const objectStore = transaction.objectStore('state');
+        let requestUnsorted = objectStore.get('unsorted');
+        let requestImportOrder = objectStore.get('importOrder');
 
-    requestUnsorted.onsuccess = () => {
-        if (requestUnsorted.result) {
-            unsorted = requestUnsorted.result;
+        requestUnsorted.onsuccess = () => {
+            if (requestUnsorted.result) {
+                unsorted = requestUnsorted.result;
+            }
+            showWelcome();
         }
-        showWelcome();
-    }
-    requestImportOrder.onsuccess = () => {
-        if (requestImportOrder.result) {
-            importOrder = requestImportOrder.result;
+        requestImportOrder.onsuccess = () => {
+            if (requestImportOrder.result) {
+                importOrder = new Set(Array.isArray ? requestImportOrder.result : []);
+            }
         }
-    }
-    let requestOpExportData = objectStore.get('opExportData');
-    requestOpExportData.onsuccess = () => {
-        if (requestOpExportData.result) {
-            const opExportData = window.msgpack.decode(requestOpExportData.result);
-            getSetOpExportData(opExportData.samples, opExportData.opDataConfig);
+        let requestOpExportData = objectStore.get('opExportData');
+        requestOpExportData.onsuccess = () => {
+            if (requestOpExportData.result) {
+                const opExportData = window.msgpack.decode(requestOpExportData.result);
+                getSetOpExportData(opExportData.samples, opExportData.opDataConfig);
+            }
         }
-    }
-    let requestFiles = objectStore.get('files');
-    requestFiles.onsuccess = async () => {
-        if (requestFiles.result && requestFiles.result.length > 0) {
+        let requestFiles = objectStore.get('files');
+        requestFiles.onsuccess = async () => {
+            if (requestFiles.result && requestFiles.result.length > 0) {
 
-            if (!skipConfirm) {
-                const proceed = await dcDialog(
-                  'confirm',
-                  `There are ${requestFiles.result.length} files from your last session, would you like to restore them?`,
-                  {
-                      kind: 'info',
-                      okLabel: 'Restore',
-                      cancelLabel: 'Discard',
-                  }
-                );
-                if (!proceed) {
-                    clearDbBuffers();
-                    setLoadingText('');
-                    return ;
+                if (!skipConfirm) {
+                    const proceed = await dcDialog(
+                      'confirm',
+                      `There are ${requestFiles.result.length} files from your last session, would you like to restore them?`,
+                      {
+                          kind: 'info',
+                          okLabel: 'Restore',
+                          cancelLabel: 'Discard',
+                      }
+                    );
+                    if (!proceed) {
+                        clearDbBuffers();
+                        setLoadingText('');
+                        return;
+                    }
                 }
+
+                const contextPromise = checkAndSetAudioContext();
+                if (contextPromise) {
+                    await contextPromise;
+                }
+
+                files = requestFiles.result.map(f => bufferRateResampler(f));
+
+                renderList(true);
+
+            } else {
+                setLoadingText('');
             }
-
-            const contextPromise = checkAndSetAudioContext();
-            if (contextPromise) {
-                await contextPromise;
-            }
-            
-            files = requestFiles.result.map(f => bufferRateResampler(f));
-
-            renderList(true);
-
-        } else {
-            setLoadingText('');
         }
+    } catch (e) {
+        setLoadingText('');
     }
 }
 function clearDbBuffers() {
@@ -5685,7 +5694,7 @@ async function saveSession(sessionFileName = 'digichain_session', includeUnselec
 
     zip.file('files', window.msgpack.encode(data), zipFileOptions);
     zip.file('unsorted', window.msgpack.encode(unsorted), zipFileOptions);
-    zip.file('importOrder', window.msgpack.encode(importOrder), zipFileOptions);
+    zip.file('importOrder', window.msgpack.encode([...importOrder]), zipFileOptions);
     zip.file('settings', window.msgpack.encode(sessionSettings), zipFileOptions);
 
     const opExportData = getSetOpExportData(false,false,true);

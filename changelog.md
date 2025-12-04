@@ -1,4 +1,8 @@
-1.5.1
+1.5.2
+- Corrected inconsistent import ordering in macOS file drops.
+- Changed sort by filename header sort to include the folder path value in sort, this results in folders being grouped together in the list.
+
+2025.09.19 1.5.1
  - Added support for importing slice data from Ableton Simpler (supporting transient detected slices or manual slices depending on what was active when the .adv preset was saved).
  - Additional changes toward desktop app support.
  - New setting for Octatrack exports, "Use even numbered slices as loop point of prev slice on .ot exports?"; When this is set to YES, and the .ot file creation is set to YES, joined files are treated as pairs, with the first being the start (attack) part of the slice, and the second being the Octatrack (loop) part of the slice.

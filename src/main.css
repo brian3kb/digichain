@@ -2288,6 +2288,72 @@ dialog .content {
     background-color: inherit;
 }
 
+/* OP-1F Tape Export Dialog Styles */
+.op1f-help-text {
+    background-color: rgba(207, 134, 0, 0.1);
+    border-left: 3px solid #cf8600;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 3px;
+}
+
+.op1f-help-text p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.op1f-tape-mode-section {
+    margin-bottom: 1.5rem;
+}
+
+.op1f-radio-label {
+    display: block;
+    margin-bottom: 1rem;
+    cursor: pointer;
+}
+
+.op1f-file-input-section {
+    display: none;
+    margin-bottom: 1rem;
+}
+
+.op1f-file-input-section.show {
+    display: block;
+}
+
+.op1f-file-label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+#tapeJsonFileInput {
+    width: 100%;
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+.op1f-track-section {
+    margin-bottom: 1.5rem;
+}
+
+.op1f-track-label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+#op1fTrackSelect {
+    width: 100%;
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+.op1f-button-group {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
 #welcomePanelMd .tip-header {
     margin-left: 1rem;
 }
@@ -2365,7 +2431,7 @@ dialog .content {
     flex-direction: row;
     justify-content: space-around;
     padding-left: 1rem;
-    width: 14rem;
+    width: 18rem;
 }
 .chain-action-icons button {
     padding: 0;

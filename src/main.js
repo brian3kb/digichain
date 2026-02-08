@@ -46,6 +46,7 @@ let mergeFiles = [];
 let chainFileNames = []; //{ name: '', used: false }
 let lastSort = '';
 let joinCount = 0;
+let noteOrder = [];
 let lastSelectedRow;
 let lastDragOverRow;
 let lastLastSelectedRow;
@@ -3443,27 +3444,29 @@ const sort = (event, by, prop = 'meta') => {
             lastSort = '';
         }
     } else if (by === 'note') {
-        const noteOrder = [];
-        const notes = [
-            'C',
-            'C#',
-            'Db',
-            'D',
-            'D#',
-            'Eb',
-            'E',
-            'F',
-            'F#',
-            'Gb',
-            'G',
-            'G#',
-            'Ab',
-            'A',
-            'A#',
-            'Bb',
-            'B'];
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].forEach(
-          o => notes.forEach(n => noteOrder.push(`${n}${o}`)));
+        if (noteOrder.length === 0) {
+            const notes = [
+                'C',
+                'C#',
+                'Db',
+                'D',
+                'D#',
+                'Eb',
+                'E',
+                'F',
+                'F#',
+                'Gb',
+                'G',
+                'G#',
+                'Ab',
+                'A',
+                'A#',
+                'Bb',
+                'B'];
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].forEach(
+              o => notes.forEach(n => noteOrder.push(`${n}${o}`))
+            );
+        }
         files = files.sort((a, b) => {
             const noteA = a[prop][by];
             const noteB = b[prop][by];
@@ -4013,7 +4016,7 @@ const bytesToInt = (bh, bm, bl) => {
 };
 
 function noteFromFileName(name) {
-    const match = name.match(/(_| |-)([A-Ga-g](?:#|b)?)(-?\d+)\.\w+$/);
+    const match = name.match(/(_| |-)([A-Ga-g](?:#|b)?)(-?\d+)(?:-[^.]+)?\.\w+$/);
     return match && match.length > 2 ? (match[1] + match[2] +
       (match[3] || '')).replace(/_|-|\./g, '').trim() : '';
 }

@@ -1,5 +1,7 @@
 2026.02.08
 - Support for 24/32bit AIFF file importing.
+- Updated note detection to find notes from Logic Pro generated filenames.
+- Sorting by note on Logic Pro generated AIFF files now correctly sorts.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

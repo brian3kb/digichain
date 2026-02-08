@@ -4192,6 +4192,7 @@ const parseOt = (fd, file, fullPath) => {
         return {uuid, failed: true};
     }
 };
+
 const parseAif = async (
   arrayBuffer, fd, file, fullPath = '', pushToTop = false) => {
     const uuid = file.uuid || crypto.randomUUID();
@@ -4251,7 +4252,16 @@ const parseAif = async (
                       jsonString.replace(/\]\}(.|\n)+/gi, ']}').trimEnd());
                     break;
                 case 'SSND':
-                    chunks.buffer = arrayBuffer.slice(offset + 4);
+                    chunks.ssnd = {
+                        offset,
+                        id: String.fromCharCode(dv.getUint8(offset),
+                          dv.getUint8(offset + 1), dv.getUint8(offset + 2),
+                          dv.getUint8(offset + 3)),
+                        size: dv.getUint32(offset + 4),
+                        dataOffset: dv.getUint32(offset + 8),
+                        blockSize: dv.getUint32(offset + 12)
+                    };
+                    chunks.buffer = arrayBuffer.slice(offset + 8);
                     chunks.bufferDv = new DataView(chunks.buffer);
             }
         };
@@ -4265,8 +4275,8 @@ const parseAif = async (
             }
         }
 
-        /*Only supporting 16bit Aif files, other bit-depths will be skipped.*/
-        if (+chunks.comm.bitDepth !== 16) {
+        /*Support reading 16-bit, 24-bit, and 32-bit AIF files*/
+        if (![16, 24, 32].includes(+chunks.comm.bitDepth)) {
             setLoadingText(`Skipping unsupported ${chunks.comm.bitDepth}bit aif file '${file.name}'...`);
             delete chunks.buffer;
             delete chunks.bufferDv;
@@ -4274,29 +4284,54 @@ const parseAif = async (
             arrayBuffer = false;
             return {uuid, failed: true};
         }
+        
+        const getInt24 = (dataView, index) => {
+            const byte1 = dataView.getUint8(index);     // MSB
+            const byte2 = dataView.getUint8(index + 1); // Middle
+            const byte3 = dataView.getUint8(index + 2); // LSB
+            
+            let value = (byte1 << 16) | (byte2 << 8) | byte3;
+            
+            if (value & 0x800000) {
+                value |= 0xFF000000;
+            }
 
-        const offset = 4; // The offset of the first byte of audio data
+            return value;
+        };
+        
+        const offset = 8 + chunks.ssnd.dataOffset;
         const bytesPerSample = chunks.comm.bitDepth / 8;
         const channels = [];
         for (let i = 0; i < chunks.comm.channels; i++) {
             channels.push(new Float32Array(chunks.comm.frames));
         }
+        
+        const isLittleEndian = chunks.form.type === 'AIFC';
 
         for (let i = 0; i < chunks.comm.channels; i++) {
             let channel = channels[i];
             for (let j = 0; j < chunks.comm.frames; j++) {
                 let index = offset;
                 index += (j * chunks.comm.channels + i) * bytesPerSample;
-                // Sample
-                let value = chunks.bufferDv.getInt16(index,
-                  chunks.form.type === 'AIFC');
-                // Scale range from 0 to 2**bitDepth -> -2**(bitDepth-1) to
-                // 2**(bitDepth-1)
-                let range = 1 << chunks.comm.bitDepth - 1;
-                if (value >= range) {
-                    value |= ~(range - 1);
+
+                let value;
+                let range;
+                
+                switch (chunks.comm.bitDepth) {
+                    case 16:
+                        value = chunks.bufferDv.getInt16(index, isLittleEndian);
+                        range = 32768; // 2^15
+                        break;
+                    case 24:
+                        value = getInt24(chunks.bufferDv, index);
+                        range = 8388608; // 2^23
+                        break;
+                    case 32:
+                        value = chunks.bufferDv.getInt32(index, isLittleEndian);
+                        range = 2147483648; // 2^31
+                        break;
                 }
-                // Scale range to -1 to 1
+                
                 channel[j] = value / range;
                 if (j === 0) {
                     channel[j] = 0;

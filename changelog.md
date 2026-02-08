@@ -1,3 +1,6 @@
+2026.02.08
+- Support for 24/32bit AIFF file importing.
+
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.
 - Changed sort by filename header sort to include the folder path value in sort, this results in folders being grouped together in the list.

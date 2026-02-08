@@ -2,6 +2,7 @@
 - Support for 24/32bit AIFF file importing.
 - Updated note detection to find notes from Logic Pro generated filenames.
 - Sorting by note on Logic Pro generated AIFF files now correctly sorts.
+- Fix session export files have .dcsd.dcsd as the filename extension in the saved notification text.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

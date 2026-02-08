@@ -5779,14 +5779,14 @@ async function saveSession(sessionFileName = 'digichain_session', includeUnselec
               create: true
           });
           setLoadingText('');
-          showToastMessage(`'${sessionFileNameString}.dcsd'<br>session file created.`, 10000);
+          showToastMessage(`'${sessionFileNameString}'<br>session file created.`, 10000);
       } : blob => {
           const el = document.getElementById('getJoined');
           el.href = URL.createObjectURL(blob);
           el.setAttribute('download', sessionFileNameString);
           el.click();
           setLoadingText('');
-          showToastMessage(`'${sessionFileNameString}.dcsd'<br>session file created.`, 10000);
+          showToastMessage(`'${sessionFileNameString}'<br>session file created.`, 10000);
       }
     
     zip.generateAsync({

@@ -3904,8 +3904,8 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
 
       `</td>
       <td class="split-td">
-          <button title="Slice sample." onpointerdown="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(
-        f)?.cssClass}" data-slice-count="${f.meta?.slices?.length || f.meta?.op1Json?.sliceCount || ''}"><i class="gg-menu-grid-r has-ctrl-mod-i"></i></button>
+          <button title="Slice sample (Ctrl/Cmd + Click to Clear Slice Data)" onpointerdown="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(
+        f)?.cssClass}" data-slice-count="${f.meta?.slices?.length || f.meta?.op1Json?.sliceCount || ''}" data-has-invalid-slice="${Array.isArray(f.meta?.slices)? (f.meta.slices.some(s => s.e - s.s < 5) ? '1' : '') : ''}"><i class="gg-menu-grid-r has-ctrl-mod-i"></i></button>
       </td>
       <td class="duplicate-td">
           <button title="Duplicate sample." onpointerdown="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>

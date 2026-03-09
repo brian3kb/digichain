@@ -1960,6 +1960,9 @@ td button { margin: 0.5rem; }
 .is-chain-count::after {
     content: attr(data-count);
 }
+.is-dc-file[data-has-invalid-slice]::after {
+    content: '!!!';
+}
 .file-path { display: block; word-break: break-word; }
 .toggle-check, .sort-check {
     border: 0.2rem solid #40392e;

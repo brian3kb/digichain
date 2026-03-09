@@ -1960,8 +1960,8 @@ td button { margin: 0.5rem; }
 .is-chain-count::after {
     content: attr(data-count);
 }
-.is-dc-file[data-has-invalid-slice]::after {
-    content: '!!!';
+.is-dc-file[data-has-invalid-slice]:not([data-has-invalid-slice="0"])::after {
+    content: '!!-' attr(data-has-invalid-slice);
 }
 .file-path { display: block; word-break: break-word; }
 .toggle-check, .sort-check {

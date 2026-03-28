@@ -7,6 +7,7 @@
 - Graceful handling of invalid slices when joining, if an invalid slice is encountered, the join will use the full source sample instead.
 - Fixed a bug where cue points with differing fmt header resulted in the embedded slices being discarded.
 - Added basic pitch detection to the edit panel.
+- Use the , and . keys to change the selected slice on the edit panel.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

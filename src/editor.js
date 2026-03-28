@@ -697,16 +697,32 @@ async function detectPitchHandler(event) {
     }
 }
 
-function sliceSelect(event) {
+function sliceSelect(event, sliceAddition) {
     const sliceSelectEl = document.querySelector('#sliceSelection');
     const selectionEl = document.querySelector('#editLines .edit-line');
-    if (+sliceSelectEl.value === -1) {
+    if (!sliceAddition && +sliceSelectEl.value === -1) {
         return resetSelectionPoints();
     }
     const slices = digichain.getSlicesFromMetaFile(editing);
-    const slice = slices.at(+sliceSelectEl.value);
-    selection.start = slice.s;
-    selection.end = slice.e;
+    const sliceNum = +sliceSelectEl.value;
+    const nextSlice = sliceAddition? (sliceNum + sliceAddition) : sliceNum;
+    const slice = slices.at(nextSlice);
+    if (slice && sliceAddition) {
+        if (nextSlice < slices.length && nextSlice >= 0) {
+            sliceSelectEl.value = nextSlice;
+        } else {
+            sliceSelectEl.value = '-1';
+            return resetSelectionPoints();
+        }
+    }
+    
+    selection.start = slice?.s??0;
+    selection.end = slice?.e??editing.buffer.length;
+    
+    if (selection.start === 0 && selection.end === editing.buffer.length) {
+        sliceSelectEl.value = '-1';
+        return resetSelectionPoints();
+    }
     updateSelectionEl();
     selectionEl.scrollIntoViewIfNeeded();
 }

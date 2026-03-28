@@ -5382,6 +5382,8 @@ function init() {
             'KeyR',
             'KeyS',
             'KeyX',
+            'Comma',
+            'Period',
             ...numberKeys
         ];
         if (keyboardShortcutsDisabled) { return; }
@@ -5443,6 +5445,10 @@ function init() {
                     digichain.editor.sliceUpdate(event);
                 } else if (event.code === 'KeyX') {
                     digichain.editor.sliceRemove(event);
+                } else if (event.code === 'Comma') {
+                    digichain.editor.sliceSelect({}, -1);
+                } else if (event.code === 'Period') {
+                    digichain.editor.sliceSelect({}, +1);
                 }
             }
             event.preventDefault();

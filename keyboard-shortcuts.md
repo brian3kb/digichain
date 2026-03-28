@@ -12,6 +12,7 @@
  - Edit Panel, N : Create new slice.
  - Edit Panel, U : Update current slice.
  - Edit Panel, X : Remove current slice.
+ - Edit Panel, ,/. : Change selected slice +/- 1.
 
 **Shift + Click / Shift + Key**
  - Up / Down Keys : moves the highlighted sample up or down in the list.

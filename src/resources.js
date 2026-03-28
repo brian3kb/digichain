@@ -1210,6 +1210,187 @@ Resampler.prototype.initializeBuffers = function() {
     }
 };
 
+export function detectPitch(audioBuffer) {
+    if (!audioBuffer) return null;
+    const sampleRate = audioBuffer.sampleRate;
+    const data = audioBuffer.getChannelData(0);
+    const windowSize = 2048;
+
+    if (data.length < windowSize) return null;
+
+    let maxEnergy = 0;
+    let maxIdx = 0;
+    const step = 512;
+
+    for (let i = 0; i < data.length - windowSize; i += step) {
+        let energy = 0;
+        for (let j = 0; j < windowSize; j++) {
+            energy += data[i + j] * data[i + j];
+        }
+        if (energy > maxEnergy) {
+            maxEnergy = energy;
+            maxIdx = i;
+        }
+    }
+
+    const segment = data.slice(maxIdx, maxIdx + windowSize);
+
+    const threshold = 0.15;
+    const halfSize = Math.floor(windowSize / 2);
+    const yinBuffer = new Float32Array(halfSize);
+
+    for (let tau = 0; tau < halfSize; tau++) {
+        for (let i = 0; i < halfSize; i++) {
+            const delta = segment[i] - segment[i + tau];
+            yinBuffer[tau] += delta * delta;
+        }
+    }
+
+    yinBuffer[0] = 1;
+    let runningSum = 0;
+    for (let tau = 1; tau < halfSize; tau++) {
+        runningSum += yinBuffer[tau];
+        yinBuffer[tau] *= tau / (runningSum || 1);
+    }
+
+    let tau = -1;
+    for (let t = 1; t < halfSize; t++) {
+        if (yinBuffer[t] < threshold) {
+            tau = t;
+            break;
+        }
+    }
+
+    if (tau === -1) {
+        let minVal = 1;
+        for (let t = 1; t < halfSize; t++) {
+            if (yinBuffer[t] < minVal) {
+                minVal = yinBuffer[t];
+                tau = t;
+            }
+        }
+    }
+
+    if (tau <= 0) return null;
+
+    let betterTau;
+    if (tau > 0 && tau < halfSize - 1) {
+        const s0 = yinBuffer[tau - 1];
+        const s1 = yinBuffer[tau];
+        const s2 = yinBuffer[tau + 1];
+        const denom = (2 * s1 - s2 - s0);
+        betterTau = denom !== 0 ? tau + (s2 - s0) / (2 * denom) : tau;
+    } else {
+        betterTau = tau;
+    }
+
+    const frequency = sampleRate / betterTau;
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const c0 = 440 * Math.pow(2, -4.75); // ~16.35 Hz
+
+    const totalCents = 1200 * Math.log2(frequency / c0);
+    const roundedCents = Math.round(totalCents);
+
+    const midiNote = Math.round(totalCents / 100) + 12;
+    const noteName = noteNames[midiNote % 12];
+    const octave = Math.floor(midiNote / 12) - 1;
+
+    return {
+        pitch: `${noteName}${octave}`,
+        semitones: Math.floor(roundedCents / 100),
+        cents: roundedCents
+    };
+}
+
+/**
+ * Internal helper to convert pitch string (e.g. C4, Db3) to MIDI note number.
+ * @param {string} pitch
+ * @returns {number|null}
+ */
+function pitchToMidi(pitch) {
+    const noteOffsets = {
+        'C': 0, 'C#': 1, 'DB': 1, 'D': 2, 'D#': 3, 'EB': 3,
+        'E': 4, 'FB': 4, 'E#': 5, 'F': 5, 'F#': 6, 'GB': 6, 'G': 7,
+        'G#': 8, 'AB': 8, 'A': 9, 'A#': 10, 'BB': 10, 'B': 11, 'CB': -1, 'B#': 12
+    };
+    const regex = /^([A-G][#b]?)(\d+)$/i;
+    const match = String(pitch).trim().match(regex);
+    if (!match) return null;
+    const name = match[1].toUpperCase();
+    const octave = parseInt(match[2]);
+    const offset = noteOffsets[name];
+    if (offset === undefined) return null;
+    return (octave + 1) * 12 + offset;
+}
+
+/**
+ * Shifts the pitch of an audio buffer.
+ * @param {object} options { buffer, from, to, cents, timeStretch }
+ * @returns {AudioBuffer|null}
+ */
+export function pitchShift({buffer, from, to, cents, timeStretch}) {
+    if (!buffer) return null;
+
+    let shiftCents = 0;
+    if (typeof cents !== 'undefined') {
+        shiftCents = parseFloat(cents);
+    } else if (from && to) {
+        const fromMidi = pitchToMidi(from);
+        const toMidi = pitchToMidi(to);
+        if (fromMidi !== null && toMidi !== null) {
+            shiftCents = (toMidi - fromMidi) * 100;
+        }
+    }
+
+    if (isNaN(shiftCents) || shiftCents === 0) return buffer;
+
+    const pitchFactor = Math.pow(2, shiftCents / 1200);
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const targetLength = Math.max(1, timeStretch ? buffer.length : Math.round(buffer.length / pitchFactor));
+
+    const newBuffer = new AudioBuffer({
+        length: targetLength,
+        numberOfChannels: numChannels,
+        sampleRate: sampleRate
+    });
+
+    if (!timeStretch) {
+        for (let ch = 0; ch < numChannels; ch++) {
+            const inputData = buffer.getChannelData(ch);
+            const outputData = newBuffer.getChannelData(ch);
+            for (let i = 0; i < targetLength; i++) {
+                const pos = i * pitchFactor;
+                const index = Math.floor(pos);
+                const fraction = pos - index;
+                if (index + 1 < buffer.length) {
+                    outputData[i] = inputData[index] * (1 - fraction) + inputData[index + 1] * fraction;
+                } else {
+                    outputData[i] = inputData[index] || 0;
+                }
+            }
+        }
+    } else {
+        const grainSize = Math.floor(sampleRate * 0.04);
+        const overlap = Math.floor(grainSize / 2);
+
+        for (let ch = 0; ch < numChannels; ch++) {
+            const inputData = buffer.getChannelData(ch);
+            const outputData = newBuffer.getChannelData(ch);
+            for (let i = 0; i < buffer.length - grainSize; i += overlap) {
+                for (let j = 0; j < grainSize; j++) {
+                    const window = 0.5 * (1 - Math.cos(2 * Math.PI * j / (grainSize - 1)));
+                    const inputIdx = Math.floor(i + j * pitchFactor);
+                    if (inputIdx < buffer.length && (i + j) < targetLength) {
+                        outputData[i + j] += inputData[inputIdx] * window;
+                    }
+                }
+            }
+        }
+    }
+    return newBuffer;
+}
+
 export function detectTempo(audioBuffer, fileName = '') {
     return new Promise((resolve, reject) => {
         function getPeaks(data) {

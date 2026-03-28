@@ -1,6 +1,6 @@
 import {
     audioBufferToWav, bufferToFloat32Array,
-    deClick, detectTempo,
+    deClick, detectTempo, detectPitch,
     Resampler,
     getResampleIfNeeded, dcDialog,
     joinToStereo, showToastMessage, buildXyDrumPatchData,
@@ -682,6 +682,21 @@ async function detectBpm(event) {
     btnEl.textContent = `${editing.tempo||''} BPM`;
 }
 
+async function detectPitchHandler(event) {
+    const btnEl = event.target;
+    const detectBufferArray = editing.buffer.getChannelData(0).slice(selection.start, selection.end);
+    const detectBuffer = conf.audioCtx.createBuffer(1, detectBufferArray.length, conf.masterSR);
+    detectBuffer.getChannelData(0).set(detectBufferArray);
+    const result = detectPitch(detectBuffer);
+    if (result) {
+        btnEl.textContent = ` ${result.pitch}`;
+        editing.meta.pitch = result;
+        showToastMessage(`Detected Pitch: ${result.pitch} (${result.cents} cents from C0)`);
+    } else {
+        showToastMessage('Could not detect pitch');
+    }
+}
+
 function sliceSelect(event) {
     const sliceSelectEl = document.querySelector('#sliceSelection');
     const selectionEl = document.querySelector('#editLines .edit-line');
@@ -763,6 +778,7 @@ export function renderEditor(item) {
 <div style="display:inline-block; margin-top: .2rem; padding-left: .5rem;">
   <button title="Snap selections to zero crossings?" onpointerdown="digichain.editor.toggleSnapToZero(event);" class="button ${shouldSnapToZeroCrossing ? '' : 'button-outline'}">Snap to Zero</button>
   <button title="Detect BPM from selection." onpointerdown="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
+  <button title="Detect Pitch from selection." onpointerdown="digichain.editor.detectPitchHandler(event);" class="button button-clear"> ${editing?.meta?.pitch?.pitch??'Pitch'}</button>
 </div>
 </div>
 <div class="above-waveform-buttons">
@@ -2385,6 +2401,7 @@ export const editor = {
     sliceSelect,
     toggleSnapToZero,
     detectBpm,
+    detectPitchHandler,
     changeChannel,
     getLastItem: () => editing?.meta?.id,
     reverse,

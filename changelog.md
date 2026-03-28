@@ -6,6 +6,7 @@
 - Add !!-s text as the slice count when there is an invalid slice on the file where s is the first encountered invalid slice number.
 - Graceful handling of invalid slices when joining, if an invalid slice is encountered, the join will use the full source sample instead.
 - Fixed a bug where cue points with differing fmt header resulted in the embedded slices being discarded.
+- Added basic pitch detection to the edit panel.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

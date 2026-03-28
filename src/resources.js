@@ -1391,6 +1391,46 @@ export function pitchShift({buffer, from, to, cents, timeStretch}) {
     return newBuffer;
 }
 
+/**
+ * Stretches the duration of an audio buffer without changing its pitch.
+ * @param {AudioBuffer} buffer
+ * @param {number} factor (e.g. 2.0 to double the length)
+ * @returns {AudioBuffer}
+ */
+export function timeStretch(buffer, factor) {
+    if (!buffer || factor === 1) return buffer;
+
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const originalLength = buffer.length;
+    const targetLength = Math.max(1, Math.round(originalLength * factor));
+
+    const newBuffer = new AudioBuffer({
+        length: targetLength,
+        numberOfChannels: numChannels,
+        sampleRate: sampleRate
+    });
+
+    const grainSize = Math.floor(sampleRate * 0.04);
+    const overlap = Math.floor(grainSize / 2);
+
+    for (let ch = 0; ch < numChannels; ch++) {
+        const inputData = buffer.getChannelData(ch);
+        const outputData = newBuffer.getChannelData(ch);
+
+        for (let i = 0; i < targetLength - grainSize; i += overlap) {
+            const inputIdx = Math.floor(i / factor);
+            for (let j = 0; j < grainSize; j++) {
+                const window = 0.5 * (1 - Math.cos(2 * Math.PI * j / (grainSize - 1)));
+                if (inputIdx + j < originalLength && (i + j) < targetLength) {
+                    outputData[i + j] += inputData[inputIdx + j] * window;
+                }
+            }
+        }
+    }
+    return newBuffer;
+}
+
 export function detectTempo(audioBuffer, fileName = '') {
     return new Promise((resolve, reject) => {
         function getPeaks(data) {

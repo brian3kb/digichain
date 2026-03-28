@@ -48,8 +48,9 @@
  - Sample Slice : In slicing panel, previews (plays) the slice clicked on.
  - Add Samples Icon: Adds a blank sample to list.
 
-**Alt + Key**
+**Alt/Option + Key / Alt/Option + Click**
  - Number 1 - 0, P : Stops the playback and looping of the sample.
+ - Editor Pitch adjustment buttons: Time-stretches the audio without affecting the pitch.
 
 **Ctrl + Shift + Click**
  - On the edit panel, when clicking the waveform, this will set the end point selection to the clicked position and move the start point to the previous end point value.

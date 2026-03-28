@@ -156,10 +156,11 @@
                 <code>Editor Crop</code> crops selection to a new sample and immediately edit that new sample in the editor.
             </div>
         </div>
-        <br><h5>Alt + Key</h5>
+        <br><h5>Alt/Option + Key / Alt/Option + Click</h5>
         <div class="shortcut-container">
             <div class="shortcut-section">
-                <code>Number 1 - 0, P</code> Stops the playback and looping of the sample
+                <code>Number 1 - 0, P</code> Stops the playback and looping of the sample<br>
+                <code>Editor pitch adjustment buttons</code> Time-stretches the audio without affecting the pitch.
             </div>
         </div>
     </div>
@@ -378,11 +379,11 @@
                             class="button-outline">
                         Condense
                     </button>
-                    <button title="Stretch all selected samples to the same length as the shortest sample in the selection. Hold shift to set a custom length in seconds. Hold shift+ctrl/cmd to set a custom length in samples."
+                    <button title="Stretch all selected samples to the same length as the shortest sample in the selection. Hold shift to set a custom length in seconds. Hold shift+ctrl/cmd to set a custom length in samples. Hold Alt/Option key in combination with any other modifier to stretch preserving pitch."
                             onclick="digichain.stretchSelected(event, true)"
                             class="button-outline has-shift-mod has-ctrl-mod">Stretch Shortest
                     </button>
-                    <button title="Stretch all selected samples to the same length as the longest sample in the selection. Hold shift to set a custom length in seconds. Hold shift+ctrl/cmd to set a custom length in samples."
+                    <button title="Stretch all selected samples to the same length as the longest sample in the selection. Hold shift to set a custom length in seconds. Hold shift+ctrl/cmd to set a custom length in samples. Hold Alt/Option key in combination with any other modifier to stretch preserving pitch."
                             onclick="digichain.stretchSelected(event)"
                             class="button-outline has-shift-mod has-ctrl-mod">Stretch Longest
                     </button>

@@ -1,6 +1,6 @@
 import {
     audioBufferToWav, bufferToFloat32Array,
-    deClick, detectTempo, detectPitch,
+    deClick, detectTempo, detectPitch, timeStretch,
     Resampler,
     getResampleIfNeeded, dcDialog,
     joinToStereo, showToastMessage, buildXyDrumPatchData,
@@ -863,18 +863,18 @@ export function renderEditor(item) {
 </div>
 <div class="edit-btn-group float-right">
     <div class="edit-pitch-btn-group pitch-semi-tones">
-    <button title="Lower pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5, 12)">-12</button>
-    <button title="Lower pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12), 1)">-1</button>
+    <button title="Lower pitch by 12 semi-tones; Hold shift key to stretch; Hold shift+alt/option keys to stretch preserving pitch." class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, .5, 12)">-12</button>
+    <button title="Lower pitch by 1 semi-tone; Hold shift key to stretch; Hold shift+alt/option keys to stretch preserving pitch." class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/12), 1)">-1</button>
     &nbsp;<a href="javascript:;" onclick="digichain.editor.togglePitchSemitoneCents(event, 'cent')" title="Click to toggle between semi-tones and cents."> Pitch (semitones) </a>&nbsp;
-    <button title="Increase pitch by 1 semi-tone" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12), -1)">+1</button>
-    <button title="Increase pitch by 12 semi-tones" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2, -12)">+12</button>
+    <button title="Increase pitch by 1 semi-tone; Hold shift key to stretch; Hold shift+alt/option keys to stretch preserving pitch." class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/12), -1)">+1</button>
+    <button title="Increase pitch by 12 semi-tones; Hold shift key to stretch; Hold shift+alt/option keys to stretch preserving pitch." class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2, -12)">+12</button>
     </div>
     <div class="edit-pitch-btn-group pitch-cents hide">
-    <button title="Lower pitch by 10 cents" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/120), 1)">-10</button>
-    <button title="Lower pitch by 1 cent" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/1200), 1)">-1</button>
+    <button title="Lower pitch by 10 cents; Hold shift key to stretch; Hold shift+alt/option keys to stretch preserving pitch." class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/120), 1)">-10</button>
+    <button title="Lower pitch by 1 cent; Hold shift key to stretch; Hold shift+alt/option keys to stretch preserving pitch." class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(-1/1200), 1)">-1</button>
     &nbsp;<a href="javascript:;" onclick="digichain.editor.togglePitchSemitoneCents(event, 'semi')" title="Click to toggle between semi-tones and cents." style="display: inline-block; width: 13rem;"> Pitch (cents) </a>&nbsp;
-    <button title="Increase pitch by 1 cent" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/1200), 1)">+1</button>
-    <button title="Increase pitch by 10 cents" class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/120), 1)">+10</button>
+    <button title="Increase pitch by 1 cent; Hold shift key to stretch; Hold shift+alt/option keys to stretch preserving pitch." class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/1200), 1)">+1</button>
+    <button title="Increase pitch by 10 cents; Hold shift key to stretch; Hold shift+alt/option keys to stretch preserving pitch." class="pitch button-outline check" onclick="digichain.editor.perSamplePitch(event, 2**(1/120), 1)">+10</button>
     </div>
     <br>
       <button title="Trims any zero valued audio from the end of the sample. Shift+click to trim both left and right." class="trim-right button button-outline" onclick="digichain.editor.trimRight(event)">Trim Right</button>
@@ -1944,28 +1944,35 @@ function stretch(event, item, renderEditPanel = true, targetLength, returnBuffer
 
     const originalLength = item.buffer.length;
     const factor = targetLength / originalLength;
-    const audioArrayBuffer = conf.audioCtx.createBuffer(
-      item.buffer.numberOfChannels,
-      targetLength,
-      conf.masterSR
-    );
 
-    for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
-        for (let i = 0; i < targetLength; i++) {
-            const index = i / factor;
-            const lowerIndex = Math.floor(index);
-            const upperIndex = Math.ceil(index);
-            const interpolationFactor = index - lowerIndex;
+    let audioArrayBuffer;
 
-            if (upperIndex >= originalLength) {
-                audioArrayBuffer.getChannelData(
-                  channel)[i] = item.buffer.getChannelData(channel)[lowerIndex];
-            } else {
-                audioArrayBuffer.getChannelData(channel)[i] =
-                  (1 - interpolationFactor) *
-                  item.buffer.getChannelData(channel)[lowerIndex] +
-                  interpolationFactor *
-                  item.buffer.getChannelData(channel)[upperIndex];
+    if (event && event.altKey) {
+        audioArrayBuffer = timeStretch(item.buffer, factor);
+    } else {
+        audioArrayBuffer = conf.audioCtx.createBuffer(
+          item.buffer.numberOfChannels,
+          targetLength,
+          conf.masterSR
+        );
+
+        for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
+            for (let i = 0; i < targetLength; i++) {
+                const index = i / factor;
+                const lowerIndex = Math.floor(index);
+                const upperIndex = Math.ceil(index);
+                const interpolationFactor = index - lowerIndex;
+
+                if (upperIndex >= originalLength) {
+                    audioArrayBuffer.getChannelData(
+                      channel)[i] = item.buffer.getChannelData(channel)[lowerIndex];
+                } else {
+                    audioArrayBuffer.getChannelData(channel)[i] =
+                      (1 - interpolationFactor) *
+                      item.buffer.getChannelData(channel)[lowerIndex] +
+                      interpolationFactor *
+                      item.buffer.getChannelData(channel)[upperIndex];
+                }
             }
         }
     }

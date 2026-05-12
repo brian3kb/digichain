@@ -1,10 +1,18 @@
 import {
-    audioBufferToWav, bufferToFloat32Array,
-    deClick, detectTempo, detectPitch, timeStretch,
+    audioBufferToWav,
+    bufferToFloat32Array,
+    buildXyDrumPatchData,
+    dcDialog,
+    deClick,
+    detectPitch,
+    detectTempo,
+    getResampleIfNeeded,
+    joinToStereo,
+    pitchShift,
     Resampler,
-    getResampleIfNeeded, dcDialog,
-    joinToStereo, showToastMessage, buildXyDrumPatchData,
-    setLoadingText
+    setLoadingText,
+    showToastMessage,
+    timeStretch
 } from './resources.js';
 import {settings} from './settings.js';
 
@@ -39,7 +47,7 @@ let shouldSnapToZeroCrossing = false;
 let folders = [];
 
 let samples = [];
-let opDataConfig = Array.from({ length: 24 }).map(i => ({}));
+let opDataConfig = Array.from({length: 24}).map(i => ({}));
 
 export function setEditorConf(options) {
     conf = options;
@@ -68,7 +76,7 @@ export function showEditor(data, options, view = 'sample', folderOptions = [], s
         /*Rehydrate state if it came from localstorage */
         if (samples.find(f => f?.buffer?.channel0)) {
             samples.forEach(f => {
-               if (!f?.buffer?.channel0) { return; }
+                if (!f?.buffer?.channel0) { return; }
                 const audioBuffer = conf.audioCtx.createBuffer(
                   f.buffer.numberOfChannels,
                   f.buffer.length,
@@ -103,13 +111,14 @@ function getOpKeyData(keyId) {
 
     return {
         center, left, right,
-        hasData:  !!(center || left || right),
-        length: Math.max(center?.buffer?.length??0, left?.buffer?.length??0, right?.buffer?.length??0)
+        hasData: !!(center || left || right),
+        length: Math.max(center?.buffer?.length ?? 0, left?.buffer?.length ?? 0, right?.buffer?.length ?? 0)
     };
 }
 
 function removeOpKeyData(keyId, zones = []) {
-    const toRemove = samples.map((s, i) => s.meta.opKeyId === keyId && zones.includes(s.meta.opKeyPosition) ? i : false).filter(i => i !== false);
+    const toRemove = samples.map(
+      (s, i) => s.meta.opKeyId === keyId && zones.includes(s.meta.opKeyPosition) ? i : false).filter(i => i !== false);
     toRemove.forEach(i => samples.splice(i, 1));
     renderOpExport();
 }
@@ -122,7 +131,8 @@ function calculateSamplesLengths() {
     }, {});
 
     samples.buffersLength = Object.keys(lengths).reduce((acc, val) => acc + lengths[val], 0);
-    samples.maxBuffersLength = (samples.buffersLength < (20 * 44100) && !samples.xyMultiOut) ? (20 * 44100) : (24 * 20 * 44100);
+    samples.maxBuffersLength = (samples.buffersLength < (20 * 44100) && !samples.xyMultiOut) ? (20 * 44100) : (24 * 20 *
+      44100);
     samples.isXyOnly = samples.buffersLength > (20 * 44100);
 }
 
@@ -145,7 +155,8 @@ async function dropOpKey(event, keyId, zone = -1) {
     if (!lastSelectedFile) { return; }
 
     if (lastSelectedFile.meta.duration > 20) {
-        await dcDialog('alert', `Skipping sample '${lastSelectedFile.file.filename}' as it is ${lastSelectedFile.meta.duration} seconds in length, samples must be less than 20 seconds.`);
+        await dcDialog('alert',
+          `Skipping sample '${lastSelectedFile.file.filename}' as it is ${lastSelectedFile.meta.duration} seconds in length, samples must be less than 20 seconds.`);
         return;
     }
 
@@ -176,8 +187,10 @@ async function dropOpKey(event, keyId, zone = -1) {
 
 function opKeySelected(event, keyId) {
     if (samples.linkMode) {
-        if (keyId === samples.selected || opDataConfig.some(c => c.linkedTo === `${keyId}`)) { return ;}
-        opDataConfig[keyId].linkedTo = opDataConfig[keyId].linkedTo === `${samples.selected}` ? false : `${samples.selected}`;
+        if (keyId === samples.selected || opDataConfig.some(c => c.linkedTo === `${keyId}`)) { return;}
+        opDataConfig[keyId].linkedTo = opDataConfig[keyId].linkedTo === `${samples.selected}`
+          ? false
+          : `${samples.selected}`;
         removeOpKeyData(keyId, [-1, 0, 1]);
     } else {
         samples.selected = samples.selected === keyId ? false : keyId;
@@ -191,7 +204,7 @@ function renderKey(color, index) {
         center: getNiceFileName('', keyData?.center, true),
         left: getNiceFileName('', keyData?.left, true),
         right: getNiceFileName('', keyData?.right, true)
-    }
+    };
     return `
     <div class="op-key ${color} key-${index} ${samples.selected === index ? 'selected' : ''}"
          ondragenter="this.classList.add('drag-over')"
@@ -208,7 +221,8 @@ function renderKey(color, index) {
         <div class="center-c"
            ondrop="digichain.editor.dropOpKey(event, ${index})"
            title="${fileNames.center ? (fileNames.center + '.') : ''}"
-        >${opDataConfig[index].linkedTo ? '<div class="op-key-linked"><i class="gg-link"></i> ' + (+opDataConfig[index].linkedTo + 1) + '</div>': ''}</div>
+        >${opDataConfig[index].linkedTo ? '<div class="op-key-linked"><i class="gg-link"></i> ' +
+      (+opDataConfig[index].linkedTo + 1) + '</div>' : ''}</div>
         <div class="right-b"
            ondragenter="this.classList.add('drag-over')"
            ondragleave="this.classList.remove('drag-over')"
@@ -235,22 +249,28 @@ function renderOpKeyDetails() {
     const opKeyDetailMarkup = (zone, zoneId, caption) => {
         return `
         <div class="op-key-detail-title">${caption}
-        ` + ( zone !== 'center' && opData[zone] ? `<div class="channel-options has-shift-mod" style="display: ${opData[zone].buffer.numberOfChannels >
-        1 ? 'block' : 'none'}">
+        ` + (zone !== 'center' && opData[zone]
+            ? `<div class="channel-options has-shift-mod" style="display: ${opData[zone].buffer.numberOfChannels >
+            1 ? 'block' : 'none'}">
           <a title="Left channel" onclick="digichain.editor.changeChannel(event, 'L', '${zone}')" class="${opData[zone].meta.channel ===
-        'L' ? 'selected' : ''} channel-option-L">L</a>
+            'L' ? 'selected' : ''} channel-option-L">L</a>
           <a title="Sum to mono" onclick="digichain.editor.changeChannel(event, 'S', '${zone}')" class="${opData[zone].meta.channel ===
-        'S' ? 'selected' : ''} channel-option-S">S</a>
+            'S' ? 'selected' : ''} channel-option-S">S</a>
           <a title="Right channel" onclick="digichain.editor.changeChannel(event, 'R', '${zone}')" class="${opData[zone].meta.channel ===
-        'R' ? 'selected' : ''} channel-option-R">R</a>
+            'R' ? 'selected' : ''} channel-option-R">R</a>
           <a title="Difference between Left and Right channels" onclick="digichain.editor.changeChannel(event, 'D', '${zone}')" class="${opData[zone].meta.channel ===
-        'D' ? 'selected' : ''} channel-option-D">D</a>
-          </div>` : '') +
-        `</div>
+            'D' ? 'selected' : ''} channel-option-D">D</a>
+          </div>`
+            : '') +
+          `</div>
         <div class="op-key-detail op-key-details-${zone}">
-            <span class="op-key-detail-name">${getNiceFileName('', opData[zone], true)??''}</span>
-            <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Edit" onclick="digichain.editor.editOpSlice('${zone}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
-            <button ${opData[zone] ? '' : 'disabled="disabled"'} title="Remove sample (double-click)." ondblclick="digichain.editor.removeOpKeyData(${samples.selected}, [${-1}])" class="button-clear remove"><i class="gg-trash"></i></button>
+            <span class="op-key-detail-name">${getNiceFileName('', opData[zone], true) ?? ''}</span>
+            <button ${opData[zone]
+            ? ''
+            : 'disabled="disabled"'} title="Edit" onclick="digichain.editor.editOpSlice('${zone}')" class="button-clear toggle-edit"><i class="gg-pen"></i></button>
+            <button ${opData[zone]
+            ? ''
+            : 'disabled="disabled"'} title="Remove sample (double-click)." ondblclick="digichain.editor.removeOpKeyData(${samples.selected}, [${-1}])" class="button-clear remove"><i class="gg-trash"></i></button>
         </div>
         <div class="op-key-spacer"></div>
         `;
@@ -261,12 +281,13 @@ function renderOpKeyDetails() {
         <div class="op-key-details-controls">
             <span>Panning</span>
             <div class="channel-options channel-options-stereo channel-options-stereo-opf ${opKeyConfig.pab
-              ? 'op-pan-ab-true'
-              : ''}" style="display: block; border: 1px solid #40392e;"
+          ? 'op-pan-ab-true'
+          : ''}" style="display: block; border: 1px solid #40392e;"
                ondblclick="digichain.editor.changeOpParam({target:{value: 16384}}, 'p')"
                >
                   <input class="channel-balance" type="range" style="display: inline-block;"
-                  min="0" max="32768" onchange="digichain.editor.changeOpParam(event, 'p')" value="${opKeyConfig.p ?? 16384}" />
+                  min="0" max="32768" onchange="digichain.editor.changeOpParam(event, 'p')" value="${opKeyConfig.p ??
+        16384}" />
                   <div style="display: inline-block;">
                     <span class="op-la"></span>
                     <span class="op-rb"></span>
@@ -283,16 +304,19 @@ function renderOpKeyDetails() {
             <div class="slice-options input-set" style="width: 100%;">
                   <label for="opPlayMode" class="before-input" style="margin-top: -.15rem;">Play Mode</label>
                   <select name="opPlayMode" id="opPlayMode" onchange="digichain.editor.changeOpParam(event, 'pm')" style="width: 100%; color:inherit;">
-                    <option value="4096" ${+opKeyConfig?.pm === 4096 ? 'selected' : '' }>Gate</option>
-                    <option value="20480" ${+opKeyConfig?.pm === 20480 ? 'selected' : '' }>Group</option>
-                    <option value="28672" ${+opKeyConfig?.pm === 28672 ? 'selected' : '' }>Loop</option>
-                    <option value="12288" ${!opKeyConfig.pm || +opKeyConfig?.pm === 12288 ? 'selected' : '' }>One Shot</option>
+                    <option value="4096" ${+opKeyConfig?.pm === 4096 ? 'selected' : ''}>Gate</option>
+                    <option value="20480" ${+opKeyConfig?.pm === 20480 ? 'selected' : ''}>Group</option>
+                    <option value="28672" ${+opKeyConfig?.pm === 28672 ? 'selected' : ''}>Loop</option>
+                    <option value="12288" ${!opKeyConfig.pm || +opKeyConfig?.pm === 12288 ? 'selected' : ''}>One Shot</option>
                   </select>
             </div>
         </div>
         <div class="op-key-details-controls" style="margin-top: .5rem;">
             <span style="margin-top: -.75rem;">Play Direction</span>
-            <button class="button button-outline" style="padding: 0 .75rem; min-width: 8rem;" onclick="digichain.editor.changeOpParam({target:{value: ${!opKeyConfig.r || +opKeyConfig?.r === 8192 ? 24576 : 8192}}}, 'r')">${!opKeyConfig.r || +opKeyConfig?.r === 8192 ? 'Forward' : 'Reverse'}</button>
+            <button class="button button-outline" style="padding: 0 .75rem; min-width: 8rem;" onclick="digichain.editor.changeOpParam({target:{value: ${!opKeyConfig.r ||
+        +opKeyConfig?.r === 8192 ? 24576 : 8192}}}, 'r')">${!opKeyConfig.r || +opKeyConfig?.r === 8192
+          ? 'Forward'
+          : 'Reverse'}</button>
         </div>
         `;
     };
@@ -301,16 +325,19 @@ function renderOpKeyDetails() {
     <div style="display: flex; justify-content: space-between;">
         <h5>${samples.selected + 1} / 24</h5>
         <div style="padding-right: .25rem; margin-top: -.5rem; opacity: .7;">
-            <button class="button-clear move-up" onclick="digichain.editor.opKeySelected(event, ${samples.selected === 0 ? 23 : (samples.selected - 1)})"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
-            <button class="button-clear move-down" onclick="digichain.editor.opKeySelected(event, ${samples.selected === 23 ? 0 : (samples.selected + 1)})"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
+            <button class="button-clear move-up" onclick="digichain.editor.opKeySelected(event, ${samples.selected === 0
+      ? 23
+      : (samples.selected - 1)})"><i class="gg-chevron-up-r has-shift-mod-i"></i></button>
+            <button class="button-clear move-down" onclick="digichain.editor.opKeySelected(event, ${samples.selected ===
+    23 ? 0 : (samples.selected + 1)})"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
         </div>
     </div>
     ` + (opKeyConfig.linkedTo ?
-      `<div class="op-key-details-buttons">
+        `<div class="op-key-details-buttons">
         <div class="op-key-detail-title">Samples Linked to Key ${+opKeyConfig.linkedTo + 1}</div>
     </div>
-    <div class="op-key-spacer"></div>` + opControlsMarkup():
-    `<div class="op-key-details-buttons">
+    <div class="op-key-spacer"></div>` + opControlsMarkup() :
+        `<div class="op-key-details-buttons">
         ${opKeyDetailMarkup('center', -1, 'Main')}
         ${opKeyDetailMarkup('left', 0, 'Left')}
         ${opKeyDetailMarkup('right', 1, 'Right')}
@@ -339,8 +366,8 @@ export function getSetOpExportData(_samples, _opDataConfig, forExport) {
     if (_samples?.length === 0) {
         samples = [];
         samples.selected = false;
-        opDataConfig = Array.from({ length: 24 }).map(i => ({}));
-    } else if (_samples && _opDataConfig){
+        opDataConfig = Array.from({length: 24}).map(i => ({}));
+    } else if (_samples && _opDataConfig) {
         samples = _samples;
         samples.selected = samples.selected || false;
         opDataConfig = _opDataConfig;
@@ -370,7 +397,8 @@ export function getSetOpExportData(_samples, _opDataConfig, forExport) {
 
 async function renderOpExport(reset = false) {
     if (reset) {
-        const confirmReset = await dcDialog('confirm', 'Reset OP Export kit config?', {kind: 'warning', okLabel: 'Reset'});
+        const confirmReset = await dcDialog('confirm', 'Reset OP Export kit config?',
+          {kind: 'warning', okLabel: 'Reset'});
         if (confirmReset) {
             getSetOpExportData([]);
         }
@@ -392,28 +420,40 @@ async function renderOpExport(reset = false) {
     opExportEl.innerHTML = `
     <div>
         <div class="op-key-details">${renderOpKeyDetails()}</div>
-        <div class="op-keys row ${samples.selected !== false && samples.linkMode ? 'in-link-mode' : ''}" style="display: flex; flex-direction: ${isBlackKeySelected && !samples.linkMode ? 'row-reverse' : 'row'};">
+        <div class="op-keys row ${samples.selected !== false && samples.linkMode
+      ? 'in-link-mode'
+      : ''}" style="display: flex; flex-direction: ${isBlackKeySelected && !samples.linkMode ? 'row-reverse' : 'row'};">
                 <div class="white-keys float-right">${keys.white.reduce(
-          (a, i) => a += renderKey('white', i), '')}</div>
-            <div class="black-keys float-right" style="${isBlackKeySelected && !samples.linkMode ? 'margin-left: .75rem;' : ''}">${keys.black.reduce(
-          (a, i) => a += renderKey('black', i), '')}</div>
+      (a, i) => a += renderKey('white', i), '')}</div>
+            <div class="black-keys float-right" style="${isBlackKeySelected && !samples.linkMode
+      ? 'margin-left: .75rem;'
+      : ''}">${keys.black.reduce(
+      (a, i) => a += renderKey('black', i), '')}</div>
         </div>
-        <div class="op-samples-length-bar" data-caption="${Math.floor((samples.buffersLength / samples.maxBuffersLength) * 100)}% (${Number(samples.buffersLength / 44100).toFixed(3)}s)">
+        <div class="op-samples-length-bar" data-caption="${Math.floor(
+      (samples.buffersLength / samples.maxBuffersLength) * 100)}% (${Number(samples.buffersLength / 44100).toFixed(3)}s)">
             <div class="fill" style="width: ${Math.floor((samples.buffersLength / samples.maxBuffersLength) * 100)}%;"></div>
         </div>
         <div class="op-buttons row" style="justify-content: space-between;">
             <button style="padding: 0 .75rem;"
             title="Toggle building the kit as a single audio sample or as multiple audio sample files in the created XY preset. \n\nNote: If the combined samples length is greater than 20 seconds, Field export will be disabled and XY multi file ouput enabled by default."
-            class="button float-right button-outline" onclick="digichain.editor.toggleOpExportSetting(event, 'xyMultiOut')" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>XY ${xyMultiOut ? 'Multi File' : 'Single File'}</button>
-            <button title="Toggle Link Selection Mode" onclick="digichain.editor.toggleOpExportSetting(event, 'linkMode')" class="button-clear toggle-link" style="opacity: ${samples.linkMode ? 1 : .2}; visibility: ${samples.selected !== false ? 'visible' : 'hidden'};"><i class="gg-link"></i></button>
+            class="button float-right button-outline" onclick="digichain.editor.toggleOpExportSetting(event, 'xyMultiOut')" ${samples.isXyOnly
+      ? 'disabled="disabled"'
+      : ''}>XY ${xyMultiOut ? 'Multi File' : 'Single File'}</button>
+            <button title="Toggle Link Selection Mode" onclick="digichain.editor.toggleOpExportSetting(event, 'linkMode')" class="button-clear toggle-link" style="opacity: ${samples.linkMode
+      ? 1
+      : .2}; visibility: ${samples.selected !== false ? 'visible' : 'hidden'};"><i class="gg-link"></i></button>
         </div>
         <div class="op-buttons row">
-            <input type="text" placeholder="Kit Name" onblur="digichain.editor.toggleOpExportSetting(event, 'kitName')" value="${samples.kitName??''}">
+            <input type="text" placeholder="Kit Name" onblur="digichain.editor.toggleOpExportSetting(event, 'kitName')" value="${samples.kitName ??
+    ''}">
             <button ondrop="digichain.splitAction(event, false, true, false, true)" title="Spreads a chain across the kit, this will replace any existing samples in the kit." class="button-outline op-chain-drop-zone">Drop Chain</button>
         </div>
         <div class="op-buttons row" style="justify-content: space-between;">
             <button class="button float-right" onclick="digichain.editor.buildXyKit()">Build XY Kit</button>
-            <button class="button float-right" onclick="digichain.editor.buildOpKit()" ${samples.isXyOnly ? 'disabled="disabled"' : ''}>Build Field Kit</button>
+            <button class="button float-right" onclick="digichain.editor.buildOpKit()" ${samples.isXyOnly
+      ? 'disabled="disabled"'
+      : ''}>Build Field Kit</button>
             <span>&nbsp;</span>
             <span>&nbsp;</span>
             <button title="Clear Kit" class="float-right button-clear" style="opacity:.7;" onpointerdown="digichain.editor.renderOpExport(true)"><i class="gg-remove"></i></button>
@@ -422,6 +462,7 @@ async function renderOpExport(reset = false) {
   `;
     conf.storeState();
 }
+
 function toggleOpExportSetting(event, setting) {
     if (setting === 'kitName') {
         samples[setting] = event?.target?.value || '';
@@ -431,7 +472,7 @@ function toggleOpExportSetting(event, setting) {
         event.target.value = samples[setting];
     } else {
         if (setting === 'linkMode' && !getOpKeyData(samples.selected)?.hasData) {
-            return ;
+            return;
         }
         samples[setting] = !samples[setting];
         renderOpExport();
@@ -447,7 +488,7 @@ async function acceptDroppedChainItems(droppedFiles = []) {
         const userValue = await dcDialog(
           'prompt',
           `The dropped chain contains ${droppedFiles.length} slices, please specify the slice number to start from to populate the kit`,
-          { inputType: 'number' });
+          {inputType: 'number'});
         if (userValue === false) { return; }
         let startFrom = Math.abs(parseInt(userValue));
         startFrom = startFrom > droppedFiles.length ? droppedFiles.length : startFrom;
@@ -568,8 +609,8 @@ function serializeOpKitToSingleBuffer() {
 
     return {
         buffer: kitAudio,
-        slices: kit.map(k=> {
-            const {buffer,samples,...slice} = k;
+        slices: kit.map(k => {
+            const {buffer, samples, ...slice} = k;
             return slice;
         })
     };
@@ -590,14 +631,14 @@ async function triggerDownload(blob, filename) {
         linkEl.setAttribute('download', filename);
         setLoadingText('');
         linkEl.click();
-    } 
+    }
 }
 
 function buildOpKit(type = 'aif', kitName) {
     setLoadingText('Building Field Kit');
     const kit = serializeOpKitToSingleBuffer();
     kitName = kitName || samples.kitName || getKitName();
-    
+
     const abtwMeta = {
         slices: kit.slices.filter(s => !s.blank),
         renderAt: type === 'aif' ? '44100' : conf.targetSR
@@ -631,7 +672,8 @@ function buildXyKit() {
                 slice.l = slice.length;
             }
             if (slice.buffer) {
-                const dataView = audioBufferToWav(slice.buffer, {slices: false, renderAt: conf.targetSR}, conf.masterSR, 16, 2);
+                const dataView = audioBufferToWav(slice.buffer, {slices: false, renderAt: conf.targetSR}, conf.masterSR,
+                  16, 2);
                 let blob = new window.Blob([dataView.buffer], {
                     type: 'audio/wav'
                 });
@@ -679,7 +721,7 @@ async function detectBpm(event) {
     detectBuffer.getChannelData(0).set(detectBufferArray);
     const bpm = await detectTempo(detectBuffer);
     editing.tempo = bpm?.match || false;
-    btnEl.textContent = `${editing.tempo||''} BPM`;
+    btnEl.textContent = `${editing.tempo || ''} BPM`;
 }
 
 async function detectPitchHandler(event) {
@@ -697,6 +739,173 @@ async function detectPitchHandler(event) {
     }
 }
 
+async function pitchShiftHandler(event) {
+    if (!editing) return;
+
+    let currentPitch = editing.meta.pitch?.pitch;
+    if (!currentPitch) {
+        setLoadingText('Detecting pitch...');
+        const detectBufferArray = editing.buffer.getChannelData(0).slice(selection.start, selection.end);
+        const detectBuffer = conf.audioCtx.createBuffer(1, detectBufferArray.length, conf.masterSR);
+        detectBuffer.getChannelData(0).set(detectBufferArray);
+        const result = detectPitch(detectBuffer);
+        if (result) {
+            currentPitch = result.pitch;
+            editing.meta.pitch = result;
+            renderEditor(editing);
+        }
+        setLoadingText('');
+    }
+
+    if (!currentPitch) {
+        currentPitch = 'C4';
+    }
+
+    const regex = /^([A-G][#b]?)(-?\d+)$/i;
+    const match = currentPitch.match(regex);
+    let selectedNote = match ? match[1].toUpperCase() : 'C';
+    let selectedOctave = match ? parseInt(match[2]) : 4;
+    let useTimeStretch = event.shiftKey;
+
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const isBlack = note => note.includes('#') || note.includes('b');
+
+    const renderKeyboard = (container) => {
+        const targetDisplay = container.querySelector('.repitch-target-display');
+        const octaveDisplay = container.querySelector('.repitch-octave-display');
+        const keyboard = container.querySelector('.repitch-keyboard');
+
+        targetDisplay.textContent = `${selectedNote}${selectedOctave}`;
+        octaveDisplay.textContent = `Octave: ${selectedOctave}`;
+
+        keyboard.innerHTML = notes.map(n => {
+            const active = n === selectedNote ? 'selected' : '';
+            const black = isBlack(n) ? 'black' : '';
+            return `<div class="repitch-key ${black} ${active}" data-note="${n}"></div>`;
+        }).join('');
+
+        keyboard.querySelectorAll('.repitch-key').forEach(key => {
+            key.onclick = () => {
+                selectedNote = key.dataset.note;
+                renderKeyboard(container);
+            };
+        });
+    };
+
+    const modalHtml = `
+        <div class="repitch-keyboard-container">
+            <div class="repitch-target-display"></div>
+            <div class="repitch-controls">
+                <button class="octave-down button-outline">- Octave</button>
+                <div class="repitch-octave-display"></div>
+                <button class="octave-up button-outline">+ Octave</button>
+            </div>
+            <div class="repitch-keyboard"></div>
+            <div class="repitch-options" style="margin-top: 1.5rem;">
+                <span>Time-stretch (preserve duration)</span>&nbsp;&nbsp;
+                <button id="repitchTsOff" class="check ${useTimeStretch ? 'button-outline' : 'button'}">OFF</button>
+                <button id="repitchTsOn" class="check ${useTimeStretch ? 'button' : 'button-outline'}">ON</button>
+            </div>
+            <div class="buttons-group" style="margin-top: 1rem;">
+                <button class="prompt-ok">Shift Current</button>
+                <button class="prompt-center button-outline" style="margin-left: 1rem;">Create Duplicate</button>
+                <button class="prompt-cancel button-outline" style="margin-left: 1rem;">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    const result = await dcDialog('custom', modalHtml, {
+        onRender: (container, resolve) => {
+            renderKeyboard(container);
+
+            container.querySelector('.octave-down').onclick = () => {
+                selectedOctave--;
+                renderKeyboard(container);
+            };
+            container.querySelector('.octave-up').onclick = () => {
+                selectedOctave++;
+                renderKeyboard(container);
+            };
+
+            const tsOffBtn = container.querySelector('#repitchTsOff');
+            const tsOnBtn = container.querySelector('#repitchTsOn');
+
+            const updateTsButtons = () => {
+                if (useTimeStretch) {
+                    tsOffBtn.classList.replace('button', 'button-outline');
+                    tsOnBtn.classList.replace('button-outline', 'button');
+                } else {
+                    tsOffBtn.classList.replace('button-outline', 'button');
+                    tsOnBtn.classList.replace('button', 'button-outline');
+                }
+            };
+
+            tsOffBtn.onclick = () => {
+                useTimeStretch = false;
+                updateTsButtons();
+            };
+            tsOnBtn.onclick = () => {
+                useTimeStretch = true;
+                updateTsButtons();
+            };
+
+            container.querySelector('.prompt-ok').onclick = () => {
+                resolve('shift');
+                container.close();
+            };
+            container.querySelector('.prompt-center').onclick = () => {
+                resolve('duplicate');
+                container.close();
+            };
+            container.querySelector('.prompt-cancel').onclick = () => {
+                resolve(false);
+                container.close();
+            };
+        }
+    });
+
+    if (!result) return;
+
+    const targetPitch = `${selectedNote}${selectedOctave}`;
+    setLoadingText('Repitching...');
+    try {
+        const newBuffer = pitchShift({
+            buffer: editing.buffer,
+            from: currentPitch,
+            to: targetPitch,
+            timeStretch: useTimeStretch
+        });
+
+        if (newBuffer) {
+            if (result === 'duplicate') {
+                const dupeObj = digichain.duplicate(event, editing.meta.id, true);
+                if (dupeObj) {
+                    const dupe = dupeObj.item;
+                    dupe.buffer = newBuffer;
+                    dupe.meta.duration = newBuffer.duration;
+                    dupe.meta.pitch = {pitch: targetPitch};
+                    const baseName = getNiceFileName(editing.file.name, editing, true);
+                    dupe.file.name = `${baseName}_${targetPitch}.wav`;
+                    dupeObj.callback(dupe, dupeObj.fileIdx);
+                    showToastMessage(`Created repitched duplicate: ${dupe.file.name}`);
+                }
+            } else {
+                editing.buffer = newBuffer;
+                editing.meta.duration = newBuffer.duration;
+                editing.meta.pitch = {pitch: targetPitch};
+                selection.end = newBuffer.length;
+                render();
+                digichain.renderList();
+                showToastMessage(`Repitched to ${targetPitch}`);
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        showToastMessage('Error during repitch');
+    }
+    setLoadingText('');
+}
+
 function sliceSelect(event, sliceAddition) {
     const sliceSelectEl = document.querySelector('#sliceSelection');
     const selectionEl = document.querySelector('#editLines .edit-line');
@@ -705,7 +914,7 @@ function sliceSelect(event, sliceAddition) {
     }
     const slices = digichain.getSlicesFromMetaFile(editing);
     const sliceNum = +sliceSelectEl.value;
-    const nextSlice = sliceAddition? (sliceNum + sliceAddition) : sliceNum;
+    const nextSlice = sliceAddition ? (sliceNum + sliceAddition) : sliceNum;
     const slice = slices.at(nextSlice);
     if (slice && sliceAddition) {
         if (nextSlice < slices.length && nextSlice >= 0) {
@@ -715,10 +924,10 @@ function sliceSelect(event, sliceAddition) {
             return resetSelectionPoints();
         }
     }
-    
-    selection.start = slice?.s??0;
-    selection.end = slice?.e??editing.buffer.length;
-    
+
+    selection.start = slice?.s ?? 0;
+    selection.end = slice?.e ?? editing.buffer.length;
+
     if (selection.start === 0 && selection.end === editing.buffer.length) {
         sliceSelectEl.value = '-1';
         return resetSelectionPoints();
@@ -792,19 +1001,24 @@ export function renderEditor(item) {
   <button title="Add the current range as a new slice marker." onpointerdown="digichain.editor.sliceCreate(event);" class="button-outline">New Slice</button>
 </div>
 <div style="display:inline-block; margin-top: .2rem; padding-left: .5rem;">
-  <button title="Snap selections to zero crossings?" onpointerdown="digichain.editor.toggleSnapToZero(event);" class="button ${shouldSnapToZeroCrossing ? '' : 'button-outline'}">Snap to Zero</button>
+  <button title="Snap selections to zero crossings?" onpointerdown="digichain.editor.toggleSnapToZero(event);" class="button ${shouldSnapToZeroCrossing
+      ? ''
+      : 'button-outline'}">Snap to Zero</button>
   <button title="Detect BPM from selection." onpointerdown="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
-  <button title="Detect Pitch from selection." onpointerdown="digichain.editor.detectPitchHandler(event);" class="button button-clear"> ${editing?.meta?.pitch?.pitch??'Pitch'}</button>
-</div>
-</div>
-<div class="above-waveform-buttons">
+  <button title="Detect Pitch from selection." onpointerdown="digichain.editor.detectPitchHandler(event);" class="button button-clear"> ${editing?.meta?.pitch?.pitch ??
+    'Pitch'}</button>
+  <button title="Repitch to a specific note; Hold Shift to preserve sample duration (time-stretch)." onpointerdown="digichain.editor.pitchShiftHandler(event);" class="button button-clear">Repitch</button>
+  </div>
+  </div><div class="above-waveform-buttons">
   <div class="sample-selection-buttons text-align-left float-left">
       <button title="Clicking on the waveform will set the selection start point." onpointerdown="digichain.editor.setSelStart(true);" class="button check btn-select-start">Start</button>
     <button title="Clicking on the waveform will set the selection end point." onpointerdown="digichain.editor.setSelStart(false);" class="button-outline check btn-select-end">End</button>
       <button title="Reset the waveform selection to the whole sample." onpointerdown="digichain.editor.resetSelectionPoints();" class="button-outline check">All</button>
   </div>
   <div class="channel-options editor-channel-options float-right" style="border: 0.1rem solid #d79c4e; display: ${(editing.buffer.numberOfChannels >
-    1 && conf.masterChannels === 1) || (editing.meta.opKey && editing.meta.opKeyPosition !== -1) ? 'inline-block' : 'none'}">
+      1 && conf.masterChannels === 1) || (editing.meta.opKey && editing.meta.opKeyPosition !== -1)
+      ? 'inline-block'
+      : 'none'}">
             <a title="Left channel" onpointerdown="digichain.editor.changeChannel(event, 'L')" class="${editing.meta.channel ===
     'L' ? 'selected' : ''} channel-option-L">L</a>
             <a title="Sum to mono" onpointerdown="digichain.editor.changeChannel(event, 'S')" class="${editing.meta.channel ===
@@ -822,7 +1036,8 @@ export function renderEditor(item) {
     <button title="Stop playback" onpointerdown="digichain.editor.editorPlayFile(event, false, true);" class="button-clear check"><i class="gg-play-stop"></i></button>
   </div>
   <div class="zoom-level text-align-right float-right">
-    <button title="Toggle waveform width / height zooming"  class="zoom-waveform-height button-outline check" onpointerdown="digichain.editor.zoomLevel('editor-height', 1)"><i class="gg-arrows-v"></i><span>${settings.wavePanelHeight / 128}x</span></button>
+    <button title="Toggle waveform width / height zooming"  class="zoom-waveform-height button-outline check" onpointerdown="digichain.editor.zoomLevel('editor-height', 1)"><i class="gg-arrows-v"></i><span>${settings.wavePanelHeight /
+    128}x</span></button>
     <button title="Zoom out waveform view." class="zoom-out button-outline check" style="width:2.5rem;" onpointerdown="digichain.editor.zoomLevel('editor', .5)">-</button>
     <button title="Reset zoom level waveform view."  class="zoom-reset button-outline check" onpointerdown="digichain.editor.zoomLevel('editor', 1)">1x</button>
     <button title="Zoom in on waveform view."  class="zoom-in button-outline check" style="width:2.5rem;" onpointerdown="digichain.editor.zoomLevel('editor', 2)">+</button>
@@ -841,7 +1056,8 @@ export function renderEditor(item) {
     ).
       reduce((a, v) => a += canvasMarkup, '')}
       <div id="editLines">
-        <div class="edit-line" style="height: ${settings.wavePanelHeight}px; margin-top: -${settings.wavePanelHeight + 8}px;">
+        <div class="edit-line" style="height: ${settings.wavePanelHeight}px; margin-top: -${settings.wavePanelHeight +
+    8}px;">
             <div class="edit-line-spacer" style="height: ${settings.wavePanelHeight}px;"></div>
         </div>
       </div>
@@ -1026,22 +1242,22 @@ function draw(data, id, canvas, dimensions) {
     ctx.strokeStyle = '#a8a8a8'; // what color our line is
     ctx.beginPath();
 
-    ctx.moveTo(0, data[0] * drawHeight/2);
+    ctx.moveTo(0, data[0] * drawHeight / 2);
 
     for (let x = 0; x < width; x++) {
         const startingIndex = Math.floor(x * samplesPerLine);
-        const endingIndex = Math.floor(((x+1) * samplesPerLine) - 1);
+        const endingIndex = Math.floor(((x + 1) * samplesPerLine) - 1);
 
         let min = data[startingIndex];
         let max = data[startingIndex];
 
-        for (let j = startingIndex; j<endingIndex; j++) {
+        for (let j = startingIndex; j < endingIndex; j++) {
             min = (data[j] < min) ? data[j] : min;
             max = (data[j] > max) ? data[j] : max;
         }
 
-        ctx.lineTo(x, min * drawHeight/2);
-        ctx.lineTo(x, max * drawHeight/2);
+        ctx.lineTo(x, min * drawHeight / 2);
+        ctx.lineTo(x, max * drawHeight / 2);
     }
 
     ctx.stroke();
@@ -1097,8 +1313,11 @@ function updateSelectionEl() {
       multiplier) : getSelectionEndPoint();
     selectionEl.style.marginLeft = `${getSelectionStartPoint()}px`;
     selectionEl.style.width = `${width}px`;
-    selectionEl.classList[+(editing.buffer.getChannelData(0)[selection.start]??1).toFixed(4) === 0 ? 'add' : 'remove']('start-is-zero-crossing');
-    selectionEl.classList[+(editing.buffer.getChannelData(0)[selection.end]??1).toFixed(4) === 0 ? 'add' : 'remove']('end-is-zero-crossing');
+    selectionEl.classList[+(editing.buffer.getChannelData(0)[selection.start] ?? 1).toFixed(4) === 0
+      ? 'add'
+      : 'remove']('start-is-zero-crossing');
+    selectionEl.classList[+(editing.buffer.getChannelData(0)[selection.end] ?? 1).toFixed(4) === 0 ? 'add' : 'remove'](
+      'end-is-zero-crossing');
     if (!selection.start || selection.start === 0) {
         selectionEl.classList.remove('start-is-zero-crossing');
     }
@@ -1111,7 +1330,7 @@ function updateSelectionEl() {
 function zoomLevel(view, level) {
     if (view === 'editor-height') {
         const currentMultiple = settings.wavePanelHeight / 128;
-        if (currentMultiple >=4) {
+        if (currentMultiple >= 4) {
             settings.wavePanelHeight = 128;
         } else {
             settings.wavePanelHeight = 128 * (currentMultiple + 1);
@@ -1327,10 +1546,10 @@ function adjustGain(event, gain, item, renderEditPanel = true) {
         selection.end = item.buffer.length;
     }
     item = item || editing;
-    
+
     if (event.shiftKey) {
         gain = 0.9;
-    } 
+    }
 
     let maxSample = 0;
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
@@ -1548,7 +1767,7 @@ function flipChannels(event, item, renderEditPanel = true) {
     }
     item = item || editing;
 
-    if (item.buffer.numberOfChannels  === 1) {
+    if (item.buffer.numberOfChannels === 1) {
         return;
     }
 
@@ -1704,8 +1923,9 @@ function thresholdCondense(event, item, renderEditPanel = true, lower = 0.003, u
         for (let i = selection.start; i < item.buffer.length; i++) {
             const absValueLast = Math.abs(data[(i - 1 > 0 ? i - 1 : 0)]);
             const absValue = Math.abs(data[i]);
-            const absValueNext = Math.abs(data[(i + 1 < item.buffer.length ? i + 1: item.buffer.length)]);
-            if ((absValue > lower && absValue < upper) || absValueNext.toFixed(4) === 0|| absValueLast.toFixed(4) === 0) {
+            const absValueNext = Math.abs(data[(i + 1 < item.buffer.length ? i + 1 : item.buffer.length)]);
+            if ((absValue > lower && absValue < upper) || absValueNext.toFixed(4) === 0 || absValueLast.toFixed(4) ===
+              0) {
                 audioArrayBuffer.getChannelData(channel)[aabIndex] = data[i] < 0 ? -absValue : absValue;
                 aabIndex++;
             }
@@ -1840,7 +2060,7 @@ function roughStretch(event, item, renderEditPanel = true, stretchFactor = 2, ad
 
     let windowSize = 4 * conf.masterSR;
     windowSize = windowSize > item.buffer.length / 16 ?
-        Math.floor(item.buffer.length / 16) : windowSize;
+      Math.floor(item.buffer.length / 16) : windowSize;
 
     let stepSize = Math.floor(windowSize / 4);
 
@@ -1857,7 +2077,7 @@ function roughStretch(event, item, renderEditPanel = true, stretchFactor = 2, ad
             let winData = new Float32Array(data.length);
             for (let w = 0; w < data.length; w++) {
                 winData[w] = data[w];
-                winData[w] = winData[w] > 1 ? 1: winData[w];
+                winData[w] = winData[w] > 1 ? 1 : winData[w];
                 winData[w] = winData[w] < -1 ? -1 : winData[w];
             }
             windows[channel].push(winData);
@@ -1872,13 +2092,19 @@ function roughStretch(event, item, renderEditPanel = true, stretchFactor = 2, ad
     );
 
     for (let winIdx = 0; winIdx < windowCount; winIdx++) {
-        let startPos = winIdx * (windowSize/2);
+        let startPos = winIdx * (windowSize / 2);
         for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
             for (let i = 0; i < windows[channel][winIdx].length; i++) {
                 if (!audioArrayBuffer.getChannelData(channel)[startPos + i]) {
                     audioArrayBuffer.getChannelData(channel)[startPos + i] = windows[channel][winIdx][i];
                 } else {
-                    audioArrayBuffer.getChannelData(channel)[startPos + i] = [startPos+i-2, startPos+i-1, startPos+i, startPos+i+1, startPos+i+2].reduce((acc, v) => acc + (audioArrayBuffer.getChannelData(channel)[v]??0 + windows[channel][winIdx][v]??0) , 0) / 5;
+                    audioArrayBuffer.getChannelData(channel)[startPos + i] = [
+                        startPos + i - 2,
+                        startPos + i - 1,
+                        startPos + i,
+                        startPos + i + 1,
+                        startPos + i + 2].reduce((acc, v) => acc +
+                      (audioArrayBuffer.getChannelData(channel)[v] ?? 0 + windows[channel][winIdx][v] ?? 0), 0) / 5;
                 }
 
             }
@@ -1890,7 +2116,8 @@ function roughStretch(event, item, renderEditPanel = true, stretchFactor = 2, ad
 
         for (let channel = 0; channel < audioArrayBuffer.numberOfChannels; channel++) {
             for (let i = 0; i < audioArrayBuffer.length; i++) {
-                audioArrayBuffer.getChannelData(channel)[i] = (audioArrayBuffer.getChannelData(channel)[i] + regularStretchedBuffer.getChannelData(channel)[i]) / 2;
+                audioArrayBuffer.getChannelData(channel)[i] = (audioArrayBuffer.getChannelData(channel)[i] +
+                  regularStretchedBuffer.getChannelData(channel)[i]) / 2;
             }
 
             const deClickedBuffer = deClick(audioArrayBuffer.getChannelData(channel), 0.4);
@@ -2040,7 +2267,7 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3, inve
     }
 
     let truncIndex = selection.end - selection.start;
-    
+
     if (truncIndex > item.buffer.length) {
         // don't need to truncate as sample is shorter than the trim length.
         return;
@@ -2051,22 +2278,22 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3, inve
       truncIndex,
       conf.masterSR
     ) : false;
-    
+
     if (invertCrop) {
         truncIndex = item.buffer.length - truncIndex;
     }
-    
+
     if (invertCrop && event.shiftKey && editPanelEl.clipboard?.length) {
         truncIndex = item.buffer.length + editPanelEl.clipboard.length;
         selection.end = selection.start;
     }
-    
+
     const audioArrayBuffer = conf.audioCtx.createBuffer(
       item.buffer.numberOfChannels,
       truncIndex,
       conf.masterSR
     );
-    
+
     for (let channel = 0; channel < item.buffer.numberOfChannels; channel++) {
         let x = 0;
         if (invertCrop) {
@@ -2075,14 +2302,14 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3, inve
                   channel)[x] = item.buffer.getChannelData(channel)[i];
                 x++;
             }
-            
+
             if (event.shiftKey) {
                 if (editPanelEl.clipboard?.length) {
                     for (let i = 0; i < editPanelEl.clipboard.length; i++) {
                         audioArrayBuffer.getChannelData(
                           channel)[x] = editPanelEl.clipboard.getChannelData(channel)[i];
                         x++;
-                    }  
+                    }
                 }
             } else {
                 let y = 0;
@@ -2092,7 +2319,7 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3, inve
                     y++;
                 }
             }
-            
+
             for (let i = selection.end; i < item.buffer.length; i++) {
                 audioArrayBuffer.getChannelData(
                   channel)[x] = item.buffer.getChannelData(channel)[i];
@@ -2103,9 +2330,9 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3, inve
                 audioArrayBuffer.getChannelData(
                   channel)[x] = item.buffer.getChannelData(channel)[i];
                 x++;
-            }  
+            }
         }
-        
+
     }
 
     item.buffer = audioArrayBuffer;
@@ -2121,8 +2348,11 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3, inve
     digichain.removeMetaFile(item.meta.id);
     if (renderEditPanel && !duplicate) {
         if (invertCrop) {
-            showEditor(editing, conf, 'sample', folders, selection.start, event.shiftKey && editPanelEl.clipboard?.length ? (selection.start + editPanelEl.clipboard.length) : selection.start);
-        }  else {
+            showEditor(editing, conf, 'sample', folders, selection.start,
+              event.shiftKey && editPanelEl.clipboard?.length
+                ? (selection.start + editPanelEl.clipboard.length)
+                : selection.start);
+        } else {
             showEditor(editing, conf, 'sample', folders);
         }
     }
@@ -2137,10 +2367,10 @@ function truncate(event, item, renderEditPanel = true, lengthInSeconds = 3, inve
             showToastMessage(`Cropped duplicate saved to list as, '${item.file.name}'`, 5000);
         }
     }
-    
+
     if (invertCrop && !event.shiftKey) {
         editPanelEl.clipboard = clipboardBuffer;
-    } 
+    }
 }
 
 function double(event, item, reverse = false, renderEditPanel = true) {
@@ -2327,7 +2557,12 @@ function editorPlayFile(event, loop = false, stop = false) {
         digichain.stopPlayFile(event, editing.meta.id);
         return;
     }
-    digichain.playFile({editor: true, file: editing, waveform: document.querySelector('.edit-panel-waveform'), loopSection: document.querySelector('.edit-line')}, editing.meta.id, false, start, end);
+    digichain.playFile({
+        editor: true,
+        file: editing,
+        waveform: document.querySelector('.edit-panel-waveform'),
+        loopSection: document.querySelector('.edit-line')
+    }, editing.meta.id, false, start, end);
     if (loop) {
         editorPlayFile.nextLoop = setTimeout(() => editorPlayFile(event, loop),
           end * 1000);
@@ -2335,7 +2570,9 @@ function editorPlayFile(event, loop = false, stop = false) {
 }
 
 function changeSelectedFile(event, direction = 1) {
-    const newSelected = document.querySelector('#fileList tr.selected')?.[direction === 1 ? 'nextElementSibling' : 'previousElementSibling'];
+    const newSelected = document.querySelector('#fileList tr.selected')?.[direction === 1
+      ? 'nextElementSibling'
+      : 'previousElementSibling'];
     if (newSelected && newSelected.tagName === 'TR') {
         digichain.handleRowClick({}, newSelected.dataset.id);
         digichain.showEditPanel({}, newSelected.dataset.id);
@@ -2425,6 +2662,7 @@ export const editor = {
     toggleSnapToZero,
     detectBpm,
     detectPitchHandler,
+    pitchShiftHandler,
     changeChannel,
     getLastItem: () => editing?.meta?.id,
     reverse,

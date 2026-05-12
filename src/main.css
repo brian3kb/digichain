@@ -3615,3 +3615,78 @@ body.latest .header-menu::after {
         margin-top: -.05rem;
     }
 }
+
+/* Repitch Modal Keyboard */
+.repitch-keyboard {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+    height: 100px;
+}
+
+.repitch-key {
+    border: 1px solid #999;
+    background: white;
+    width: 30px;
+    height: 100%;
+    cursor: pointer;
+    box-sizing: border-box;
+    z-index: 1;
+    transition: background 0.1s;
+}
+
+.repitch-key.black {
+    background: #333;
+    height: 60%;
+    width: 20px;
+    margin-left: -10px;
+    margin-right: -10px;
+    z-index: 2;
+}
+
+.repitch-key.selected {
+    background: #d79c4e !important;
+}
+
+.repitch-key:hover {
+    background: #eee;
+}
+
+.repitch-key.black:hover {
+    background: #444;
+}
+
+.repitch-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.repitch-octave-display {
+    font-size: 1.5rem;
+    min-width: 8rem;
+    text-align: center;
+    margin-top: -.75rem;
+}
+
+.repitch-target-display {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 1rem 0;
+    color: #d79c4e;
+    min-height: 2.5rem;
+}
+
+.repitch-options {
+    margin: 1.5rem 0;
+    text-align: center;
+}
+
+.repitch-keyboard-container {
+    padding: 0.5rem;
+    min-width: 320px;
+}
+

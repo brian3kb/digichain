@@ -1,24 +1,29 @@
 import {settings} from './settings.js';
 import {
-    Resampler,
     audioBufferToWav,
+    bufferToFloat32Array,
+    buildElMultiMarkup,
+    buildXyDrumPatchData,
+    dcDialog,
+    detectTempo,
     encodeOt,
+    flattenFile,
     getAifSampleRate,
     joinToMono,
     joinToStereo,
-    bufferToFloat32Array,
-    detectTempo, dcDialog, showToastMessage, setLoadingText,
-    flattenFile, buildXyDrumPatchData, buildElMultiMarkup
+    Resampler,
+    setLoadingText,
+    showToastMessage
 } from './resources.js';
 import {
-    editor,
-    showEditor,
     drawWaveform,
+    editor,
     getNiceFileName,
-    setEditorConf,
-    getUniqueName,
     getSetOpExportData,
-    sanitizeFileName
+    getUniqueName,
+    sanitizeFileName,
+    setEditorConf,
+    showEditor
 } from './editor.js';
 import './jszip.js';
 import './msgpack.min.js';
@@ -127,8 +132,8 @@ metaFiles.getByFile = function(file) {
             name: file.file.name,
             path: file.file.path,
             cssClass: 'is-dc-file',
-            otLoop: file.meta.otLoop??0,
-            otLoopStart: file.meta.otLoopStart??0,
+            otLoop: file.meta.otLoop ?? 0,
+            otLoopStart: file.meta.otLoopStart ?? 0,
             sliceCount: file.meta.slices.length,
             slices: file.meta.slices.map(
               slice => ({
@@ -149,17 +154,17 @@ metaFiles.getByFileInDcFormat = function(file) {
       file === '---sliceToTransientCached---' ?
         metaFiles.getByFileName('---sliceToTransientCached---') :
         metaFiles.getByFile(file) || {slices: []}).slices.map(slice => {
-            let _slice = {
-                s: slice.startPoint,
-                e: slice.endPoint,
-                l: slice.loopPoint,
-                n: slice.name || ''
-            };
-            ['p', 'pab', 'st'].forEach(k => {
-                if (slice[k]??false) { return ; }
-                _slice[k] = slice[k];
-            });
-            return _slice;
+        let _slice = {
+            s: slice.startPoint,
+            e: slice.endPoint,
+            l: slice.loopPoint,
+            n: slice.name || ''
+        };
+        ['p', 'pab', 'st'].forEach(k => {
+            if (slice[k] ?? false) { return; }
+            _slice[k] = slice[k];
+        });
+        return _slice;
     });
 };
 metaFiles.removeSelected = function() {
@@ -210,7 +215,7 @@ async function checkAndSetAudioContext() {
 function setAudioOptionsFromCommonConfig(event) {
     const configString = event.target.value;
     if (configString === 'none') {
-        return ;
+        return;
     }
     const defaults = [48000, 'm', 16, 'w', ...DefaultSliceOptions];
     let configValues = configString ? configString.match(/^\d+|[ms]|\d+|[wa]/g) : defaults;
@@ -218,7 +223,7 @@ function setAudioOptionsFromCommonConfig(event) {
     document.getElementById('settingsSampleRate').value = +configValues[0];
     document.getElementById(`acoChannel${configValues[1]}`).click();
     document.getElementById(`acoBitDepth${configValues[2]}`).click();
-    configValues.slice(4).forEach((g, i) => i > 0 ?document.getElementById(`gridSize${+i}`).value = +g : '');
+    configValues.slice(4).forEach((g, i) => i > 0 ? document.getElementById(`gridSize${+i}`).value = +g : '');
     if (files.length === 0) {
         document.getElementById('settingsWorkingSampleRate').value = +configValues[0];
     }
@@ -231,20 +236,22 @@ function setSliceOptionsFromArray(sliceOptions = []) {
     ));
 
     selectSliceAmount({
-        shiftKey: false,
-        target: document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)
-    }, sliceOptions[+document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)?.dataset?.sel??0]);
+          shiftKey: false,
+          target: document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)
+      },
+      sliceOptions[+document.querySelector(`.master-slices [class*="sel-"].check:not(.button-outline)`)?.dataset?.sel ??
+      0]);
 }
 
 async function changeAudioConfig(configString = '', onloadRestore = false) {
     const settingsPanelEl = document.getElementById('exportSettingsPanel');
     const configOptionsEl = document.getElementById('audioConfigOptions');
     const audioValuesFromCommonSelectEl = document.getElementById('audioValuesFromCommonSelect');
-    const commonSelectDevice = (audioValuesFromCommonSelectEl?.selectedOptions??[])[0]?.dataset?.device;
+    const commonSelectDevice = (audioValuesFromCommonSelectEl?.selectedOptions ?? [])[0]?.dataset?.device;
     const defaults = [48000, 'm', 16, 'w', ...DefaultSliceOptions];
     let configValues = configString ? configString.match(/^\d+|[ms]|\d+|[wa]/g) : defaults;
     configValues = configValues.length === 11 ? configValues : defaults;
-    let configData = configString && configValues.length === 11? {
+    let configData = configString && configValues.length === 11 ? {
         sr: +configValues[0],
         c: configValues[1],
         bd: +configValues[2],
@@ -258,11 +265,12 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
         go: [0, ...[...document.querySelectorAll('.acoSliceGridOption')].map(go => +go.value)]
     };
 
-    let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value || localStorage.getItem('workingSampleRate') || 48000);
+    let workingSR = +(document.getElementById('settingsWorkingSampleRate')?.value ||
+      localStorage.getItem('workingSampleRate') || 48000);
 
     try {
         settings.ditherExports = JSON.parse(document.getElementById('ditherGroup').dataset.dither);
-    } catch(e) {}
+    } catch (e) {}
 
     if (audioValuesFromCommonSelectEl) {
         toggleSetting('exportWithOtFile', 'ot' === commonSelectDevice, true);
@@ -276,12 +284,14 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 
     if (configData.sr < settings.supportedSampleRates[0] || configData.sr > settings.supportedSampleRates[1]) {
         showToastMessage(
-          `ERROR: The sample rate ${configData.sr}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`, 8000);
+          `ERROR: The sample rate ${configData.sr}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`,
+          8000);
         return false;
     }
     if (workingSR < settings.supportedSampleRates[0] || workingSR > settings.supportedSampleRates[1]) {
         showToastMessage(
-          `ERROR: The sample rate ${workingSR}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`, 8000);
+          `ERROR: The sample rate ${workingSR}Hz is not supported by your browser.\n\nPlease select a sample rate between ${settings.supportedSampleRates[0]}Hz and ${settings.supportedSampleRates[1]}Hz`,
+          8000);
         return false;
     }
 
@@ -298,7 +308,8 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
         }
     }
     setLoadingText('Configuring');
-    const selectionString = `${configData.f === 'a' ? 'AIF ' : ''}${configData.sr/1000}kHz/${configData.bd}BIT ${configData.c === 'm' ? 'MONO' : 'STEREO'}`;
+    const selectionString = `${configData.f === 'a' ? 'AIF ' : ''}${configData.sr /
+    1000}kHz/${configData.bd}BIT ${configData.c === 'm' ? 'MONO' : 'STEREO'}`;
     configOptionsEl.value = selectionString;
     const selection = `${configData.sr}${configData.c}${configData.bd}${configData.f}${configData.go.join('-')}`;
     settings.lastUsedAudioConfig = selection;
@@ -348,7 +359,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
         if ('xy' === commonSelectDevice) {
             updateExportChainsAsPresets({device: 'xy', length: 24});
         } else if ('tv' === commonSelectDevice) {
-            updateExportChainsAsPresets({device: 'tv', length: 84});    
+            updateExportChainsAsPresets({device: 'tv', length: 84});
         } else {
             updateUiButtonAction('exportChainsAsPresets', '.toggle-preset-bundling-xy');
             updateUiButtonAction('exportChainsAsPresets', '.toggle-preset-bundling-tv');
@@ -383,7 +394,7 @@ function checkAudioContextState() {
     return false;
 }
 
-function bufferRateResampler(f, workingSR, audioCtxOverride)  {
+function bufferRateResampler(f, workingSR, audioCtxOverride) {
     let audioBuffer, slices;
     let channel0 = (f.buffer.channel0 || f.buffer.getChannelData(0));
     let channel1 = f.buffer.numberOfChannels === 2 ? (f.buffer.channel1 || f.buffer.getChannelData(1)) : false;
@@ -392,19 +403,19 @@ function bufferRateResampler(f, workingSR, audioCtxOverride)  {
     if (f.buffer.sampleRate !== workingSR) {
         let resample, resampleR;
         resample = new Resampler(f.buffer.sampleRate, workingSR, 1,
-            channel0);
+          channel0);
         resample.resampler(resample.inputBuffer.length);
 
         if (f.buffer.numberOfChannels === 2) {
             resampleR = new Resampler(f.buffer.sampleRate, workingSR, 1,
-                channel1);
+              channel1);
             resampleR.resampler(resampleR.inputBuffer.length);
         }
 
-        audioBuffer = (audioCtxOverride??audioCtx).createBuffer(
-            f.buffer.numberOfChannels,
-            resample.outputBuffer.length,
-            workingSR
+        audioBuffer = (audioCtxOverride ?? audioCtx).createBuffer(
+          f.buffer.numberOfChannels,
+          resample.outputBuffer.length,
+          workingSR
         );
         audioBuffer.copyToChannel(resample.outputBuffer, 0);
         if (f.buffer.numberOfChannels === 2) {
@@ -423,10 +434,10 @@ function bufferRateResampler(f, workingSR, audioCtxOverride)  {
         }
 
     } else {
-        audioBuffer = (audioCtxOverride??audioCtx).createBuffer(
-            f.buffer.numberOfChannels,
-            f.buffer.length,
-            workingSR
+        audioBuffer = (audioCtxOverride ?? audioCtx).createBuffer(
+          f.buffer.numberOfChannels,
+          f.buffer.length,
+          workingSR
         );
         audioBuffer.copyToChannel(channel0, 0);
         if (f.buffer.numberOfChannels === 2) {
@@ -531,7 +542,7 @@ async function changeChainName(event, index, action) {
     if (action === 'remove-all') {
         event.preventDefault();
         let confirmRemove = await dcDialog('confirm',
-          `Are you sure you want to remove all the chain names below?`, { kind: 'warning', okLabel: 'Remove All' });
+          `Are you sure you want to remove all the chain names below?`, {kind: 'warning', okLabel: 'Remove All'});
         if (confirmRemove) {
             chainFileNames = [];
         }
@@ -545,7 +556,7 @@ async function changeChainName(event, index, action) {
     if ((index > -1) && action === 'remove') {
         event.preventDefault();
         let confirmRemove = await dcDialog('confirm',
-          `Are you sure you want to remove the chain name '${item.name}'?`, { kind: 'warning', okLabel: 'Remove' });
+          `Are you sure you want to remove the chain name '${item.name}'?`, {kind: 'warning', okLabel: 'Remove'});
         if (confirmRemove) {
             chainFileNames.splice(index, 1);
         }
@@ -693,7 +704,8 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
     file.meta.slices = file.meta.slices || metaFiles.getByFileInDcFormat(file);
 
     wav = audioBufferToWav(
-      file.buffer, {...file.meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
+      file.buffer, {...file.meta, renderAt: useTargetSR ? targetSR : false}, masterSR,
+      (bitDepthOverride || masterBitDepth),
       masterChannels, settings.dePopClick,
       (renderAsAif && settings.pitchModifier === 1), settings.pitchModifier, embedSliceData,
       settings.embedCuePoints, settings.embedOrslData
@@ -716,7 +728,8 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
               slice.l / settings.pitchModifier)
         }));
         wav = audioBufferToWav(
-          pitchedBuffer, {...meta, renderAt: useTargetSR ? targetSR : false}, masterSR, (bitDepthOverride || masterBitDepth),
+          pitchedBuffer, {...meta, renderAt: useTargetSR ? targetSR : false}, masterSR,
+          (bitDepthOverride || masterBitDepth),
           masterChannels, settings.dePopClick,
           renderAsAif, 1, embedSliceData, settings.embedCuePoints, settings.embedOrslData
         );
@@ -742,8 +755,9 @@ async function downloadAll(event) {
     if (_files.length === 0) { return; }
     if (_files.length > 5 && !settings.zipDownloads) {
         const userReadyForTheCommitment = await dcDialog('confirm',
-          `You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`, {
-            kind: 'info', okLabel: 'Absolutely'
+          `You are about to download ${_files.length} files, that will show ${_files.length} pop-ups one after each other..\n\nAre you ready for that??`,
+          {
+              kind: 'info', okLabel: 'Absolutely'
           });
         if (!userReadyForTheCommitment) { return; }
     }
@@ -829,7 +843,7 @@ async function downloadFile(id, fireLink = false, event = {}) {
     const renderAsAif = targetContainer === 'a';
     const {blob: fileBlob} = await setWavLink(file, el, renderAsAif, true);
     let otFile = await createAndSetOtFileLink(
-        file.meta.slices ?? [], file, file.file.name, metaEl);
+      file.meta.slices ?? [], file, file.file.name, metaEl);
     if (fireLink && (!settings.shiftClickForFileDownload || (settings.shiftClickForFileDownload && event.shiftKey))) {
         if (window.__TAURI__) {
             const audioData = await fileBlob.arrayBuffer();
@@ -843,12 +857,12 @@ async function downloadFile(id, fireLink = false, event = {}) {
                     baseDir: window.__TAURI__.fs.BaseDirectory.Download,
                     create: true
                 });
-            } 
+            }
             setLoadingText('');
             window.__TAURI__.dialog.message(`Saved to the Downloads folder as '${file.file.name}'.`);
         } else {
             el.click();
-            if (otFile) {metaEl.click(); }  
+            if (otFile) {metaEl.click(); }
         }
     }
     return [el, metaEl];
@@ -926,12 +940,12 @@ async function condenseSelected(event) {
       `Please enter the LOWER threshold (decimal value between 0 and 1)...`);
     if (lower && !isNaN(lower)) {
         lower = Math.abs(+lower);
-    } else { return ;}
+    } else { return;}
     let upper = await dcDialog('prompt',
       `Please enter the UPPER threshold (decimal value between 0 and 1)...`);
     if (upper && !isNaN(upper)) {
         upper = Math.abs(+upper);
-    } else { return ;}
+    } else { return;}
     setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
@@ -982,15 +996,16 @@ async function clearSlicesSelected(event) {
 
 async function assignFolder(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
-    let newPath = await dcDialog('prompt', `Set folder path for all selected to: (start the path with / to prepend new path to existing path)`, {
-        dataList: [...new Set(files.map(f => f.file.path))]
-    });
+    let newPath = await dcDialog('prompt',
+      `Set folder path for all selected to: (start the path with / to prepend new path to existing path)`, {
+          dataList: [...new Set(files.map(f => f.file.path))]
+      });
     if (newPath === false) {
         return;
     }
     if (!newPath.endsWith('/')) {
         newPath = `${newPath}/`;
-    } 
+    }
     setLoadingText('Processing');
     setTimeout(() => {
         const selected = files.filter(f => f.meta.checked);
@@ -1106,7 +1121,7 @@ async function stretchSelected(event, shortest = false) {
             }
         } else if (userResponse === false) {
             return;
-        } 
+        }
     }
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     setLoadingText('Processing');
@@ -1434,7 +1449,7 @@ function toggleSetting(param, value, suppressRerender) {
     }
     if (param === 'padSpacedChainsWith') {
         settings.padSpacedChainsWith = value;
-     } 
+    }
     if (param === 'skipMiniWaveformRender') {
         renderList();
     }
@@ -1488,14 +1503,14 @@ function toggleSecondsPerFile(event, value) {
             updateSpacedChainMode(true);
         }
     }
-    
+
     setCountValues();
 }
 
 function updateSpacedChainMode(toggleSetting) {
     const spacedEl = document.querySelector('button.dl-spaced');
     const chainEl = document.querySelector('button.dl-chain');
-    const spacedToggleEl = document.querySelector('.toggle-spaced-chain-mode')
+    const spacedToggleEl = document.querySelector('.toggle-spaced-chain-mode');
     if (toggleSetting) {
         settings.spacedChainMode = !settings.spacedChainMode;
     }
@@ -1512,7 +1527,7 @@ function updateUiButtonAction(param, buttonClass, toggleSetting, forceValue) {
     if (toggleSetting) {
         settings[param] = forceValue === undefined ? !settings[param] : forceValue;
     }
-    buttonEl?.classList[settings[param]? 'remove' : 'add']('fade');
+    buttonEl?.classList[settings[param] ? 'remove' : 'add']('fade');
 }
 
 function updateExportChainsAsPresets(presetConfig) {
@@ -1522,7 +1537,8 @@ function updateExportChainsAsPresets(presetConfig) {
     const _presetConfig = presetConfig.device === settings.exportChainsAsPresets?.device ? undefined : presetConfig;
     const buttonElements = document.querySelectorAll('button[class^=toggle-preset-bundling]');
     buttonElements.forEach(el => el.classList.add('fade'));
-    updateUiButtonAction('exportChainsAsPresets', `.toggle-preset-bundling-${presetConfig.device}`, (settings.exportChainsAsPresets !== presetConfig), _presetConfig);
+    updateUiButtonAction('exportChainsAsPresets', `.toggle-preset-bundling-${presetConfig.device}`,
+      (settings.exportChainsAsPresets !== presetConfig), _presetConfig);
     setCountValues();
 }
 
@@ -1578,10 +1594,10 @@ function showExportSettingsPanel(page = 'settings') {
 
     let panelMarkup = `
       <div class="export-options">
-          <span class="${page === 'about' || !page ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('about')">About</span>
-          <span class="${page === 'audio' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('audio')">Audio Config</span>
-          <span class="${page === 'session' || !page ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('session')">Session</span>
-          <span class="${page === 'settings' ? 'active': ''}" onpointerdown="digichain.showExportSettingsPanel('settings')">Settings</span>
+          <span class="${page === 'about' || !page ? 'active' : ''}" onpointerdown="digichain.showExportSettingsPanel('about')">About</span>
+          <span class="${page === 'audio' ? 'active' : ''}" onpointerdown="digichain.showExportSettingsPanel('audio')">Audio Config</span>
+          <span class="${page === 'session' || !page ? 'active' : ''}" onpointerdown="digichain.showExportSettingsPanel('session')">Session</span>
+          <span class="${page === 'settings' ? 'active' : ''}" onpointerdown="digichain.showExportSettingsPanel('settings')">Settings</span>
       </div>
     `;
     switch (page) {
@@ -1619,11 +1635,11 @@ function showExportSettingsPanel(page = 'settings') {
     <td><span>Pad spaced chains with?&nbsp;&nbsp;&nbsp;</span></td>
     <td>
     <button title="Pads spaced chains with the last sample of the chain." onpointerdown="digichain.toggleSetting('padSpacedChainsWith', 'last')" class="check ${settings.padSpacedChainsWith ===
-        'last' ? 'button' : 'button-outline'}">Last</button>
+            'last' ? 'button' : 'button-outline'}">Last</button>
     <button title="Pads spaced chains with silent slices." onpointerdown="digichain.toggleSetting('padSpacedChainsWith', 'silence')" class="check ${settings.padSpacedChainsWith ===
-        'silence' ? 'button' : 'button-outline'}">Blnk</button>
+            'silence' ? 'button' : 'button-outline'}">Blnk</button>
     <button title="Pads spaced chains with a random sample from within the chain." onpointerdown="digichain.toggleSetting('padSpacedChainsWith', 'random')" class="check ${settings.padSpacedChainsWith ===
-        'random' ? 'button' : 'button-outline'}">Rand</button>
+            'random' ? 'button' : 'button-outline'}">Rand</button>
     <button title="Pads spaced chains with a reversed repeat of the sample within the chain at the offset position from the start." onpointerdown="digichain.toggleSetting('padSpacedChainsWith', 'repeat')" class="check ${settings.padSpacedChainsWith ===
             'repeat' ? 'button' : 'button-outline'}">Rcsr</button>
     </td>
@@ -1822,7 +1838,7 @@ function showExportSettingsPanel(page = 'settings') {
                   min="${settings.supportedSampleRates[0]}" max="${settings.supportedSampleRates[1]}">
                   <datalist id="commonSR">
                     ${[12000, 24000, 32000, 44100, 48000].map(
-                      v => '<option value="' + v + '">').join('')}
+              v => '<option value="' + v + '">').join('')}
                   </datalist>
                   <button title="Restore currently active sample rate" class="button-clear" onpointerdown="(() => {const i = document.getElementById('settingsSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
               </div>
@@ -1833,7 +1849,9 @@ function showExportSettingsPanel(page = 'settings') {
       <tr>
       <td><span>Bit Depth&nbsp;&nbsp;&nbsp;</span></td>
       <td>
-      <div style="padding: 1.5rem 0;" class="${targetContainer === 'a' ? 'disabled' : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onclick="((event, el) => {
+      <div style="padding: 1.5rem 0;" class="${targetContainer === 'a'
+              ? 'disabled'
+              : ''}" id="bitDepthGroup" data-bit-depth="${masterBitDepth}" onclick="((event, el) => {
           el.dataset.bitDepth = event.target.dataset.bitDepth || el.dataset.bitDepth;
       el.querySelectorAll('button').forEach(b => b.classList = b.dataset.bitDepth === el.dataset.bitDepth ? 'check button' : 'check button-outline');
       document.getElementById('ditherGroup').classList[+el.dataset.bitDepth === 32 ? 'add': 'remove']('disabled');
@@ -1848,12 +1866,16 @@ function showExportSettingsPanel(page = 'settings') {
       <tr>
       <td><span>Dither 8/16/24 Bit Exports&nbsp;&nbsp;&nbsp;</span></td>
       <td>
-      <div style="padding: 1.5rem 0;" class="${masterBitDepth === 32 ? 'disabled' : ''}" data-dither="${settings.ditherExports}" id="ditherGroup" onclick="((event, el) => {
+      <div style="padding: 1.5rem 0;" class="${masterBitDepth === 32
+              ? 'disabled'
+              : ''}" data-dither="${settings.ditherExports}" id="ditherGroup" onclick="((event, el) => {
           el.dataset.dither = event.target.dataset.dither || el.dataset.dither;
       el.querySelectorAll('button').forEach(b => b.classList = b.dataset.dither === el.dataset.dither ? 'check button' : 'check button-outline');
       })(event, this);">
-          <button id="acoDitherNo" data-dither="false" class="check button${!settings.ditherExports || masterBitDepth === 32 ? '' : '-outline'}">NO</button>
-          <button id="acoDitherYes" data-dither="true" class="check button${settings.ditherExports && masterBitDepth !== 32 ? '' : '-outline'}">YES</button>
+          <button id="acoDitherNo" data-dither="false" class="check button${!settings.ditherExports ||
+            masterBitDepth === 32 ? '' : '-outline'}">NO</button>
+          <button id="acoDitherYes" data-dither="true" class="check button${settings.ditherExports && masterBitDepth !==
+            32 ? '' : '-outline'}">YES</button>
      </div>
       </td>
       </tr>
@@ -1888,8 +1910,12 @@ function showExportSettingsPanel(page = 'settings') {
             document.getElementById('settingsSampleRateGroup').classList.remove('disabled');
       }
       })(event, this);">
-            <button id="acoContainerw" data-container="w" class="check button${targetContainer === 'w' ? '' : '-outline'}">WAV</button>
-              <button id="acoContainera" data-container="a" class="check button${targetContainer === 'a' ? '' : '-outline'}">AIF</button>
+            <button id="acoContainerw" data-container="w" class="check button${targetContainer === 'w'
+              ? ''
+              : '-outline'}">WAV</button>
+              <button id="acoContainera" data-container="a" class="check button${targetContainer === 'a'
+              ? ''
+              : '-outline'}">AIF</button>
               </div>
           </td>
       </tr>
@@ -1901,9 +1927,11 @@ function showExportSettingsPanel(page = 'settings') {
         <td><span>Slice Grid Options&nbsp;&nbsp;&nbsp;</span></td>
         <td>
             <div id="sliceGridGroup">
-               ${[1,2,3,4,5,6].map((g, i) => '<input id="gridSize' + g + '" placeholder="" type="number" class="acoSliceGridOption" onfocus="(() => {this.placeholder = this.value; this.value = \'\';})()" onblur="(() => { this.value = this.value || this.placeholder;})()" list="commonGridSizes" value="' + sliceOptions[i + 1] + '">').join('')}
+               ${[1, 2, 3, 4, 5, 6].map((g, i) => '<input id="gridSize' + g +
+              '" placeholder="" type="number" class="acoSliceGridOption" onfocus="(() => {this.placeholder = this.value; this.value = \'\';})()" onblur="(() => { this.value = this.value || this.placeholder;})()" list="commonGridSizes" value="' +
+              sliceOptions[i + 1] + '">').join('')}
                <datalist id="commonGridSizes">
-                    ${[2,4,8,10,12,15,16,24,30,32,48,60,64,128].map(
+                    ${[2, 4, 8, 10, 12, 15, 16, 24, 30, 32, 48, 60, 64, 128].map(
               v => '<option value="' + v + '">').join('')}
                </datalist>
             </div>
@@ -1979,7 +2007,7 @@ function showExportSettingsPanel(page = 'settings') {
             </tbody>
             </table>
             <a class="button" style="margin-left: 2rem;" onclick="digichain.saveSessionUiCall()">Export Session to File</a>
-            `
+            `;
             break;
         case 'about':
         default:
@@ -2235,7 +2263,7 @@ function performBlend(mFiles, blendLength) {
 
 }
 
-function generateBlankFile(){
+function generateBlankFile() {
     const uuid = crypto.randomUUID();
     const audioArrayBuffer = audioCtx.createBuffer(
       masterChannels,
@@ -2289,7 +2317,7 @@ async function joinAll(
         if (
           (((settings.zipDownloads || window.__TAURI__) && !toInternal) || settings.exportChainsAsPresets) &&
           files.filter(
-          f => f.meta.checked).length > 1
+            f => f.meta.checked).length > 1
         ) {
             zip = zip || new JSZip();
         }
@@ -2317,7 +2345,7 @@ async function joinAll(
         if (filesRemaining.length === 0 && settings.exportChainsAsPresets?.device === 'xy') {
             const _filesLongerThanTwentySeconds = [];
             _files.forEach(
-              (f, fIdx) => +(f.meta?.duration??0) >= 20 ? _filesLongerThanTwentySeconds.push(fIdx) : false
+              (f, fIdx) => +(f.meta?.duration ?? 0) >= 20 ? _filesLongerThanTwentySeconds.push(fIdx) : false
             );
             while (_filesLongerThanTwentySeconds.length > 0) {
                 const __fileId = _filesLongerThanTwentySeconds.pop();
@@ -2336,7 +2364,8 @@ async function joinAll(
 
         let tempFiles, slices, largest;
         let totalLength = 0;
-        let sliceGridT = settings.exportChainsAsPresets ? ((sliceGrid > settings.exportChainsAsPresets.length || !sliceGrid) ? settings.exportChainsAsPresets.length : sliceGrid) : sliceGrid;
+        let sliceGridT = settings.exportChainsAsPresets ? ((sliceGrid > settings.exportChainsAsPresets.length ||
+          !sliceGrid) ? settings.exportChainsAsPresets.length : sliceGrid) : sliceGrid;
 
         if (secondsPerFile === 0) { /*Using slice grid file lengths*/
             tempFiles = _files.splice(0,
@@ -2351,7 +2380,7 @@ async function joinAll(
                             _files.push(_files[Math.floor(Math.random() * _files.length)]);
                             break;
                         case 'repeat':
-                            const _dupeFile = duplicate({},_files[_files.length - tempFiles.length], false, true);
+                            const _dupeFile = duplicate({}, _files[_files.length - tempFiles.length], false, true);
                             await editor.reverse({}, _dupeFile, false);
                             _files.push(_dupeFile);
                             break;
@@ -2373,9 +2402,11 @@ async function joinAll(
         } else { /*Using max length in seconds (if aif also limit up to device length files per chain)*/
             _files = _files.filter(f => f.meta.duration < secondsPerFile);
             let maxChainLength = (
-              (targetContainer === 'a' || settings.exportChainsAsPresets?.device === 'xy') ? (settings.exportChainsAsPresets?.length || 24) : (sliceGrid === 0
-                ? 64
-                : sliceGrid));
+              (targetContainer === 'a' || settings.exportChainsAsPresets?.device === 'xy')
+                ? (settings.exportChainsAsPresets?.length || 24)
+                : (sliceGrid === 0
+                  ? 64
+                  : sliceGrid));
             const processing = _files.reduce((a, f) => {
                 if (
                   (a.duration + +f.meta.duration <=
@@ -2465,13 +2496,15 @@ async function joinAll(
                     let blob = new window.Blob([dataView.buffer], {
                         type: 'audio/wav'
                     });
-                    
-                    const sliceName = getUniqueName(_files.filter(_f => _f !== f),f?.file?.name?.replace(/\.wav$/i, targetContainer === 'a' ? '.aif' : '.wav') || f.name).replace(/(\s-\s|\s)/g, '-');
-                    
+
+                    const sliceName = getUniqueName(_files.filter(_f => _f !== f),
+                      f?.file?.name?.replace(/\.wav$/i, targetContainer === 'a' ? '.aif' : '.wav') || f.name).replace(
+                      /(\s-\s|\s)/g, '-');
+
                     if (settings.exportChainsAsPresets.device === 'xy') {
-                        zip.file(`${presetFileName}.preset/${sliceName}`, blob, {binary: true});  
+                        zip.file(`${presetFileName}.preset/${sliceName}`, blob, {binary: true});
                     } else {
-                        zip.file(`${presetFileName}/${sliceName}`, blob, {binary: true});  
+                        zip.file(`${presetFileName}/${sliceName}`, blob, {binary: true});
                     }
 
                     presetSlices.push({
@@ -2485,12 +2518,12 @@ async function joinAll(
             });
             if (settings.exportChainsAsPresets.device === 'xy') {
                 const xyPatchData = buildXyDrumPatchData({}, presetSlices.map(s => {
-                     s.name = s.name.replace(/\.(wav|aif)$/i, '');
-                     return s;
+                    s.name = s.name.replace(/\.(wav|aif)$/i, '');
+                    return s;
                 }), true);
                 zip.file(`${presetFileName}.preset/patch.json`, JSON.stringify(xyPatchData));
             } else {
-                const elMultiMarkup = buildElMultiMarkup(presetFileName,presetSlices);
+                const elMultiMarkup = buildElMultiMarkup(presetFileName, presetSlices);
                 zip.file(`${presetFileName}/${presetFileName}.elmulti`, elMultiMarkup);
             }
         } else {
@@ -2732,7 +2765,9 @@ const stopPlayFile = (event, id) => {
 const playFile = (event, id, loop, start = 0, end) => {
     const file = getFileById(id || lastSelectedRow.dataset.id) || (event.editor && event.file ? event.file : false);
     let playHead;
-    let waveform = event?.editor ? event.waveform : (file.waveform && file.waveform.nodeName !== 'BUTTON'? file.waveform : false);
+    let waveform = event?.editor ? event.waveform : (file.waveform && file.waveform.nodeName !== 'BUTTON'
+      ? file.waveform
+      : false);
     loop = loop || (event.shiftKey || modifierKeys.shiftKey) || false;
 
     stopPlayFile(false, (id || file.meta.id));
@@ -2772,7 +2807,7 @@ const playFile = (event, id, loop, start = 0, end) => {
     file.source.connect(audioCtx.destination);
     file.source.loop = loop;
 
-    if (id && !event?.editor &&event.target && event.target !== file.waveform) {
+    if (id && !event?.editor && event.target && event.target !== file.waveform) {
         file.waveform = file.waveform?.tagName === 'CANVAS' ? file.waveform : event.target;
         waveform = file.waveform && file.waveform.nodeName !== 'BUTTON' ? file.waveform : false;
     }
@@ -2824,7 +2859,7 @@ const playFile = (event, id, loop, start = 0, end) => {
                 }, file.meta.duration * 1000);
             }
         } else if (file.source.loop) {
-            file.meta.playing = file.source.loop  || 'Timeout_' + setTimeout(() => {
+            file.meta.playing = file.source.loop || 'Timeout_' + setTimeout(() => {
                 stopPlayFile(false, file.meta.id);
             }, file.meta.duration * 1000);
         }
@@ -2852,11 +2887,12 @@ function sliceAction(event, id, params) {
             line.classList.remove('file-loop-pp');
         });
         const sliceLinesEl = document.getElementById('sliceLines');
-        file.meta.otLoop = parseInt(file.meta?.otLoop) < 2 ? file.meta.otLoop+1 : 0;
+        file.meta.otLoop = parseInt(file.meta?.otLoop) < 2 ? file.meta.otLoop + 1 : 0;
         if (file.meta.otLoop === 0) {
             file.meta.otLoopStart = 0;
         } else {
-            [...document.getElementById('splitOptions').querySelectorAll(`div.line`)].slice(+lineEl.dataset.idx).forEach(
+            [...document.getElementById('splitOptions').querySelectorAll(`div.line`)].slice(
+              +lineEl.dataset.idx).forEach(
               line => line.classList.add(file.meta.otLoop === 1 ? 'file-loop-on' : 'file-loop-pp')
             );
             file.meta.otLoopStart = +params.startPoint;
@@ -3064,7 +3100,7 @@ const duplicate = (event, id, prepForEdit = false, returnFile = false) => {
                 unsorted.push(_item.meta.id);
                 renderList();
             },
-            editorCallback : (_item, _fileIdx) => {
+            editorCallback: (_item, _fileIdx) => {
                 files.splice(_fileIdx, 0, _item);
                 unsorted.push(_item.meta.id);
             }
@@ -3355,7 +3391,8 @@ const splitSizeAction = async (event, slices, threshold) => {
     convertChainButtonEl.style.display = 'none';
 
     if (slices === 'custom') {
-        const customSlices = await dcDialog('prompt', 'Enter the number of slices to equally chop this sample', {inputType: 'number'});
+        const customSlices = await dcDialog('prompt', 'Enter the number of slices to equally chop this sample',
+          {inputType: 'number'});
         if (typeof parseInt(customSlices) === 'number') {
             slices = parseInt(customSlices);
         }
@@ -3435,7 +3472,7 @@ const sort = (event, by, prop = 'meta') => {
         let oA = order.indexOf(a[prop][by]);
         let oB = order.indexOf(b[prop][by]);
         return oA >= oB ? 1 : -1;
-    }
+    };
     if (by === 'id') {
         if (groupByChecked === true) {
             files.sort(
@@ -3487,7 +3524,7 @@ const sort = (event, by, prop = 'meta') => {
         if (lastSort === by) {
             //files.reverse();
             if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
-                files.sort((a, b) => (+(b[prop][by].replace(/\D+/gi, ''))  - +(a[prop][by].replace(/\D+/gi, '')) ));
+                files.sort((a, b) => (+(b[prop][by].replace(/\D+/gi, '')) - +(a[prop][by].replace(/\D+/gi, ''))));
             } else {
                 files = forLocaleCompare.includes(by) ?
                   files.sort((a, b) => b[prop][by].localeCompare(a[prop][by])) :
@@ -3496,7 +3533,7 @@ const sort = (event, by, prop = 'meta') => {
             lastSort = '';
         } else {
             if (event.ctrlKey || event.metaKey || modifierKeys.ctrlKey) {
-                files.sort((a, b) => (+(a[prop][by].replace(/\D+/gi, '')) - +(b[prop][by].replace(/\D+/gi, '')) ));
+                files.sort((a, b) => (+(a[prop][by].replace(/\D+/gi, '')) - +(b[prop][by].replace(/\D+/gi, ''))));
             } else {
                 files = forLocaleCompare.includes(by) ?
                   files.sort((a, b) => a[prop][by].localeCompare(b[prop][by])) :
@@ -3567,22 +3604,25 @@ const drawSliceLines = (slices, file, otMeta) => {
     if (file && otMeta) {
         let scaleSize = file.buffer.length / waveformWidth;
         lines = otMeta.slices.map(
-            (slice, idx) => `
+          (slice, idx) => `
                 <div
-                    class="line ${(slice.loopPoint??-1) !== -1 ? 'slice-loop' : ''} ${(file.meta?.otLoop === 1 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-on' : ''} ${(file.meta?.otLoop === 2 && slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-pp' : ''}"
+                    class="line ${(slice.loopPoint ?? -1) !== -1 ? 'slice-loop' : ''} ${(file.meta?.otLoop === 1 &&
+            slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-on' : ''} ${(file.meta?.otLoop === 2 &&
+            slice.startPoint >= file.meta?.otLoopStart) ? 'file-loop-pp' : ''}"
                     data-idx="${idx}"
                     onclick="digichain.sliceAction(event, '${file.meta.id}', {startPoint: '${slice.startPoint}', endPoint: '${slice.endPoint}'})"
                     ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"
                     title="${slice.name || ('Slice ' + (idx + 1))}"
-                    style="margin-left:${(slice.startPoint / scaleSize)}px; width:${(slice.endPoint / scaleSize) - (slice.startPoint / scaleSize)}px;"
+                    style="margin-left:${(slice.startPoint / scaleSize)}px; width:${(slice.endPoint / scaleSize) -
+          (slice.startPoint / scaleSize)}px;"
                 ></div>
             `
         );
     } else {
         lines = _slices.map((slice, idx) => `
             <div class="line" data-idx="${idx}" onpointerdown="digichain.playSlice(event, '${file.meta.id}', '${slice.startPoint}', '${slice.endPoint}')" ondblclick="this.classList[this.classList.contains('fade') ? 'remove' : 'add']('fade')"style="margin-left:${(waveformWidth /
-                _slices.length) * idx}px; width:${(waveformWidth /
-                _slices.length)}px;" title="Slice ${idx + 1}"></div>
+          _slices.length) * idx}px; width:${(waveformWidth /
+          _slices.length)}px;" title="Slice ${idx + 1}"></div>
         `);
         //
         // lines = _slices.map((slice, idx) => `
@@ -3698,7 +3738,9 @@ const setFileNumTicker = () => {
 function setCountValues() {
     const filesSelected = files.filter(f => f.meta.checked);
     const selectionCount = filesSelected.length;
-    let sliceGridT = settings.exportChainsAsPresets ? ((sliceGrid > settings.exportChainsAsPresets.length || !sliceGrid) ? settings.exportChainsAsPresets.length : sliceGrid) : sliceGrid;
+    let sliceGridT = settings.exportChainsAsPresets ? ((sliceGrid > settings.exportChainsAsPresets.length || !sliceGrid)
+      ? settings.exportChainsAsPresets.length
+      : sliceGrid) : sliceGrid;
     const selectionSlicesCount = settings.splitOutExistingSlicesOnJoin ? filesSelected.reduce(
       (a, f) => a + (f.meta?.slices?.length ? (f.meta.slices.length - 1) : 0), 0
     ) : 0;
@@ -3711,7 +3753,7 @@ function setCountValues() {
     const chainText = settings.exportChainsAsPresets ? ' Preset' : ' Chain';
     document.getElementById(
       'fileNum').textContent = `${files.length}/${selectionCount}` + (selectionSlicesCount ?
-      ` (+${selectionSlicesCount} slices)`: '');
+      ` (+${selectionSlicesCount} slices)` : '');
     document.getElementById(
       'fileNum').classList.remove('gg-spinner');
     document.querySelector(
@@ -3832,7 +3874,7 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
           <button title="Move down in sample list." onclick="digichain.move(event, '${f.meta.id}', 1)" class="button-clear move-down"><i class="gg-chevron-down-r has-shift-mod-i"></i></button>
       </td>
       <td class="waveform-td">` +
-        getWaveformElementContent(f) +
+      getWaveformElementContent(f) +
       `</td>
       <td class="file-path-td">
       ${(f.file.path + f.file.name).length + 4 > 127
@@ -3842,7 +3884,9 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
         '<div>'
       }
           <span class="file-path">${f.file.path}</span>
-          <a title="${settings.shiftClickForFileDownload ? 'Shift+Click to d' : 'D'}ownload processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true, event)">${getNiceFileName(
+          <a title="${settings.shiftClickForFileDownload
+        ? 'Shift+Click to d'
+        : 'D'}ownload processed wav file of sample." class="wav-link" onclick="digichain.downloadFile('${f.meta.id}', true, event)">${getNiceFileName(
         f.file.name)}</a>
           ${f.meta.dupeOf ? ' d' : ''}
           ${f.meta.editOf ? ' e' : ''}
@@ -3908,7 +3952,8 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
       `</td>
       <td class="split-td">
           <button title="Slice sample (Ctrl/Cmd + Click to Clear Slice Data)" onpointerdown="digichain.splitAction(event, '${f.meta.id}')" class="button-clear split gg-menu-grid-r ${metaFiles.getByFile(
-        f)?.cssClass}" data-slice-count="${f.meta?.slices?.length || f.meta?.op1Json?.sliceCount || ''}" data-has-invalid-slice="${f.meta?.slices?.length ? f.meta.slices.findIndex(s => s.e - s.s < 2) + 1 : '0'}"><i class="gg-menu-grid-r has-ctrl-mod-i"></i></button>
+        f)?.cssClass}" data-slice-count="${f.meta?.slices?.length || f.meta?.op1Json?.sliceCount ||
+      ''}" data-has-invalid-slice="${f.meta?.slices?.length ? f.meta.slices.findIndex(s => s.e - s.s < 2) + 1 : '0'}"><i class="gg-menu-grid-r has-ctrl-mod-i"></i></button>
       </td>
       <td class="duplicate-td">
           <button title="Duplicate sample." onpointerdown="digichain.duplicate(event, '${f.meta.id}')" class="button-clear duplicate"><i class="gg-duplicate has-shift-mod-i"></i></button>
@@ -4045,21 +4090,21 @@ async function createAndSetOtFileLink(slices, file, fileName, linkEl, skipExport
         if (settings.useNextEvenNumberedSliceAsLoopStartForOtFile) {
             _slices = slices.map((slice, idx) => {
                 if (idx % 2 === 0) {
-                  return {
-                      ...slice,
-                      l: slices.at(idx + 1)?.s ?? -1,
-                      e: slices.at(idx + 1)?.e ?? file.buffer.length
-                  };
+                    return {
+                        ...slice,
+                        l: slices.at(idx + 1)?.s ?? -1,
+                        e: slices.at(idx + 1)?.e ?? file.buffer.length
+                    };
                 }
                 return false;
             }).filter(Boolean);
         }
         _slices = _slices.length > 64 ? _slices.slice(0, 64) : _slices;
-        let data = encodeOt(_slices, bufferLength, tempo?.match??120, {
-            loop: settings.useNextEvenNumberedSliceAsLoopStartForOtFile ? 1 : (file.meta.otLoop??0),
-            loopStart: file.meta.otLoopStart??0
+        let data = encodeOt(_slices, bufferLength, tempo?.match ?? 120, {
+            loop: settings.useNextEvenNumberedSliceAsLoopStartForOtFile ? 1 : (file.meta.otLoop ?? 0),
+            loopStart: file.meta.otLoopStart ?? 0
         });
-        let fName = fileName.replace(/\.[^.]*$/, '.ot')
+        let fName = fileName.replace(/\.[^.]*$/, '.ot');
         if (!data) { return false; }
         let blob = new window.Blob([data], {
             type: 'application/octet-stream'
@@ -4089,7 +4134,7 @@ const parseXml = (xml, fullPath) => {
                 slices: [...sample.getElementsByTagName('SliceMarker')].map(
                   slice => +slice.getElementsByTagName('SamplePosition')[0].textContent
                 )
-            })).filter(sample => sample.slices.length > 0)
+            })).filter(sample => sample.slices.length > 0);
 
             sampleSlices.forEach(sample => {
                 uuid = sample.uuid;
@@ -4110,11 +4155,17 @@ const parseXml = (xml, fullPath) => {
         }
         if (docType === 'Ableton') {
             [...doc.getElementsByTagName('MultiSamplePart')].forEach(part => {
-                const sampleName = (part.querySelector('SampleRef FileRef RelativePath')?.getAttribute('Value') ?? '').split('/').at(-1);
-                const fileSampleRate = +(part.querySelector('SampleRef DefaultSampleRate')?.getAttribute('Value') ?? '44100');
+                const sampleName = (part.querySelector('SampleRef FileRef RelativePath')?.getAttribute('Value') ??
+                  '').split('/').at(-1);
+                const fileSampleRate = +(part.querySelector('SampleRef DefaultSampleRate')?.getAttribute('Value') ??
+                  '44100');
                 const fileLength = +(part.querySelector('SampleRef DefaultDuration')?.getAttribute('Value') ?? '0');
-                const sliceOrigin = +(part.querySelector('SlicingStyle')?.getAttribute('Value') ?? '0') === 3 ? 'ManualSlicePoints' : 'SlicePoints';
-                const sampleSlices = [...new Set([...part.querySelectorAll(`${sliceOrigin} SlicePoint`)].map(slice => +(slice.getAttribute('TimeInSeconds') || '0') * fileSampleRate))];
+                const sliceOrigin = +(part.querySelector('SlicingStyle')?.getAttribute('Value') ?? '0') === 3
+                  ? 'ManualSlicePoints'
+                  : 'SlicePoints';
+                const sampleSlices = [
+                    ...new Set([...part.querySelectorAll(`${sliceOrigin} SlicePoint`)].map(
+                      slice => +(slice.getAttribute('TimeInSeconds') || '0') * fileSampleRate))];
                 metaFiles.push({
                     name: sampleName,
                     path: fullPath,
@@ -4127,7 +4178,7 @@ const parseXml = (xml, fullPath) => {
                     }))
                 });
             });
-        } 
+        }
         return uuid;
     } catch (err) {
         return {uuid, failed: true};
@@ -4290,28 +4341,28 @@ const parseAif = async (
             arrayBuffer = false;
             return {uuid, failed: true};
         }
-        
+
         const getInt24 = (dataView, index) => {
             const byte1 = dataView.getUint8(index);     // MSB
             const byte2 = dataView.getUint8(index + 1); // Middle
             const byte3 = dataView.getUint8(index + 2); // LSB
-            
+
             let value = (byte1 << 16) | (byte2 << 8) | byte3;
-            
+
             if (value & 0x800000) {
                 value |= 0xFF000000;
             }
 
             return value;
         };
-        
+
         const offset = 8 + chunks.ssnd.dataOffset;
         const bytesPerSample = chunks.comm.bitDepth / 8;
         const channels = [];
         for (let i = 0; i < chunks.comm.channels; i++) {
             channels.push(new Float32Array(chunks.comm.frames));
         }
-        
+
         const isLittleEndian = chunks.form.type === 'AIFC';
 
         for (let i = 0; i < chunks.comm.channels; i++) {
@@ -4322,7 +4373,7 @@ const parseAif = async (
 
                 let value;
                 let range;
-                
+
                 switch (chunks.comm.bitDepth) {
                     case 16:
                         value = chunks.bufferDv.getInt16(index, isLittleEndian);
@@ -4337,7 +4388,7 @@ const parseAif = async (
                         range = 2147483648; // 2^31
                         break;
                 }
-                
+
                 channel[j] = value / range;
                 if (j === 0) {
                     channel[j] = 0;
@@ -4551,7 +4602,7 @@ const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
             n: `Slice ${sliceIdx + 1}`
         }));
 
-        const parsedFile= {
+        const parsedFile = {
             file: {
                 lastModified: file.lastModified,
                 name: getUniqueName(files, file.name),
@@ -4561,11 +4612,11 @@ const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
                 ize: file.size,
                 type: file.type
             },
-            buffer: (resampleBuffer ||audioArrayBuffer), meta: {
-                length: (resampleBuffer ||audioArrayBuffer).length,
-                duration: Number((resampleBuffer ||audioArrayBuffer).length / masterSR).toFixed(3),
-                startFrame: 0, endFrame: (resampleBuffer ||audioArrayBuffer).length,
-                channel: (resampleBuffer ||audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
+            buffer: (resampleBuffer || audioArrayBuffer), meta: {
+                length: (resampleBuffer || audioArrayBuffer).length,
+                duration: Number((resampleBuffer || audioArrayBuffer).length / masterSR).toFixed(3),
+                startFrame: 0, endFrame: (resampleBuffer || audioArrayBuffer).length,
+                channel: (resampleBuffer || audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
                 checked: true, id: uuid,
                 slices: slices.length > 1 ? slices : false,
                 note: noteFromFileName(file.name)
@@ -4607,10 +4658,10 @@ const parseWav = (
                       dv.getUint8(i + 8), dv.getUint8(i + 9),
                       dv.getUint8(i + 10), dv.getUint8(i + 11)
                     );
-                    if (listType === 'ISBJ'){
-                      jsonString = atob(utf8Decoder.decode(
-                        arrayBuffer.slice(i + 12, i + 8 + size)
-                      ));
+                    if (listType === 'ISBJ') {
+                        jsonString = atob(utf8Decoder.decode(
+                          arrayBuffer.slice(i + 12, i + 8 + size)
+                        ));
                     }
                 }
                 /*else*/
@@ -4731,11 +4782,11 @@ const parseWav = (
                   l: slice.loopPoint
               }))
               : metaFile.slices.map((slice, idx) => ({
-                    s: slice.startPoint,
-                    e: slice.endPoint,
-                    l: slice.loopPoint,
-                    n: slice.name || `OT slice ${idx + 1}`
-                }));
+                  s: slice.startPoint,
+                  e: slice.endPoint,
+                  l: slice.loopPoint,
+                  n: slice.name || `OT slice ${idx + 1}`
+              }));
             otLoop = metaFile.otLoop;
             otLoopStart = metaFile.otLoopStart;
             metaFiles.removeByName(file.name);
@@ -4885,7 +4936,7 @@ const consumeFileInput = async (event, inputFiles) => {
           '${sessionFile.name}'?
           <br><br>
           (Items currently in the list will be removed).`,
-          { okLabel: 'Restore', cancelLabel: 'Cancel' }
+          {okLabel: 'Restore', cancelLabel: 'Cancel'}
         );
         if (dialogResponse) {
             return restoreSessionFile(sessionFile);
@@ -4910,7 +4961,8 @@ const consumeFileInput = async (event, inputFiles) => {
                       zf.split('.').at(-1).toLowerCase())
                   ).length;
                 if (supportedFileCount + files.length > importFileLimitValue) {
-                    setLoadingText(`skipping zip '${archive.name}', files (${supportedFileCount}) will exceed ${importFileLimitValue} file import limit...`);
+                    setLoadingText(
+                      `skipping zip '${archive.name}', files (${supportedFileCount}) will exceed ${importFileLimitValue} file import limit...`);
                     if (zidx === _zips.length - 1) {
                         setTimeout(() => consumeFileInput(event, inputFiles),
                           3000);
@@ -4969,7 +5021,7 @@ const consumeFileInput = async (event, inputFiles) => {
             }
             continue;
         }
-        
+
         const reader = new FileReader();
         reader.onload = function(e) {
             file.uuid = crypto.randomUUID();
@@ -4993,7 +5045,7 @@ const consumeFileInput = async (event, inputFiles) => {
             reader.readAsText(file);
         }
     }
-    
+
     if (_files.length === 0) {
         return renderList();
     }
@@ -5032,16 +5084,16 @@ const consumeFileInput = async (event, inputFiles) => {
                       bufferByteLength);
                     count.push(file.uuid);
                     let result;
-                    if(file.name.toLowerCase().endsWith('.aif')){
+                    if (file.name.toLowerCase().endsWith('.aif')) {
                         result = await parseAif(buffer, bufferUint8Array, file,
-                          file.fullPath)
+                          file.fullPath);
                     }
                     if (file.name.toLowerCase().endsWith('.syx')) {
                         result = parseSds(bufferUint8Array, file, file.fullPath);
                     }
                     if (file.name.toLowerCase().endsWith('.pti')) {
                         result = await parsePti(buffer, new Int16Array(buffer, 392), file,
-                          file.fullPath)
+                          file.fullPath);
                     }
                     if (result.failed) {
                         count.splice(count.findIndex(c => c === result.uuid),
@@ -5235,7 +5287,7 @@ const dropHandler = async (event) => {
             let selectedRowId = getFileIndexById(selectedRowUuid);
             let targetRowId = getFileIndexById(target.dataset.id);
             let item = files.splice(selectedRowId, 1)[0];
-            files.splice((targetRowId <= selectedRowId ? targetRowId : (targetRowId-1)), 0, item);
+            files.splice((targetRowId <= selectedRowId ? targetRowId : (targetRowId - 1)), 0, item);
             renderList();
             lastSelectedRow = getRowElementById(selectedRowUuid);
             lastSelectedRow.classList.add('selected');
@@ -5276,7 +5328,7 @@ function init() {
     uploadInput.addEventListener(
       'change',
       async () => consumeFileInput({shiftKey: modifierKeys.shiftKey},
-                uploadInput.files),
+        uploadInput.files),
       false
     );
     uploadInput.addEventListener(
@@ -5299,7 +5351,7 @@ function init() {
             lastSelectedRow &&
             lastSelectedRow.classList.contains('is-dragging') &&
             !document.getElementById('opExportPanel').
-            classList.contains('show')
+              classList.contains('show')
           ) {
               const dragOverRow = document.elementsFromPoint(event.clientX, event.clientY).filter(
                 el => el.tagName === 'TD'
@@ -5389,9 +5441,9 @@ function init() {
         if (keyboardShortcutsDisabled) { return; }
         if (document.body.classList.contains('show-help')) {
             document.body.dataset.keysPressed = [
-              event.shiftKey ? 'shift' : '',
-              event.ctrlKey || event.metaKey ? 'ctrl/cmd' : '',
-              event.key.length === 1 ? event.key : ''
+                event.shiftKey ? 'shift' : '',
+                event.ctrlKey || event.metaKey ? 'ctrl/cmd' : '',
+                event.key.length === 1 ? event.key : ''
             ].filter(Boolean).join(' + ');
         }
         if (event.shiftKey) { document.body.classList.add('shiftKey-down'); }
@@ -5603,7 +5655,9 @@ function init() {
     updateExportChainsAsPresets(settings.exportChainsAsPresets);
     setTimeout(() => toggleOptionsPanel(), 250);
     configDb();
-    document.getElementById('modifierKeyctrlKey').textContent= navigator.userAgent.indexOf('Mac') !== -1 ? 'CMD' : 'CTRL';
+    document.getElementById('modifierKeyctrlKey').textContent = navigator.userAgent.indexOf('Mac') !== -1
+      ? 'CMD'
+      : 'CTRL';
 }
 
 async function clearIndexedDb() {
@@ -5636,6 +5690,7 @@ function configDb(skipLoad = false, callback) {
         db.createObjectStore('state');
     };
 }
+
 async function storeState(onlyOpExport = false) {
     if (!settings.retainSessionState) {
         return new Promise(resolve => resolve(true));
@@ -5647,7 +5702,7 @@ async function storeState(onlyOpExport = false) {
     const transaction = db.transaction(['state'], 'readwrite', {durability: 'relaxed'});
     const objectStore = transaction.objectStore('state');
 
-    objectStore.put(window.msgpack.encode(getSetOpExportData(false,false,true)), 'opExportData');
+    objectStore.put(window.msgpack.encode(getSetOpExportData(false, false, true)), 'opExportData');
     if (onlyOpExport) {
         return;
     }
@@ -5680,19 +5735,19 @@ function loadState(skipConfirm = false) {
                 unsorted = requestUnsorted.result;
             }
             showWelcome();
-        }
+        };
         requestImportOrder.onsuccess = () => {
             if (requestImportOrder.result) {
                 importOrder = new Set(Array.isArray ? requestImportOrder.result : []);
             }
-        }
+        };
         let requestOpExportData = objectStore.get('opExportData');
         requestOpExportData.onsuccess = () => {
             if (requestOpExportData.result) {
                 const opExportData = window.msgpack.decode(requestOpExportData.result);
                 getSetOpExportData(opExportData.samples, opExportData.opDataConfig);
             }
-        }
+        };
         let requestFiles = objectStore.get('files');
         requestFiles.onsuccess = async () => {
             if (requestFiles.result && requestFiles.result.length > 0) {
@@ -5704,7 +5759,7 @@ function loadState(skipConfirm = false) {
                       {
                           kind: 'info',
                           okLabel: 'Restore',
-                          cancelLabel: 'Discard',
+                          cancelLabel: 'Discard'
                       }
                     );
                     if (!proceed) {
@@ -5726,11 +5781,12 @@ function loadState(skipConfirm = false) {
             } else {
                 setLoadingText('');
             }
-        }
+        };
     } catch (e) {
         setLoadingText('');
     }
 }
+
 function clearDbBuffers() {
     db.transaction(['state'], 'readwrite', {durability: 'relaxed'}).objectStore('state').clear();
     clearIndexedDb();
@@ -5739,12 +5795,14 @@ function clearDbBuffers() {
 function saveSessionUiCall() {
     const settingsPanelEl = document.getElementById('exportSettingsPanel');
     const sessionFileName = document.querySelector('#sessionFileName').value;
-    const sessionIncludeUnselected = document.querySelector('#sessionIncludeUnselected').dataset.sessionUnselected === 'yes';
+    const sessionIncludeUnselected = document.querySelector('#sessionIncludeUnselected').dataset.sessionUnselected ===
+      'yes';
 
     if (!sessionFileName) {
         return showToastMessage('Please specify a session file name.');
     }
-    if ((sessionIncludeUnselected && files.length === 0) || (!sessionIncludeUnselected && files.filter(f => f.meta.checked).length === 0)) {
+    if ((sessionIncludeUnselected && files.length === 0) ||
+      (!sessionIncludeUnselected && files.filter(f => f.meta.checked).length === 0)) {
         return showToastMessage('Session must include at least one file.');
     }
     setLoadingText('Exporting Session');
@@ -5757,7 +5815,7 @@ function saveSessionUiCall() {
 async function saveSession(sessionFileName = 'digichain_session', includeUnselected = false) {
     const zip = new JSZip();
     const zipFileOptions = {
-        compression: "DEFLATE",
+        compression: 'DEFLATE',
         compressionOptions: {
             level: 9
         }
@@ -5774,13 +5832,13 @@ async function saveSession(sessionFileName = 'digichain_session', includeUnselec
     zip.file('importOrder', window.msgpack.encode([...importOrder]), zipFileOptions);
     zip.file('settings', window.msgpack.encode(sessionSettings), zipFileOptions);
 
-    const opExportData = getSetOpExportData(false,false,true);
+    const opExportData = getSetOpExportData(false, false, true);
     if (opExportData.samples.length > 0) {
         zip.file('opExportData', window.msgpack.encode(opExportData), zipFileOptions);
     }
 
-    const sessionFileNameString = `${sessionFileName}.dcsd`
-    const zipCallback = window.__TAURI__ ? 
+    const sessionFileNameString = `${sessionFileName}.dcsd`;
+    const zipCallback = window.__TAURI__ ?
       async blob => {
           const sessionData = await blob.arrayBuffer();
           await window.__TAURI__.fs.writeFile(sessionFileNameString, sessionData, {
@@ -5796,11 +5854,11 @@ async function saveSession(sessionFileName = 'digichain_session', includeUnselec
           el.click();
           setLoadingText('');
           showToastMessage(`'${sessionFileNameString}'<br>session file created.`, 10000);
-      }
-    
+      };
+
     zip.generateAsync({
-        type: "blob",
-        compression: "DEFLATE"
+        type: 'blob',
+        compression: 'DEFLATE'
     }).then(zipCallback);
 }
 

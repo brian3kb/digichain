@@ -1,4 +1,4 @@
-2026.03.27
+2026.05.12
 - Support for 24/32bit AIFF file importing.
 - Updated note detection to find notes from Logic Pro generated filenames.
 - Sorting by note on Logic Pro generated AIFF files now correctly sorts.
@@ -9,6 +9,7 @@
 - Added basic pitch detection to the edit panel.
 - Use the , and . keys to change the selected slice on the edit panel.
 - For Stretch Selected Actions holding the Alt Key, and for the pitch shift buttons on the editor panel, holding the Shift+Alt keys will apply time-stretching where the pitch of the samples is preserved.
+- Repitch tool in sample editor panel.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

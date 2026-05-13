@@ -38,6 +38,7 @@
  - Pad With Zero : allow entering a custom value to pad the sample with in seconds.
  - L : Toggles hiding/showing of the rendered list of samples.
  - Editor Crop : Crop selection to a new sample (but stay in the current sample).
+ - Editor Pitch : Manually enter samples note.
 
 **Ctrl + Click**
  - Slice Grid Number Buttons : prompts to enter a custom value for the slice grid.

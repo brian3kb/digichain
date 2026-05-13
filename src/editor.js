@@ -726,17 +726,57 @@ async function detectBpm(event) {
 }
 
 async function detectPitchHandler(event) {
-    const btnEl = event.target;
-    const detectBufferArray = editing.buffer.getChannelData(0).slice(selection.start, selection.end);
-    const detectBuffer = conf.audioCtx.createBuffer(1, detectBufferArray.length, conf.masterSR);
-    detectBuffer.getChannelData(0).set(detectBufferArray);
-    const result = detectPitch(detectBuffer);
+    const btnEl = typeof event.target === 'string' ? document.querySelector(event.target) : event.target;
+    let result;
+
+    if (event.shiftKey) {
+        const manualPitch = await dcDialog('prompt', 'Enter pitch (e.g. C4, D#2):', {
+            defaultValue: editing.meta.pitch?.pitch || 'C4'
+        });
+        if (manualPitch) {
+            const regex = /^([A-G][#b]?)(-?\d+)$/i;
+            const match = manualPitch.match(regex);
+            if (match) {
+                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const noteOffsets = {
+                    'C': 0, 'C#': 1, 'DB': 1, 'D': 2, 'D#': 3, 'EB': 3,
+                    'E': 4, 'FB': 4, 'E#': 5, 'F': 5, 'F#': 6, 'GB': 6, 'G': 7,
+                    'G#': 8, 'AB': 8, 'A': 9, 'A#': 10, 'BB': 10, 'B': 11, 'CB': -1, 'B#': 12
+                };
+                const name = match[1].toUpperCase();
+                const octave = parseInt(match[2]);
+                const midiNote = (octave + 1) * 12 + noteOffsets[name];
+                const totalCents = (midiNote - 12) * 100;
+
+                result = {
+                    pitch: manualPitch.toUpperCase(),
+                    semitones: Math.floor(totalCents / 100),
+                    cents: totalCents
+                };
+            } else {
+                showToastMessage('Invalid pitch format. Use e.g. C4, D#2');
+                return;
+            }
+        } else {
+            return;
+        }
+    } else {
+        const detectBufferArray = editing.buffer.getChannelData(0).slice(selection.start, selection.end);
+        const detectBuffer = conf.audioCtx.createBuffer(1, detectBufferArray.length, conf.masterSR);
+        detectBuffer.getChannelData(0).set(detectBufferArray);
+        result = detectPitch(detectBuffer);
+    }
+
     if (result) {
         btnEl.textContent = ` ${result.pitch}`;
         editing.meta.pitch = result;
-        showToastMessage(`Detected Pitch: ${result.pitch} (${result.cents} cents from C0)`);
-    } else {
-        showToastMessage('Could not detect pitch');
+        if (!event.shiftKey) {
+            showToastMessage(`Detected Pitch: ${result.pitch} (${result.cents} cents from C0)`);
+        } else {
+            showToastMessage(`Pitch set to: ${result.pitch}`);
+        }
+    } else if (!event.shiftKey) {
+        showToastMessage(`Could not detect pitch, <a style="color: floralwhite; text-decoration: underline;" onclick="digichain.editor.detectPitchHandler({target: '.button-pitch-detect', shiftKey: true})">set manually?</a>`, 6e3);
     }
 }
 
@@ -1107,7 +1147,7 @@ export function renderEditor(item) {
       ? ''
       : 'button-outline'}">Snap to Zero</button>
   <button title="Detect BPM from selection." onpointerdown="digichain.editor.detectBpm(event);" class="button button-clear"> BPM</button>
-  <button title="Detect Pitch from selection." onpointerdown="digichain.editor.detectPitchHandler(event);" class="button button-clear"> ${editing?.meta?.pitch?.pitch ??
+  <button title="Detect Pitch from selection. Shift+Click to manually set pitch value." onpointerdown="digichain.editor.detectPitchHandler(event);" class="button button-clear button-pitch-detect"> ${editing?.meta?.pitch?.pitch ??
     'Pitch'}</button>
   <button title="Repitch to a specific note; Hold Shift to preserve sample duration (time-stretch)." onpointerdown="digichain.editor.pitchShiftHandler(event);" class="button button-clear">Repitch</button>
   </div>

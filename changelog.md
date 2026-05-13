@@ -12,6 +12,7 @@
 - Repitch tool in sample editor panel with pitched duplicate interval mode.
 - Moved the merge and blend buttons into the selected action panel.
 - Disable the selected action panel when no samples are selected.
+- Allow override/manual set of detected pitch via editor -> pitch shift+click, or via toast link if pitch detect failed.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

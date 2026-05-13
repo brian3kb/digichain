@@ -3617,6 +3617,10 @@ body.latest .header-menu::after {
 }
 
 /* Repitch Modal Keyboard */
+.repitch-keyboard-container {
+    min-height: 45rem;
+}
+
 .repitch-keyboard {
     display: flex;
     justify-content: center;
@@ -3690,3 +3694,34 @@ body.latest .header-menu::after {
     min-width: 320px;
 }
 
+
+/* Repitch Tabs */
+.repitch-tabs {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #d79c4e;
+}
+
+.repitch-tabs span {
+    padding: .65rem 1rem;
+    border-top: 1px solid;
+    border-left: 1px solid;
+    border-right: 1px solid;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    cursor: pointer;
+    margin-right: .5rem;
+    transform: translateY(1px);
+    border-bottom: 1px solid #d79c4e;
+    z-index: 2;
+}
+
+.repitch-tabs span.active {
+    color: #d79c4e;
+    border-bottom-color: #202124;
+}
+
+body.light .repitch-tabs span.active {
+    border-bottom-color: #f5f5f5;
+}

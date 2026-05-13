@@ -1349,6 +1349,18 @@ function pitchToMidi(pitch) {
 }
 
 /**
+ * Helper to convert MIDI note number to pitch string.
+ * @param {number} midi
+ * @returns {string}
+ */
+export function midiToPitch(midi) {
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const noteName = noteNames[midi % 12];
+    const octave = Math.floor(midi / 12) - 1;
+    return `${noteName}${octave}`;
+}
+
+/**
  * Shifts the pitch of an audio buffer.
  * @param {object} options { buffer, from, to, cents, timeStretch }
  * @returns {AudioBuffer|null}

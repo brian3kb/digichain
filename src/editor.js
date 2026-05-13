@@ -9,6 +9,7 @@ import {
     getResampleIfNeeded,
     joinToStereo,
     pitchShift,
+    midiToPitch,
     Resampler,
     setLoadingText,
     showToastMessage,
@@ -101,7 +102,7 @@ function render() {
     updateSelectionEl();
     if (!editPanelEl.open) { editPanelEl.showModal(); }
     renderSliceList();
-    renderEditPanelWaveform();
+    renderEditPanelWaveform(multiplier);
 }
 
 function getOpKeyData(keyId) {
@@ -752,9 +753,11 @@ async function pitchShiftHandler(event) {
         if (result) {
             currentPitch = result.pitch;
             editing.meta.pitch = result;
-            renderEditor(editing);
         }
         setLoadingText('');
+        if (result) {
+            render();
+        }
     }
 
     if (!currentPitch) {
@@ -766,6 +769,9 @@ async function pitchShiftHandler(event) {
     let selectedNote = match ? match[1].toUpperCase() : 'C';
     let selectedOctave = match ? parseInt(match[2]) : 4;
     let useTimeStretch = event.shiftKey;
+    let isIntervalsMode = false;
+    let numDuplicates = 12;
+    let intervalStep = 1;
 
     const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const isBlack = note => note.includes('#') || note.includes('b');
@@ -788,12 +794,55 @@ async function pitchShiftHandler(event) {
             key.onclick = () => {
                 selectedNote = key.dataset.note;
                 renderKeyboard(container);
+                updateIntervalSummary(container);
             };
         });
     };
 
+    const updateIntervalSummary = (container) => {
+        const summaryEl = container.querySelector('.repitch-intervals-summary');
+        if (!summaryEl) return;
+        
+        if (isIntervalsMode) {
+            const startMidi = notes.indexOf(selectedNote) + (selectedOctave + 1) * 12;
+            const endMidi = startMidi + ((numDuplicates - 1) * intervalStep);
+            const endPitch = midiToPitch(endMidi);
+            summaryEl.innerHTML = `Creating <b>${numDuplicates}</b> items, from <b>${selectedNote}${selectedOctave}</b> up to <b>${endPitch}</b>`;
+            summaryEl.style.display = 'block';
+        } else {
+            summaryEl.style.display = 'none';
+        }
+    };
+
+    const updateModeUI = (container) => {
+        const intervalsConfig = container.querySelector('.repitch-intervals-config');
+        const shiftCurrentBtn = container.querySelector('.prompt-ok');
+        const duplicateBtn = container.querySelector('.prompt-center');
+        const singleModeTab = container.querySelector('#repitchModeSingle');
+        const intervalsModeTab = container.querySelector('#repitchModeIntervals');
+
+        if (isIntervalsMode) {
+            intervalsConfig.style.display = 'block';
+            shiftCurrentBtn.textContent = 'Create Duplicates';
+            duplicateBtn.style.display = 'none';
+            singleModeTab.classList.remove('active');
+            intervalsModeTab.classList.add('active');
+        } else {
+            intervalsConfig.style.display = 'none';
+            shiftCurrentBtn.textContent = 'Shift Current';
+            duplicateBtn.style.display = 'inline-block';
+            singleModeTab.classList.add('active');
+            intervalsModeTab.classList.remove('active');
+        }
+        updateIntervalSummary(container);
+    };
+
     const modalHtml = `
         <div class="repitch-keyboard-container">
+            <div class="repitch-tabs">
+                <span id="repitchModeSingle" class="active">Single</span>
+                <span id="repitchModeIntervals">Intervals</span>
+            </div>
             <div class="repitch-target-display"></div>
             <div class="repitch-controls">
                 <button class="octave-down button-outline">- Octave</button>
@@ -801,6 +850,19 @@ async function pitchShiftHandler(event) {
                 <button class="octave-up button-outline">+ Octave</button>
             </div>
             <div class="repitch-keyboard"></div>
+            
+            <div class="repitch-intervals-config" style="display: none; margin-top: 1.5rem; text-align: center; border: 1px solid #555; padding: 1rem; border-radius: 4px;">
+                <div class="input-set">
+                    <label for="repitchNumDupes" class="before-input">Duplicates</label>
+                    <input type="number" id="repitchNumDupes" value="${numDuplicates}" min="1" max="128" style="width: 5rem;">
+                </div>
+                <div class="input-set" style="margin-top: 0.5rem;">
+                    <label for="repitchIntervalStep" class="before-input">Interval (semitones)</label>
+                    <input type="number" id="repitchIntervalStep" value="${intervalStep}" min="-24" max="24" style="width: 5rem;">
+                </div>
+                <div class="repitch-intervals-summary" style="display: none; margin-top: 0rem; text-align: center; color: #d79c4e; font-size: 1.1rem;"></div>
+            </div>
+        </div>
             <div class="repitch-options" style="margin-top: 1.5rem;">
                 <span>Time-stretch (preserve duration)</span>&nbsp;&nbsp;
                 <button id="repitchTsOff" class="check ${useTimeStretch ? 'button-outline' : 'button'}">OFF</button>
@@ -811,20 +873,40 @@ async function pitchShiftHandler(event) {
                 <button class="prompt-center button-outline" style="margin-left: 1rem;">Create Duplicate</button>
                 <button class="prompt-cancel button-outline" style="margin-left: 1rem;">Cancel</button>
             </div>
-        </div>
+
     `;
 
     const result = await dcDialog('custom', modalHtml, {
         onRender: (container, resolve) => {
             renderKeyboard(container);
 
+            container.querySelector('#repitchModeSingle').onclick = () => {
+                isIntervalsMode = false;
+                updateModeUI(container);
+            };
+            container.querySelector('#repitchModeIntervals').onclick = () => {
+                isIntervalsMode = true;
+                updateModeUI(container);
+            };
+
             container.querySelector('.octave-down').onclick = () => {
                 selectedOctave--;
                 renderKeyboard(container);
+                updateIntervalSummary(container);
             };
             container.querySelector('.octave-up').onclick = () => {
                 selectedOctave++;
                 renderKeyboard(container);
+                updateIntervalSummary(container);
+            };
+
+            container.querySelector('#repitchNumDupes').oninput = (e) => {
+                numDuplicates = parseInt(e.target.value) || 0;
+                updateIntervalSummary(container);
+            };
+            container.querySelector('#repitchIntervalStep').oninput = (e) => {
+                intervalStep = parseInt(e.target.value) || 0;
+                updateIntervalSummary(container);
             };
 
             const tsOffBtn = container.querySelector('#repitchTsOff');
@@ -850,7 +932,7 @@ async function pitchShiftHandler(event) {
             };
 
             container.querySelector('.prompt-ok').onclick = () => {
-                resolve('shift');
+                resolve(isIntervalsMode ? 'intervals' : 'shift');
                 container.close();
             };
             container.querySelector('.prompt-center').onclick = () => {
@@ -866,39 +948,59 @@ async function pitchShiftHandler(event) {
 
     if (!result) return;
 
-    const targetPitch = `${selectedNote}${selectedOctave}`;
+    const startPitch = `${selectedNote}${selectedOctave}`;
+    const targetPitches = [];
+    
+    if (result === 'intervals') {
+        const startMidi = notes.indexOf(selectedNote) + (selectedOctave + 1) * 12;
+        for (let i = 0; i < numDuplicates; i++) {
+            targetPitches.push(midiToPitch(startMidi + (i * intervalStep)));
+        }
+    } else {
+        targetPitches.push(startPitch);
+    }
+
     setLoadingText('Repitching...');
     try {
-        const newBuffer = pitchShift({
-            buffer: editing.buffer,
-            from: currentPitch,
-            to: targetPitch,
-            timeStretch: useTimeStretch
-        });
+        for (const targetPitch of targetPitches) {
+            const newBuffer = pitchShift({
+                buffer: editing.buffer,
+                from: currentPitch,
+                to: targetPitch,
+                timeStretch: useTimeStretch
+            });
 
-        if (newBuffer) {
-            if (result === 'duplicate') {
-                const dupeObj = digichain.duplicate(event, editing.meta.id, true);
-                if (dupeObj) {
-                    const dupe = dupeObj.item;
-                    dupe.buffer = newBuffer;
-                    dupe.meta.duration = newBuffer.duration;
-                    dupe.meta.pitch = {pitch: targetPitch};
-                    const baseName = getNiceFileName(editing.file.name, editing, true);
-                    dupe.file.name = `${baseName}_${targetPitch}.wav`;
-                    dupeObj.callback(dupe, dupeObj.fileIdx);
-                    showToastMessage(`Created repitched duplicate: ${dupe.file.name}`);
+            if (newBuffer) {
+                if (result === 'duplicate' || result === 'intervals') {
+                    const dupeObj = digichain.duplicate(event, editing.meta.id, true);
+                    if (dupeObj) {
+                        const dupe = dupeObj.item;
+                        dupe.buffer = newBuffer;
+                        dupe.meta.duration = Number(newBuffer.length / conf.masterSR).toFixed(3);
+                        dupe.meta.pitch = {pitch: targetPitch};
+                        const baseName = getNiceFileName(editing.file.name, editing, true);
+                        dupe.file.name = `${baseName}_${targetPitch}.wav`;
+                        dupeObj.callback(dupe, dupeObj.fileIdx);
+                    }
+                } else {
+                    editing.buffer = newBuffer;
+                    editing.meta.duration = Number(newBuffer.length / conf.masterSR).toFixed(3);
+                    editing.meta.pitch = {pitch: targetPitch};
+                    selection.end = newBuffer.length;
+                    render();
+                    digichain.renderList();
                 }
-            } else {
-                editing.buffer = newBuffer;
-                editing.meta.duration = newBuffer.duration;
-                editing.meta.pitch = {pitch: targetPitch};
-                selection.end = newBuffer.length;
-                render();
-                digichain.renderList();
-                showToastMessage(`Repitched to ${targetPitch}`);
             }
         }
+        
+        if (result === 'intervals') {
+            showToastMessage(`Created ${numDuplicates} repitched duplicates`);
+        } else if (result === 'duplicate') {
+            showToastMessage(`Created repitched duplicate: ${targetPitches[0]}`);
+        } else {
+            showToastMessage(`Repitched to ${targetPitches[0]}`);
+        }
+        
     } catch (e) {
         console.error(e);
         showToastMessage('Error during repitch');

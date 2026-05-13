@@ -882,6 +882,9 @@ async function attachDragDownloadBlob(event, id) {
 function toggleSelectedActionsList() {
     const actionListEl = document.querySelector(
       `.selected-actions-button-list`);
+    if (files.filter(f => f.meta.checked).length === 0) {
+        return;
+    }
     actionListEl.style.display = actionListEl.style.display === 'none'
       ? 'flex'
       : 'none';
@@ -3751,6 +3754,7 @@ function setCountValues() {
     joinCount = chainCount === 0 ? 0 : (chainCount > 0 &&
     sliceGridT > 0 ? Math.ceil(chainCount / sliceGridT) : 1);
     const chainText = settings.exportChainsAsPresets ? ' Preset' : ' Chain';
+    document.body.dataset.selectedCount = `${filesSelected.length}`;
     document.getElementById(
       'fileNum').textContent = `${files.length}/${selectionCount}` + (selectionSlicesCount ?
       ` (+${selectionSlicesCount} slices)` : '');

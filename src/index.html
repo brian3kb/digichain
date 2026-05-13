@@ -329,10 +329,18 @@
             </div>
             <div class="row">
                 <button title="Show actions that will affect all the currently selected samples."
-                        onpointerdown="digichain.toggleSelectedActionsList(event)" class="button">Selected Actions
+                        onpointerdown="digichain.toggleSelectedActionsList(event)" class="button toggle-selected-actions-list">Selected Actions
                 </button>
                 <div class="selected-actions-button-list" style="display: none;">
 
+                    <button title="Merge/mix-down all selected" onpointerdown="digichain.showMergePanel(event)"
+                            class="button-outline">Merge
+                    </button>
+                    <button title="Blend all selected to new sample" onpointerdown="digichain.showBlendPanel(event)"
+                            class="button-outline">Blend
+                    </button>
+                    <div class="button-clear"></div>
+                    
                     <button title="Trim right all selected, shift+click to trim both left and right." onclick="digichain.trimRightSelected(event)"
                             class="button-outline has-shift-mod">
                         Trim Right
@@ -449,12 +457,7 @@
                     </button>
                     <div class="button-clear"></div>
                 </div>
-                <button title="Merge/mix-down all selected" onpointerdown="digichain.showMergePanel(event)"
-                        class="button button-outline" style="width: 23%;">Merge
-                </button>
-                <button title="Blend all selected to new sample" onpointerdown="digichain.showBlendPanel(event)"
-                        class="button button-outline" style="width: 23%;">Blend
-                </button>
+                <div class="record-sample-controls"></div>
             </div>
         </div>
         <div class="column">

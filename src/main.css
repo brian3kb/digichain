@@ -2482,12 +2482,16 @@ button.sel-transient:is(.button-outline) ~ #transientThreshold {
     transition: opacity .33s ease-in;
 }
 .right-buttons:has(.toggle-seconds-per-file.on) button.check:not(.slice-grid-off),
-.right-buttons:has(.toggle-seconds-per-file.on) button.dl-spaced {
+.right-buttons:has(.toggle-seconds-per-file.on) button.dl-spaced,
+body[data-selected-count="0"] .toggle-selected-actions-list {
     pointer-events: none;
     color: #2f3234;
     border-color: #2f3234 !important;
     background-color: transparent !important;
-
+    transition: all .1s linear;
+}
+body[data-selected-count="0"]  .selected-actions-button-list {
+    display: none !important;
 }
 .btn-audio-config * { color: #7a6241; }
 .btn-audio-config:hover * { color: #d79c4e; }

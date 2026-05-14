@@ -13,6 +13,7 @@
 - Moved the merge and blend buttons into the selected action panel.
 - Disable the selected action panel when no samples are selected.
 - Allow override/manual set of detected pitch via editor -> pitch shift+click, or via toast link if pitch detect failed.
+- Record audio from device microphone function with slice markers added on recording pause; Uses web MediaRecorder API so quality is compressed audio (ogg/vorbis/vp8).
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

@@ -66,6 +66,13 @@ let modifierKeys = {
     shiftKey: false,
     ctrlKey: false
 };
+let mediaRecorder;
+let audioChunks = [];
+let recordingInterval;
+let recordingSeconds = 0;
+let recordingSlices = [];
+let recordingStartTime;
+let totalRecordedTime = 0;
 
 metaFiles.getByFileName = function(filename) {
     let found = this.find(m => m.name.replace(/\.[^.]*$/, '') ===
@@ -382,6 +389,9 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 }
 
 function checkAudioContextState() {
+    if (!audioCtx) {
+        return false;
+    }
     if (audioCtx.state === 'closed') {
         setLoadingText('');
         showToastMessage(
@@ -5885,8 +5895,152 @@ try {
     console.log(err);
 }
 
+function updateRecordingUI() {
+    const recordControlsEl = document.querySelector('.record-sample-controls');
+    if (!recordControlsEl) return;
+
+    if (recordControlsEl.innerHTML === '') {
+        recordControlsEl.innerHTML = `
+            <button id="btnRecord" title="Start/Pause/Resume recording audio." class="button button-outline record" onpointerdown="digichain.recordAction()">
+                <i class="gg-shape-circle"></i>
+                <span class="record-timer hide">00:00</span>
+                <span class="record-label">REC</span>
+            </button>
+            <button id="btnStop" title="Stop recording and add to list." class="button-clear check hide" onpointerdown="digichain.stopRecording()"><i class="gg-play-stop"></i></button>
+        `;
+    }
+
+    const btnRecord = document.getElementById('btnRecord');
+    const btnStop = document.getElementById('btnStop');
+    const timerEl = btnRecord.querySelector('.record-timer');
+    const labelEl = btnRecord.querySelector('.record-label');
+    const iconEl = btnRecord.querySelector('i');
+
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        btnRecord.classList.remove('is-recording', 'is-paused');
+        btnStop.classList.add('hide');
+        timerEl.classList.add('hide');
+        labelEl.classList.remove('hide');
+        iconEl.classList.remove('hide');
+    } else if (mediaRecorder.state === 'recording') {
+        btnRecord.classList.add('is-recording');
+        btnRecord.classList.remove('is-paused');
+        btnStop.classList.remove('hide');
+        timerEl.classList.remove('hide');
+        labelEl.classList.add('hide');
+        iconEl.classList.add('hide');
+    } else if (mediaRecorder.state === 'paused') {
+        btnRecord.classList.add('is-paused');
+        btnRecord.classList.remove('is-recording');
+        btnStop.classList.remove('hide');
+        timerEl.classList.remove('hide');
+        labelEl.classList.add('hide');
+        iconEl.classList.add('hide');
+    }
+}
+
+async function recordAction() {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+        await startRecording();
+    } else {
+        pauseRecording();
+    }
+}
+
+async function startRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        recordingSlices = [0];
+        totalRecordedTime = 0;
+        recordingStartTime = performance.now();
+
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const fileName = `recording_${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
+            
+            recordingSlices.push(totalRecordedTime / 1000);
+            if (recordingSlices.length > 2) {
+                metaFiles.push({
+                    name: fileName,
+                    slices: recordingSlices.map((s, idx) => ({
+                        startPoint: Math.round(s * masterSR),
+                        endPoint: recordingSlices[idx + 1] ? Math.round(recordingSlices[idx + 1] * masterSR) : -1,
+                        loopPoint: -1,
+                        name: `Slice ${idx + 1}`
+                    }))
+                });
+            }
+
+            const file = new File([audioBlob], fileName, { type: 'audio/webm' });
+            consumeFileInput({}, [file]);
+
+            clearInterval(recordingInterval);
+            recordingSeconds = 0;
+            updateRecordingUI();
+
+            stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        recordingSeconds = 0;
+        recordingInterval = setInterval(() => {
+            recordingSeconds++;
+            const mins = Math.floor(recordingSeconds / 60).toString().padStart(2, '0');
+            const secs = (recordingSeconds % 60).toString().padStart(2, '0');
+            const timerEl = document.querySelector('.record-timer');
+            if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+        }, 1000);
+
+        updateRecordingUI();
+    } catch (err) {
+        console.error('Error starting recording:', err);
+        showToastMessage('Could not start recording. Please ensure microphone access is allowed.');
+    }
+}
+
+function pauseRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.pause();
+        totalRecordedTime += (performance.now() - recordingStartTime);
+        clearInterval(recordingInterval);
+    } else if (mediaRecorder && mediaRecorder.state === 'paused') {
+        recordingSlices.push(totalRecordedTime / 1000);
+        mediaRecorder.resume();
+        recordingStartTime = performance.now();
+        recordingInterval = setInterval(() => {
+            recordingSeconds++;
+            const mins = Math.floor(recordingSeconds / 60).toString().padStart(2, '0');
+            const secs = (recordingSeconds % 60).toString().padStart(2, '0');
+            const timerEl = document.querySelector('.record-timer');
+            if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+        }, 1000);
+    }
+    updateRecordingUI();
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        if (mediaRecorder.state === 'recording') {
+            totalRecordedTime += (performance.now() - recordingStartTime);
+        }
+        mediaRecorder.stop();
+    }
+}
+
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {
+    startRecording,
+    pauseRecording,
+    stopRecording,
+    recordAction,
     sliceOptions: () => sliceOptions,
     lastSelectedFile: () => getFileById(lastSelectedRow?.dataset?.id),
     saveSession,
@@ -5974,3 +6128,5 @@ window.digichain = {
     showWelcome,
     editor
 };
+
+updateRecordingUI();

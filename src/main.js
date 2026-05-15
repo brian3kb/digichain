@@ -5517,6 +5517,8 @@ function init() {
                     digichain.editor.sliceSelect({}, -1);
                 } else if (event.code === 'Period') {
                     digichain.editor.sliceSelect({}, +1);
+                } else if (event.code === 'KeyC') {
+                    digichain.editor.sliceLazyCreate(event);
                 }
             }
             event.preventDefault();

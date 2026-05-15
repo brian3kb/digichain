@@ -1,4 +1,4 @@
-2026.05.12
+2026.05.14
 - Support for 24/32bit AIFF file importing.
 - Updated note detection to find notes from Logic Pro generated filenames.
 - Sorting by note on Logic Pro generated AIFF files now correctly sorts.
@@ -13,8 +13,9 @@
 - Moved the merge and blend buttons into the selected action panel.
 - Disable the selected action panel when no samples are selected.
 - Allow override/manual set of detected pitch via editor -> pitch shift+click, or via toast link if pitch detect failed.
-- Record audio from device microphone function with slice markers added on recording pause; Uses web MediaRecorder API so quality is compressed audio (ogg/vorbis/vp8).
-- While recording is active, pressing C will add a slice marker into the recording.
+- Record audio from the device microphone function with slice markers added on recording pause; Uses web MediaRecorder API so quality is compressed audio (ogg/vorbis/vp8).
+- When the recording function is active, pressing C will add a slice marker into the recording.
+- While playback is active in the sample editor panel, pressing C will add a slice marker at the play head.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

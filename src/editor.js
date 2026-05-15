@@ -42,6 +42,8 @@ let selection = {
     step: 0,
     selStart: true
 };
+let playbackStartTime = 0;
+let playbackStartOffset = 0;
 let showStereoWaveform = false;
 let shouldSnapToZeroCrossing = false;
 
@@ -1046,6 +1048,76 @@ async function pitchShiftHandler(event) {
         showToastMessage('Error during repitch');
     }
     setLoadingText('');
+}
+
+function sliceLazyCreate(event) {
+    if (!playbackStartTime || !editing.meta.playing) return;
+
+    const currentTime = (performance.now() - playbackStartTime) / 1000;
+    const currentSample = Math.round(playbackStartOffset + (currentTime * conf.masterSR));
+
+    if (currentSample >= editing.buffer.length || currentSample <= 0) return;
+
+    let slices = digichain.getSlicesFromMetaFile(editing);
+    if (!slices || slices.length === 0) {
+        slices = [
+            {s: 0, e: currentSample, l: -1, n: 'Slice 1'}
+        ];
+    } else {
+        // Find the slice that contains currentSample
+        const sliceIdx = slices.findIndex(s => currentSample > s.s && currentSample < s.e);
+        if (sliceIdx !== -1) {
+            const originalSlice = slices[sliceIdx];
+            const oldEnd = originalSlice.e;
+            originalSlice.e = currentSample;
+            slices.splice(sliceIdx + 1, 0, {
+                s: currentSample,
+                e: oldEnd,
+                l: -1,
+                n: ''
+            });
+        } else {
+            // It's outside existing slices. Find the closest slice before currentSample.
+            let closestSlice = null;
+            let closestDistance = Infinity;
+            for (let i = 0; i < slices.length; i++) {
+                if (slices[i].e <= currentSample) {
+                    if (currentSample - slices[i].e < closestDistance) {
+                        closestDistance = currentSample - slices[i].e;
+                        closestSlice = slices[i];
+                    }
+                }
+            }
+
+            if (closestSlice) {
+                slices.push({
+                    s: closestSlice.e,
+                    e: currentSample,
+                    l: -1,
+                    n: ''
+                });
+            } else {
+                slices.push({
+                    s: 0,
+                    e: currentSample,
+                    l: -1,
+                    n: ''
+                });
+            }
+        }
+    }
+
+    slices.sort((a, b) => a.s - b.s);
+
+    // Update names
+    slices.forEach((s, i) => {
+        s.n = `Slice ${i + 1}`;
+    });
+
+    editing.meta.slices = slices;
+    digichain.removeMetaFile(editing.meta.id);
+    renderSliceList();
+    showToastMessage(`Slice added at ${(currentSample / conf.masterSR).toFixed(2)}s`);
 }
 
 function sliceSelect(event, sliceAddition) {
@@ -2697,8 +2769,11 @@ function editorPlayFile(event, loop = false, stop = false) {
     clearTimeout(editorPlayFile.nextLoop);
     if (stop || !editPanelEl.open) {
         digichain.stopPlayFile(event, editing.meta.id);
+        playbackStartTime = 0;
         return;
     }
+    playbackStartTime = performance.now();
+    playbackStartOffset = selection.start;
     digichain.playFile({
         editor: true,
         file: editing,
@@ -2799,6 +2874,7 @@ export const editor = {
     acceptDroppedChainItems,
     sliceUpdate,
     sliceCreate,
+    sliceLazyCreate,
     sliceRemove,
     sliceSelect,
     toggleSnapToZero,

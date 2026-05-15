@@ -908,6 +908,55 @@
     border-right: 2px solid;
     top: 1px;
 }
+.gg-mic {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(1);
+    width: 16px;
+    height: 12px;
+    border-bottom-left-radius: 120px;
+    border-bottom-right-radius: 120px;
+    border: 2px solid;
+    border-top: 0;
+    margin-top: 3px;
+}
+.gg-mic::after,
+.gg-mic::before {
+    content: "";
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+}
+.gg-mic::after {
+    border: 2px solid;
+    width: 8px;
+    height: 18px;
+    left: 2px;
+    top: -10px;
+    border-radius: 4px;
+}
+.gg-mic::before {
+    width: 10px;
+    height: 4px;
+    top: 12px;
+    left: 1px;
+    border-right: 4px solid transparent;
+    box-shadow:
+            0 2px 0,
+            inset -2px 0 0;
+}
+.gg-play-pause {
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    transform: scale(1);
+    width: 8px;
+    height: 10px;
+    border-left: 3px solid;
+    border-right: 3px solid;
+    margin-left: 4px;
+}
 
 /*!
   * Milligram v1.4.1
@@ -3774,14 +3823,14 @@ body.light .repitch-tabs span.active {
     font-weight: bold;
 }
 
-.gg-play-pause {
-    box-sizing: border-box;
-    position: relative;
-    display: block;
-    transform: scale(var(--ggs,1));
-    width: 8px;
-    height: 10px;
-    border-left: 3px solid;
-    border-right: 3px solid;
-    margin-left: 4px;
+#btnRecordSettings {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.25rem 0 0;
+    margin-left: -.75rem;
+    height: 1.5rem;
+}
+#btnRecordSettings .gg-mic {
+    transform: scale(.5);
 }

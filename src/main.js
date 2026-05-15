@@ -73,6 +73,7 @@ let recordingSeconds = 0;
 let recordingSlices = [];
 let recordingStartTime;
 let totalRecordedTime = 0;
+let selectedDeviceId = null;
 
 metaFiles.getByFileName = function(filename) {
     let found = this.find(m => m.name.replace(/\.[^.]*$/, '') ===
@@ -5907,11 +5908,15 @@ function updateRecordingUI() {
                 <span class="record-label">REC</span>
             </button>
             <button id="btnStop" title="Stop recording and add to list." class="button-clear check hide" onpointerdown="digichain.stopRecording()"><i class="gg-play-stop"></i></button>
+            <button id="btnRecordSettings" title="Choose recording device." class="button-clear" onpointerdown="digichain.showRecordSettings(event)">
+                <i class="gg-mic"></i>
+            </button>
         `;
     }
 
     const btnRecord = document.getElementById('btnRecord');
     const btnStop = document.getElementById('btnStop');
+    const btnRecordSettings = document.getElementById('btnRecordSettings');
     const timerEl = btnRecord.querySelector('.record-timer');
     const labelEl = btnRecord.querySelector('.record-label');
     const iconEl = btnRecord.querySelector('i');
@@ -5922,6 +5927,7 @@ function updateRecordingUI() {
         timerEl.classList.add('hide');
         labelEl.classList.remove('hide');
         iconEl.classList.remove('hide');
+        btnRecordSettings.classList.remove('hide');
     } else if (mediaRecorder.state === 'recording') {
         btnRecord.classList.add('is-recording');
         btnRecord.classList.remove('is-paused');
@@ -5929,6 +5935,7 @@ function updateRecordingUI() {
         timerEl.classList.remove('hide');
         labelEl.classList.add('hide');
         iconEl.classList.add('hide');
+        btnRecordSettings.classList.add('hide');
     } else if (mediaRecorder.state === 'paused') {
         btnRecord.classList.add('is-paused');
         btnRecord.classList.remove('is-recording');
@@ -5936,6 +5943,7 @@ function updateRecordingUI() {
         timerEl.classList.remove('hide');
         labelEl.classList.add('hide');
         iconEl.classList.add('hide');
+        btnRecordSettings.classList.add('hide');
     }
 }
 
@@ -5949,7 +5957,11 @@ async function recordAction() {
 
 async function startRecording() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const constraints = { audio: true };
+        if (selectedDeviceId) {
+            constraints.audio = { deviceId: { exact: selectedDeviceId } };
+        }
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
         recordingSlices = [0];
@@ -6035,11 +6047,59 @@ function stopRecording() {
     }
 }
 
+async function showRecordSettings(event) {
+    if (event) event.preventDefault();
+    try {
+        /* Request permission first to get labels if needed, though enumerateDevices might work if already granted */
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+
+        if (audioInputs.length === 0) {
+            showToastMessage('No audio input devices found.');
+            return;
+        }
+
+        const deviceOptionsMarkup = audioInputs.map(device => `
+            <option value="${device.deviceId}" ${selectedDeviceId === device.deviceId || (!selectedDeviceId && device.deviceId === 'default') ? 'selected' : ''}>
+                ${device.label || 'Unknown Device'}
+            </option>
+        `).join('');
+
+        const dialogResponse = await dcDialog(
+            'confirm',
+            `<h5>Select Recording Device</h5>
+            <div style="text-align: left;">
+                <select id="audioDeviceSelect" class="btn-audio-config" style="width: 82% !important;">
+                    ${deviceOptionsMarkup}
+                </select>
+            </div>`,
+            {
+                okLabel: 'Select',
+                cancelLabel: 'Cancel'
+            }
+        );
+
+        if (dialogResponse) {
+            const selectEl = document.getElementById('audioDeviceSelect');
+            if (selectEl) {
+                selectedDeviceId = selectEl.value;
+                const selectedLabel = selectEl.options[selectEl.selectedIndex].text;
+                showToastMessage(`Selected device: ${selectedLabel.trim()}`);
+            }
+        }
+    } catch (err) {
+        console.error('Error listing devices:', err);
+        showToastMessage('Could not access audio devices.');
+    }
+}
+
 /*Expose properties/methods used in html events to the global scope.*/
 window.digichain = {
     startRecording,
     pauseRecording,
     stopRecording,
+    showRecordSettings,
     recordAction,
     sliceOptions: () => sliceOptions,
     lastSelectedFile: () => getFileById(lastSelectedRow?.dataset?.id),

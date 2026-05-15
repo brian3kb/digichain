@@ -5449,6 +5449,7 @@ function init() {
             'KeyR',
             'KeyS',
             'KeyX',
+            'KeyC',
             'Comma',
             'Period',
             ...numberKeys
@@ -5520,6 +5521,16 @@ function init() {
             }
             event.preventDefault();
             return;
+        }
+
+        if (event.code === 'KeyC') {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                const sliceTime = (totalRecordedTime + (performance.now() - recordingStartTime)) / 1000;
+                recordingSlices.push(sliceTime);
+                showToastMessage(`Lazy slice added at ${sliceTime.toFixed(2)}s`);
+                event.preventDefault();
+                return;
+            }
         }
 
         if (numberKeys.includes(event.code)) {

@@ -13,6 +13,7 @@
  - Edit Panel, U : Update current slice.
  - Edit Panel, X : Remove current slice.
  - Edit Panel, ,/. : Change selected slice +/- 1.
+ - C : while recording is active, pressing C will add a slice marker into the recording.
 
 **Shift + Click / Shift + Key**
  - Up / Down Keys : moves the highlighted sample up or down in the list.

@@ -3788,6 +3788,7 @@ body.light .repitch-tabs span.active {
     width: fit-content !important;
     margin-left: -.47rem;
     gap: 0.5rem;
+    float: right;
 }
 
 .record-sample-controls .button {

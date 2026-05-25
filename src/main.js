@@ -5970,11 +5970,46 @@ async function recordAction() {
 
 async function startRecording() {
     try {
-        const constraints = { audio: true };
-        if (selectedDeviceId) {
-            constraints.audio = { deviceId: { exact: selectedDeviceId } };
+        let stream;
+        if (selectedDeviceId.startsWith('resample')) {
+            try {
+                stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    },
+                    preferCurrentTab: selectedDeviceId.endsWith('-tab'),
+                    selfBrowserSurface: 'include',
+                    systemAudio: 'include',
+                    monitorTypeSurfaces: 'include'
+                });
+                
+                const audioTracks = stream.getAudioTracks();
+                if (audioTracks.length === 0) {
+                    stream.getTracks().forEach(track => track.stop());
+                    showToastMessage('No audio selected for Resample. Ensure "Share tab audio" is checked.');
+                    return;
+                }
+                
+                // Stop video tracks immediately as we don't need them
+                stream.getVideoTracks().forEach(track => track.stop());
+                
+                // Create a new stream with just the audio track(s)
+                stream = new MediaStream(audioTracks);
+            } catch (e) {
+                console.error('getDisplayMedia error:', e);
+                showToastMessage('Tab audio capture cancelled or not supported.');
+                return;
+            }
+        } else {
+            const constraints = { audio: true };
+            if (selectedDeviceId) {
+                constraints.audio = { deviceId: { exact: selectedDeviceId } };
+            }
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
         }
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
         recordingSlices = [0];
@@ -6073,7 +6108,11 @@ async function showRecordSettings(event) {
             return;
         }
 
-        const deviceOptionsMarkup = audioInputs.map(device => `
+        const resampleOptions = `
+            <option value="resample-tab" ${selectedDeviceId === 'resample-tab' ? 'selected' : ''}>Resample (DigiChain Audio)</option>
+            <option value="resample" ${selectedDeviceId === 'resample' ? 'selected' : ''}>Resample (Tab/Window/Screen Audio)</option>
+        `;
+        const deviceOptionsMarkup = resampleOptions + audioInputs.map(device => `
             <option value="${device.deviceId}" ${selectedDeviceId === device.deviceId || (!selectedDeviceId && device.deviceId === 'default') ? 'selected' : ''}>
                 ${device.label || 'Unknown Device'}
             </option>

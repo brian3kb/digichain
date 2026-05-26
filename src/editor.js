@@ -996,7 +996,7 @@ async function pitchShiftHandler(event) {
     if (result === 'intervals') {
         const startMidi = notes.indexOf(selectedNote) + (selectedOctave + 1) * 12;
         for (let i = 0; i < numDuplicates; i++) {
-            targetPitches.push(midiToPitch(startMidi + (i * intervalStep)));
+            targetPitches.unshift(midiToPitch(startMidi + (i * intervalStep)));
         }
     } else {
         targetPitches.push(startPitch);

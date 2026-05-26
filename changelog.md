@@ -17,6 +17,8 @@
 - When the recording function is active, pressing C will add a slice marker into the recording.
 - While playback is active in the sample editor panel, pressing C will add a slice marker at the play head.
 - Allow resample as an input recording source.
+- Fixed bug in sorting inserted blank audio files.
+- Fixed bug where duplicates are numbered from *-2 instead of *-1.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

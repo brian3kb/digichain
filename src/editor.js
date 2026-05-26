@@ -1433,7 +1433,7 @@ export function getUniqueName(files, name) {
     const fname = parts.join('.');
     const count = files.filter(
       f => (f.file.name || f.file.filename).includes(fname)).length;
-    return count > 0 ? `${fname}-${count + 1}.${ext}` : name;
+    return count > 0 ? `${fname}-${count}.${ext}` : name;
 }
 
 function draw(data, id, canvas, dimensions) {

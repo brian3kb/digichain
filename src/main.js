@@ -74,6 +74,7 @@ let recordingSlices = [];
 let recordingStartTime;
 let totalRecordedTime = 0;
 let selectedDeviceId = null;
+let lastCountCalc = 0;
 
 metaFiles.getByFileName = function(filename) {
     let found = this.find(m => m.name.replace(/\.[^.]*$/, '') ===
@@ -2289,11 +2290,13 @@ function generateBlankFile() {
             audioArrayBuffer.getChannelData(channel)[i] = 0;
         }
     }
+    const uniqueFileName = getUniqueName(files, 'blank.wav');
     return {
         file: {
             lastModified: Date.now(),
-            name: getUniqueName(files, 'blank.wav'),
-            filename: 'blank.wav',
+            name: uniqueFileName,
+            filename: uniqueFileName,
+            fullPath: uniqueFileName,
             path: '',
             size: 0
         },
@@ -3461,6 +3464,9 @@ const remove = (id, skipStateStore) => {
     }
     rowEl.classList.add('hide');
     rowEl.remove();
+    if (!skipStateStore) {
+        setCountValues();
+    }
     return skipStateStore ? true : storeState();
 };
 
@@ -3586,7 +3592,7 @@ const handleRowClick = (event, id) => {
     lastLastSelectedRow = lastSelectedRow;
     lastSelectedRow = row;
     lastSelectedRow.scrollIntoViewIfNeeded(true);
-    setCountValues();
+    //setCountValues();
 
 };
 
@@ -3750,6 +3756,10 @@ const setFileNumTicker = () => {
 };
 
 function setCountValues() {
+    if (lastCountCalc > Date.now() - 150) {
+        return;
+    }
+    lastCountCalc = Date.now();
     const filesSelected = files.filter(f => f.meta.checked);
     const selectionCount = filesSelected.length;
     let sliceGridT = settings.exportChainsAsPresets ? ((sliceGrid > settings.exportChainsAsPresets.length || !sliceGrid)

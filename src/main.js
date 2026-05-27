@@ -74,6 +74,7 @@ let recordingSlices = [];
 let recordingStartTime;
 let totalRecordedTime = 0;
 let selectedDeviceId = null;
+let digichainAudioDestination = null;
 let lastCountCalc = 0;
 
 metaFiles.getByFileName = function(filename) {
@@ -2822,6 +2823,9 @@ const playFile = (event, id, loop, start = 0, end) => {
 
     file.source.buffer = buffer;
     file.source.connect(audioCtx.destination);
+    if (digichainAudioDestination) {
+        file.source.connect(digichainAudioDestination);
+    }
     file.source.loop = loop;
 
     if (id && !event?.editor && event.target && event.target !== file.waveform) {
@@ -5982,8 +5986,17 @@ async function recordAction() {
 async function startRecording() {
     try {
         let stream;
-        if (selectedDeviceId.startsWith('resample')) {
+        if (selectedDeviceId === 'resample-tab') {
+            await checkAndSetAudioContext();
+            digichainAudioDestination = audioCtx.createMediaStreamDestination();
+            stream = digichainAudioDestination.stream;
+        } else if (selectedDeviceId === 'resample') {
             try {
+                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                if (isSafari) {
+                    showToastMessage('Tab/Window/Screen audio capture is not supported in Safari. Please use "Resample (DigiChain Audio)".');
+                    return;
+                }
                 stream = await navigator.mediaDevices.getDisplayMedia({
                     video: true,
                     audio: {
@@ -5991,7 +6004,7 @@ async function startRecording() {
                         noiseSuppression: false,
                         autoGainControl: false
                     },
-                    preferCurrentTab: selectedDeviceId.endsWith('-tab'),
+                    preferCurrentTab: false,
                     selfBrowserSurface: 'include',
                     systemAudio: 'include',
                     monitorTypeSurfaces: 'include'
@@ -6011,7 +6024,7 @@ async function startRecording() {
                 stream = new MediaStream(audioTracks);
             } catch (e) {
                 console.error('getDisplayMedia error:', e);
-                showToastMessage('Tab audio capture cancelled or not supported.');
+                showToastMessage('Tab/Window/Screen audio capture cancelled or not supported.');
                 return;
             }
         } else {
@@ -6058,6 +6071,7 @@ async function startRecording() {
             updateRecordingUI();
 
             stream.getTracks().forEach(track => track.stop());
+            digichainAudioDestination = null;
         };
 
         mediaRecorder.start();
@@ -6119,9 +6133,10 @@ async function showRecordSettings(event) {
             return;
         }
 
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         const resampleOptions = `
             <option value="resample-tab" ${selectedDeviceId === 'resample-tab' ? 'selected' : ''}>Resample (DigiChain Audio)</option>
-            <option value="resample" ${selectedDeviceId === 'resample' ? 'selected' : ''}>Resample (Tab/Window/Screen Audio)</option>
+            ${!isSafari ? `<option value="resample" ${selectedDeviceId === 'resample' ? 'selected' : ''}>Resample (Tab/Window/Screen Audio)</option>` : ''}
         `;
         const deviceOptionsMarkup = resampleOptions + audioInputs.map(device => `
             <option value="${device.deviceId}" ${selectedDeviceId === device.deviceId || (!selectedDeviceId && device.deviceId === 'default') ? 'selected' : ''}>

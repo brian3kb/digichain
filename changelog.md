@@ -1,4 +1,4 @@
-2026.05.26
+2026.05.27
 - Support for 24/32bit AIFF file importing.
 - Updated note detection to find notes from Logic Pro generated filenames.
 - Sorting by note on Logic Pro generated AIFF files now correctly sorts.

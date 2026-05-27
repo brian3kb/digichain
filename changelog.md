@@ -19,6 +19,7 @@
 - Allow resample as an input recording source.
 - Fixed bug in sorting inserted blank audio files.
 - Fixed bug where duplicates are numbered from *-2 instead of *-1.
+- Fixed bug where the sample editor panel would not show the correct play head position when the sample was playing in Safari/WebKit.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

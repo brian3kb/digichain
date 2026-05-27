@@ -1878,9 +1878,12 @@ td.waveform-td span.play-head.play {
     margin-left: 150px !important;
 }
 
+#editorPanelContent span.play-head {
+    --playhead-end: 0;
+}
 @keyframes waveformPlayHeadEditor {
     from { margin-left: 0; }
-    to { margin-left: attr(data-end px); }
+    to { margin-left: var(--playhead-end); }
 }
 #editorPanelContent span.play-head {
     display: none;
@@ -1897,7 +1900,7 @@ td.waveform-td span.play-head.play {
     display: block;
 }
 #editorPanelContent span.play-head.play {
-    margin-left: attr(data-end px) !important;
+    margin-left: var(--playhead-end) !important;
 }
 
 .waveform-container {

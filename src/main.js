@@ -2837,6 +2837,7 @@ const playFile = (event, id, loop, start = 0, end) => {
             playHead.style.height = `${event.loopSection.style.height}`;
             playHead.style.animationDuration = `${end}s`;
             playHead.dataset.end = `${event.loopSection.style.width.replace('px', '')}`;
+            playHead.style.setProperty('--playhead-end', event.loopSection.style.width);
             event.loopSection.appendChild(playHead);
         } else {
             waveform.parentElement.appendChild(playHead);

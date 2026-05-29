@@ -1,4 +1,4 @@
-2026.05.27
+2026.05.28
 - Support for 24/32bit AIFF file importing.
 - Updated note detection to find notes from Logic Pro generated filenames.
 - Sorting by note on Logic Pro generated AIFF files now correctly sorts.
@@ -7,7 +7,7 @@
 - Graceful handling of invalid slices when joining, if an invalid slice is encountered, the join will use the full source sample instead.
 - Fixed a bug where cue points with differing fmt header resulted in the embedded slices being discarded.
 - Added basic pitch detection to the edit panel.
-- Use the , and . keys to change the selected slice on the edit panel.
+- Use `,` and `.` keys to change the selected slice on the edit panel.
 - For Stretch Selected Actions holding the Alt Key, and for the pitch shift buttons on the editor panel, holding the Shift+Alt keys will apply time-stretching where the pitch of the samples is preserved.
 - Repitch tool in sample editor panel with pitched duplicate interval mode.
 - Moved the merge and blend buttons into the selected action panel.
@@ -16,10 +16,11 @@
 - Record audio from the device microphone function with slice markers added on recording pause; Uses web MediaRecorder API so quality is compressed audio (ogg/vorbis/vp8).
 - When the recording function is active, pressing C will add a slice marker into the recording.
 - While playback is active in the sample editor panel, pressing C will add a slice marker at the play head.
-- Allow resample as an input recording source.
-- Fixed bug in sorting inserted blank audio files.
-- Fixed bug where duplicates are numbered from *-2 instead of *-1.
-- Fixed bug where the sample editor panel would not show the correct play head position when the sample was playing in Safari/WebKit.
+- Allow resampling as an input recording source.
+- Fixed a bug in sorting inserted blank audio files.
+- Fixed a bug where duplicates are numbered from *-2 instead of *-1.
+- Fixed a bug where the sample editor panel would not show the correct play head position when the sample was playing in Safari/WebKit.
+- Added Amiga Paula processing selected actions (8 or 14 bit) best used for final render of samples as this is a destructive effect.
 
 2025.12.07 1.5.2
 - Corrected inconsistent import ordering in macOS file drops.

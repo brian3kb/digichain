@@ -3,7 +3,7 @@
     box-sizing: border-box;
     position: relative;
     display: block;
-    transform: scale(var(--ggs,1));
+    transform: scale(1);
     width: 22px;
     height: 22px;
     border: 2px solid;
@@ -26,7 +26,7 @@
     box-sizing: border-box;
     position: relative;
     display: block;
-    transform: scale(var(--ggs,1));
+    transform: scale(1);
     width: 22px;
     height: 22px;
     border: 2px solid;
@@ -77,7 +77,7 @@
     box-sizing: border-box;
     position: relative;
     display: block;
-    transform: scale(var(--ggs,1));
+    transform: scale(1);
     width: 20px;
     height: 20px;
     border: 2px solid;
@@ -106,7 +106,7 @@
     box-sizing: border-box;
     position: relative;
     display: block;
-    transform: scale(var(--ggs,1));
+    transform: scale(1);
     width: 22px;
     height: 22px;
     border: 2px solid transparent;
@@ -133,7 +133,7 @@
     box-sizing: border-box;
     position: relative;
     display: block;
-    transform: scale(var(--ggs,1));
+    transform: scale(1);
     width: 10px;
     height: 10px;
     border: 2px solid transparent;
@@ -168,7 +168,7 @@
     box-sizing: border-box;
     position: relative;
     display: block;
-    transform: scale(var(--ggs,1));
+    transform: scale(1);
     width: 10px;
     height: 12px;
     border: 2px solid transparent;
@@ -209,7 +209,7 @@
     box-sizing: border-box;
     position: relative;
     display: block;
-    transform: scale(var(--ggs,1));
+    transform: scale(1);
     width: 18px;
     height: 18px;
     border-top-left-radius: 120px;
@@ -242,7 +242,7 @@
     box-sizing: border-box;
     position: relative;
     display: block;
-    transform: scale(var(--ggs,1));
+    transform: scale(1);
     width: 16px;
     height: 6px;
     border: 2px solid;
@@ -2282,6 +2282,11 @@ body.shiftKey-down .sample-op-buttons .invert-crop::before {
 }
 #settingAudioConfig button.check, #settingSession button.check {
     width: 7rem;
+}
+#settingAudioConfig td:first-child, th:first-child {
+    padding-left: 0;
+    vertical-align: top;
+    padding-top: 1.5rem;
 }
 
 .above-waveform-buttons {

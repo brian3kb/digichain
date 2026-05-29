@@ -340,7 +340,10 @@
                     <button title="Blend all selected to new sample" onpointerdown="digichain.showBlendPanel(event)"
                             class="button-outline">Blend
                     </button>
-                    <div class="button-clear"></div>
+                    <button title="Clear any existing slice data for the selected."
+                            onclick="digichain.clearSlicesSelected(event)"
+                            class="button-outline">Clear Slices
+                    </button>
                     
                     <button title="Trim right all selected, shift+click to trim both left and right." onclick="digichain.trimRightSelected(event)"
                             class="button-outline has-shift-mod">
@@ -448,15 +451,18 @@
                             onclick="digichain.shortenNameSelected(event, true)"
                             class="button-outline">Restore Names
                     </button>
-                    <button title="Clear any existing slice data for the selected."
-                            onclick="digichain.clearSlicesSelected(event)"
-                            class="button-outline">Clear Slices
-                    </button>
                     <button title="Change the folder path for all selected."
                             onclick="digichain.assignFolder(event)"
                             class="button-outline">Set Folder
                     </button>
-                    <div class="button-clear"></div>
+                    <button title="Processes selected through an Amiga Paula emulation at 8 bit."
+                            onclick="digichain.processSelectedWithPaula(event, '8 bit')"
+                            class="button-outline">Paula 8 bit
+                    </button>
+                    <button title="Processes selected through an Amiga Paula emulation at pseudo 14 bit simulating the 8/6bit classic Amiga trick."
+                            onclick="digichain.processSelectedWithPaula(event, '14 bit')"
+                            class="button-outline">Paula 14 bit
+                    </button>
                 </div>
                 &nbsp;
                 <div class="record-sample-controls button-clear"></div>

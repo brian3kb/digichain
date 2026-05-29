@@ -10,7 +10,7 @@ import {
     flattenFile,
     getAifSampleRate,
     joinToMono,
-    joinToStereo,
+    joinToStereo, Paula,
     Resampler,
     setLoadingText,
     showToastMessage
@@ -280,6 +280,9 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 
     try {
         settings.ditherExports = JSON.parse(document.getElementById('ditherGroup').dataset.dither);
+    } catch (e) {}
+    try {
+        settings.processWithPaula = document.getElementById('paulaGroup').dataset.paula;
     } catch (e) {}
 
     if (audioValuesFromCommonSelectEl) {
@@ -1339,6 +1342,21 @@ function fuzzSelected(event) {
     }, 250);
 }
 
+function processSelectedWithPaula(event, mode = '8 bit') {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    setLoadingText('Processing');
+    setTimeout(() => {
+        const selected = files.filter(f => f.meta.checked);
+        selected.forEach((f, idx) => {
+            f.buffer = Paula(f.buffer, mode, audioCtx);
+            if (idx === selected.length - 1) {
+                setLoadingText('');
+            }
+        });
+        renderList();
+    }, 250);
+}
+
 async function crushSelected(event) {
     let crushAmount = 25;
     if (event.shiftKey || modifierKeys.shiftKey) {
@@ -1814,17 +1832,13 @@ function showExportSettingsPanel(page = 'settings') {
             break;
         case 'audio':
             panelMarkup += `
-      <table style="padding-top:0;" id="settingAudioConfig">
+      <table style="padding-top:0; margin-bottom: -1rem;" id="settingAudioConfig">
       <thead>
-      <tr>
-      <th style="border: none;"></th>
-      <th style="border: none;"></th>
-    </tr>
     </thead>
       <tbody>
         <tr>
-          <td style="border: none;"><span>Working Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
-          <td style="border: none;">
+          <td><span>Working Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
+          <td>
               <div class="input-set" id="settingsWorkingSampleRateGroup" style="display: flex; align-items: flex-start;">
                   <input type="number" placeholder="Sample Rate between ${settings.supportedSampleRates.toString()}Hz"
                   onfocus="(() => {this.placeholder = this.value; this.value = '';})()"
@@ -1838,9 +1852,9 @@ function showExportSettingsPanel(page = 'settings') {
                   </datalist>
                   <button title="Restore currently active working sample rate" class="button-clear" onpointerdown="(() => {const i = document.getElementById('settingsWorkingSampleRate'); i.value = i.dataset.sampleRate;})()"><i class="gg-undo"></i></button>
               </div>
+              <div style="margin: -1rem 0 1rem 0;"><small>Caution: Changing the working sample rate resamples files currently in the list.</small></div>
           </td>
       </tr>
-        <tr><td colspan="2"><span><small>Caution: Changing the working sample rate will resample any files currently in the list to the specified sample rate.</small></span><br><br></td></tr>
       <tr>
           <td style="border: none;"><span style="padding-top: 1rem; display: block;">Target Sample Rate (Hz)&nbsp;&nbsp;&nbsp;</span></td>
           <td style="border: none;">
@@ -1909,8 +1923,8 @@ function showExportSettingsPanel(page = 'settings') {
       </tr>
     
       <tr>
-          <td style="border: none;"><span>Container&nbsp;&nbsp;&nbsp;</span></td>
-          <td style="border: none;">
+          <td><span>Container&nbsp;&nbsp;&nbsp;</span></td>
+          <td>
             <div style="padding: 1.5rem 0;" id="targetContainerGroup" data-container="${targetContainer}" onclick="((event, el) => {
           el.dataset.container = event.target.dataset.container || el.dataset.container;
       el.querySelectorAll('button').forEach(b => b.classList = b.dataset.container === el.dataset.container ? 'check button' : 'check button-outline');
@@ -1933,11 +1947,9 @@ function showExportSettingsPanel(page = 'settings') {
               ? ''
               : '-outline'}">AIF</button>
               </div>
+              <div style="margin: -1rem 0 1rem 0;"><small>Note: Choosing AIF will set the sample rate to 44100 and the bit depth to 16 bit.</small></div>
           </td>
       </tr>
-        <tr><td colspan="3"><span><small>Note: Choosing AIF will set the sample rate to 44100 and the bit depth to 16 bit.</small></span><br><br></td></tr>
-    
-      <tr>
     
       <tr>
         <td><span>Slice Grid Options&nbsp;&nbsp;&nbsp;</span></td>
@@ -1981,7 +1993,6 @@ function showExportSettingsPanel(page = 'settings') {
         </select>
       </td>
       </tr>
-      <tr><td colspan="2"  style="border: none;">&nbsp;</td></tr>
     </tbody>
     </table>
     `;
@@ -4444,17 +4455,15 @@ const parseAif = async (
         );
         if (chunks.comm.channels === 2) {
             for (let i = 0; i < resample.outputBuffer.length; i++) {
-                audioArrayBuffer.getChannelData(
-                  0)[i] = resample.outputBuffer[i];
-                audioArrayBuffer.getChannelData(
-                  1)[i] = resampleR.outputBuffer[i];
+                audioArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
+                audioArrayBuffer.getChannelData(1)[i] = resampleR.outputBuffer[i];
             }
         } else {
             for (let i = 0; i < resample.outputBuffer.length; i++) {
-                audioArrayBuffer.getChannelData(
-                  0)[i] = resample.outputBuffer[i];
+                audioArrayBuffer.getChannelData(0)[i] = resample.outputBuffer[i];
             }
         }
+
         const getRelPosition = v => v / chunks.json.scale;
 
         /*Update the slice points to masterSR - hardcoded to 44100 as OP sample rate will always be this.*/
@@ -4603,7 +4612,7 @@ const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
               audioArrayBuffer.getChannelData(0));
             resample.resampler(resample.inputBuffer.length);
 
-            const resampleBuffer = audioCtx.createBuffer(
+            resampleBuffer = audioCtx.createBuffer(
               1,
               resample.outputBuffer.length,
               masterSR
@@ -4615,6 +4624,8 @@ const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
             }
         }
 
+        const finalBuffer = resampleBuffer || audioArrayBuffer;
+
         let dv = new DataView(buffer);
         const sliceCount = dv.getUint8(376);
         let slices = [];
@@ -4622,12 +4633,12 @@ const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
             slices.push(dv.getUint16(i, true));
         }
         slices = slices.map(
-          slice => (slice / 65535) * (resampleBuffer || audioArrayBuffer).length
+          slice => (slice / 65535) * finalBuffer.length
         );
         slices = slices.map((slice, sliceIdx) => ({
             s: slice,
             e: sliceIdx !== sliceCount - 1 ? slices[sliceIdx +
-            1] : (resampleBuffer || audioArrayBuffer).length,
+            1] : finalBuffer.length,
             l: -1,
             n: `Slice ${sliceIdx + 1}`
         }));
@@ -4642,11 +4653,11 @@ const parsePti = async (buffer, audioDataBuffer, file, fullPath = '') => {
                 ize: file.size,
                 type: file.type
             },
-            buffer: (resampleBuffer || audioArrayBuffer), meta: {
-                length: (resampleBuffer || audioArrayBuffer).length,
-                duration: Number((resampleBuffer || audioArrayBuffer).length / masterSR).toFixed(3),
-                startFrame: 0, endFrame: (resampleBuffer || audioArrayBuffer).length,
-                channel: (resampleBuffer || audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
+            buffer: finalBuffer, meta: {
+                length: finalBuffer.length,
+                duration: Number(finalBuffer.length / masterSR).toFixed(3),
+                startFrame: 0, endFrame: finalBuffer.length,
+                channel: finalBuffer.numberOfChannels > 1 ? 'L' : '',
                 checked: true, id: uuid,
                 slices: slices.length > 1 ? slices : false,
                 note: noteFromFileName(file.name)
@@ -4825,6 +4836,8 @@ const parseWav = (
             slices = slices.filter(s => s.s < s.e);
         }
 
+        const finalBuffer = resampledArrayBuffer || audioArrayBuffer;
+
         files[pushToTop ? 'unshift' : 'push']({
             file: {
                 lastModified: file.lastModified,
@@ -4835,20 +4848,17 @@ const parseWav = (
                 size: file.size,
                 type: file.type
             },
-            buffer: (resampledArrayBuffer || audioArrayBuffer),
+            buffer: finalBuffer,
             meta: {
                 sourceBitDepth: file.bitDepth,
                 sourceSampleRate: file.sampleRate,
-                length: (resampledArrayBuffer || audioArrayBuffer).length,
-                duration: Number(
-                  (resampledArrayBuffer || audioArrayBuffer).length / masterSR).
-                  toFixed(3),
+                length: finalBuffer.length,
+                duration: Number(finalBuffer.length / masterSR).toFixed(3),
                 startFrame: 0,
-                endFrame: (resampledArrayBuffer || audioArrayBuffer).length,
+                endFrame: finalBuffer.length,
                 checked: checked,
                 id: uuid,
-                channel: (resampledArrayBuffer ||
-                  audioArrayBuffer).numberOfChannels > 1 ? 'L' : '',
+                channel: finalBuffer.numberOfChannels > 1 ? 'L' : '',
                 dualMono: false,
                 slices: slices.length > 0 ? slices : false,
                 otLoop,
@@ -6204,6 +6214,7 @@ window.digichain = {
     shortenNameSelected,
     sanitizeNameSelected,
     assignFolder,
+    processSelectedWithPaula,
     serializeSelected,
     deserializeSelected,
     condenseSelected,

@@ -1,5 +1,5 @@
 /*!
-DigiChain v1.4.17-latest [ https://digichain.brianbar.net/ ]
+DigiChain v1.5.3 [ https://digichain.brianbar.net/ ]
 <https://github.com/brian3kb/digichain>
 
 (c) 2023 Brian Barnett <me [at] brianbar.net>
@@ -1574,105 +1574,133 @@ export function detectTempo(audioBuffer, fileName = '') {
 
 }
 
-export function Paula() {
-    const pChannel = () => ({
-        en: false,
-        lch: 0,
-        lcl: 0,
-        len: 0,
-        per: 0,
-        vol: 0,
-        ciata: 0,
-        offset: 0,
-        ex: false,
-        start: 0,
-        length: 0
-    });
+export function Paula(audioBuffer, mode = 'Off', audioCtx = null) {
+    if (mode === 'Off' || !mode) {
+        return audioBuffer;
+    }
 
-    return (monoAudioArrayBuffer, sampleRate = 44100, callbacks = {}, ciaTimerInterval = 0, regionNTSC = false) => {
-        const numChannels = 4;
-        const fps = 50;
+    const numChannels = audioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const length = audioBuffer.length;
 
-        const callback = {
-            vBlank: () => {},
-            audioInterrupt: () => {},
-            ciaTimer: () => {},
+    // Use or create audio context to create the output buffer
+    const ctx = audioCtx || window.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const outputBuffer = ctx.createBuffer(numChannels, length, sampleRate);
 
-            ...callbacks
-        };
+    // Amiga Paula PAL clock rate (3.546895 MHz)
+    const F_clock = 3546895;
 
-        let ciata = ciaTimerInterval;
-        let clock = regionNTSC ? 3579545 : 3579545;
-        let clockAdvance = clock / sampleRate;
-        let ciaClockAdvance = clockAdvance / 5;
+    // Emulated Paula playback sample rate: capped at maximum Paula rate of ~28.86 kHz, or original if lower
+    const F_paula = Math.min(sampleRate, 28867);
 
-        let frameCount = 0;
-        let ciaClock = 0;
+    // Ratios for timing
+    const ratio_paula_to_clock = F_paula / F_clock;
+    const ratio_sample_to_paula = sampleRate / F_paula;
+    const ratio_clock_to_output = F_clock / sampleRate;
 
-        let frameAdvance = fps / sampleRate;
+    // Hardware Filter Cutoffs
+    const fc_rc = 26000;  // Fixed RC filter cutoff (~26 kHz)
+    const fc_led = 7000;  // Switchable LED filter cutoff (~7 kHz)
 
-        let channel = [];
+    // Coefficients for fixed RC filter (first-order low-pass)
+    const w_rc = 2 * Math.PI * fc_rc / F_clock;
+    const b1_rc = Math.exp(-w_rc);
+    const a0_rc = 1 - b1_rc;
 
-        let ram = new DataView(monoAudioArrayBuffer);
+    // Coefficients for LED filter (second-order Butterworth low-pass)
+    const w0_led = 2 * Math.PI * fc_led / F_clock;
+    const cos_w0 = Math.cos(w0_led);
+    const sin_w0 = Math.sin(w0_led);
+    const alpha_led = sin_w0 / (2 * 0.7071); // Q = 0.7071 (Butterworth)
+    const b0_led = (1 - cos_w0) / 2;
+    const b1_led = 1 - cos_w0;
+    const b2_led = (1 - cos_w0) / 2;
+    const a0_led = 1 + alpha_led;
+    const a1_led = -2 * cos_w0;
+    const a2_led = 1 - alpha_led;
 
-        for (let i = 0; i < numChannels; i++) {
-            channel.push(pChannel());
+    const b0_n = b0_led / a0_led;
+    const b1_n = b1_led / a0_led;
+    const b2_n = b2_led / a0_led;
+    const a1_n = a1_led / a0_led;
+    const a2_n = a2_led / a0_led;
+
+    for (let c = 0; c < numChannels; c++) {
+        const inputData = audioBuffer.getChannelData(c);
+        const outputData = outputBuffer.getChannelData(c);
+
+        // Filter state variables
+        let y_rc = 0;
+        let y_led1 = 0, y_led2 = 0;
+        let x_led1 = 0, x_led2 = 0;
+
+        let next_output_t = 0;
+        let output_idx = 0;
+
+        // Loop over clock cycles to generate output
+        const totalClockCycles = Math.ceil((length / sampleRate) * F_clock);
+
+        for (let t = 0; t < totalClockCycles; t++) {
+            // 1. Fetch sample at current clock tick with stepwise hold (no interpolation)
+            const idx_paula = Math.floor(t * ratio_paula_to_clock);
+            const idx_input = Math.min(inputData.length - 1, Math.floor(idx_paula * ratio_sample_to_paula));
+            const inputSample = inputData[idx_input];
+
+            let mix = 0;
+
+            if (mode === '8 bit') {
+                // Standard 8-bit Paula channel: signed 8-bit quantization
+                let q8 = Math.round(inputSample * 128);
+                q8 = Math.max(-128, Math.min(127, q8));
+                
+                // Volume 64 (maximum) -> 100% duty cycle, no PWM switching
+                mix = q8 / 128;
+            } else if (mode === '14 bit') {
+                // 14-bit hack: split into Channel A (coarse, high 8 bits) and Channel B (fine, low 6-bit part)
+                let q14 = Math.round(inputSample * 8192);
+                q14 = Math.max(-8192, Math.min(8191, q14));
+
+                const coarse = Math.max(-128, Math.min(127, Math.round(q14 / 64)));
+                const fine = q14 - coarse * 64; // range [-32, 63]
+
+                const dac_A = coarse / 128;
+                const dac_B = fine / 128;
+
+                // Channel A runs at Volume 64 (always active).
+                // Channel B runs at Volume 1 (active 1 out of 64 cycles for PWM volume control).
+                const pwm_B = (t % 64 === 0);
+                
+                // Mix Channel A and Channel B (combines outputs to form a 14-bit signal)
+                mix = dac_A + (pwm_B ? dac_B : 0);
+            }
+
+            // 2. Pass raw signal through the fixed RC filter
+            y_rc = a0_rc * mix + b1_rc * y_rc;
+
+            // 3. Pass through switchable LED low-pass filter
+            const y_led = b0_n * y_rc + b1_n * x_led1 + b2_n * x_led2 - a1_n * y_led1 - a2_n * y_led2;
+            
+            x_led2 = x_led1;
+            x_led1 = y_rc;
+            y_led2 = y_led1;
+            y_led1 = y_led;
+
+            // 4. Record output sample at the correct playback interval
+            if (t >= next_output_t) {
+                if (output_idx < length) {
+                    outputData[output_idx++] = y_led;
+                }
+                next_output_t += ratio_clock_to_output;
+            }
         }
 
-        const channelLatch = ch => {
-            ch.start = ch.lch << 16 | ch.lcl;
-            ch.length = ch.len * 2;
-            ch.offset = 0;
-            callback.audioInterrupt(ch);
-        };
+        // Fill remaining output samples with last filter state if necessary
+        while (output_idx < length) {
+            outputData[output_idx++] = y_led1;
+        }
+    }
 
-        // Get Next Sample Value;
-        return (output = 0) => {
-            if (Math.floor(frameCount + frameAdvance) > frameCount) {
-                frameCount--;
-                callback.vBlank();
-            }
-
-            frameCount = frameCount + frameAdvance;
-
-            if (Math.floor(ciaClock + ciaClockAdvance) > ciaTimerInterval) {
-                ciaClock = ciaClock - ciaTimerInterval;
-                ciaTimerInterval = ciata;
-                callback.ciaTimer();
-            }
-
-            ciaClock = ciaClock + ciaClockAdvance;
-
-            channel.forEach(ch => {
-                if (ch.en) {
-                    if (ch.ex === false) {
-                        channelLatch(ch);
-                        ch.ex = true;
-                    }
-
-                    ch.offset = ch.offset + (clockAdvance / ch.per);
-
-                    let offset = Math.floor(ch.offset);
-
-                    if (offset >= ch.length) {
-                        channelLatch(ch);
-                        offset = 0;
-                    }
-
-                    let delta = ch.offset = offset;
-
-                    let current = ram.getInt8(ch.start + offset);
-                    let next = ((offset + 1) < ch.length) ?
-                      ram.getInt8(ch.start + offset + 1) :
-                      ram.getInt8(ch.start);
-                    output = output + (ch.vol * (current + delta * (next - current)));
-                } else {
-                    ch.ex = false;
-                }
-            });
-            return output / 32768;
-        };
-    };
+    return outputBuffer;
 }
 
 export function setLoadingText(text = 'Loading', dismissTimeout) {

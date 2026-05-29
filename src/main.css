@@ -3837,9 +3837,9 @@ body.light .repitch-tabs span.active {
     align-items: center;
     justify-content: center;
     padding: 0 0.25rem 0 0;
-    margin-left: -.75rem;
-    height: 1.5rem;
+    margin-left: .5rem;
+    height: 3.35rem;
 }
 #btnRecordSettings .gg-mic {
-    transform: scale(.5);
+    transform: scale(.65);
 }

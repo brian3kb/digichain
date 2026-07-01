@@ -1013,6 +1013,47 @@ async function clearSlicesSelected(event) {
     }, 250);
 }
 
+async function evenlySliceSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    const selected = files.filter(f => f.meta.checked);
+    if (selected.length === 0) {
+        return;
+    }
+    const inputVal = await dcDialog('prompt', 'Enter the number of slices to evenly slice the selected samples:', {
+        inputType: 'number'
+    });
+    if (inputVal === false || inputVal === '') {
+        return;
+    }
+    const slices = parseInt(inputVal, 10);
+    if (isNaN(slices) || slices <= 0) {
+        return;
+    }
+    setLoadingText('Processing');
+    setTimeout(() => {
+        selected.forEach((file, idx) => {
+            file.meta.slices = Array.from({ length: slices }).map((x, i) => ({
+                s: Math.round((file.buffer.length / slices) * i),
+                e: Math.round((file.buffer.length / slices) * (i + 1)),
+                n: '',
+                l: -1
+            }));
+            const filename = file.file.name || file.file.filename;
+            if (filename) {
+                metaFiles.removeByName(filename);
+            }
+            file.meta.slices = file.meta.slices.length > 0
+              ? file.meta.slices
+              : false;
+            if (idx === selected.length - 1) {
+                setLoadingText('');
+            }
+        });
+        renderList();
+    }, 250);
+}
+
+
 async function assignFolder(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
     let newPath = await dcDialog('prompt',
@@ -6220,6 +6261,7 @@ window.digichain = {
     condenseSelected,
     nudgeCrossingsSelected,
     clearSlicesSelected,
+    evenlySliceSelected,
     padWithZeroSelected,
     showMergePanel,
     showBlendPanel,

@@ -1,3 +1,6 @@
+latest
+- Evenly Slice selected-action to embed slice points to all selected files.
+
 2026.06.02 1.6.0
 - Support for 24/32bit AIFF file importing.
 - Updated note detection to find notes from Logic Pro generated filenames.

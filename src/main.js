@@ -1045,6 +1045,12 @@ async function evenlySliceSelected(event) {
             file.meta.slices = file.meta.slices.length > 0
               ? file.meta.slices
               : false;
+            if (file.meta.sliceNumber) {
+                delete file.meta.sliceNumber;
+            }
+            if (file.meta.slicedFrom) {
+                delete file.meta.slicedFrom;
+            }
             if (idx === selected.length - 1) {
                 setLoadingText('');
             }
@@ -1098,6 +1104,157 @@ async function sliceToSamplesSelected(event) {
         }
     }, 250);
 }
+
+async function megaBreakSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    const selected = files.filter(f => f.meta.checked);
+    if (selected.length === 0) {
+        return;
+    }
+
+    // Check slice counts
+    let commonSliceCount = -1;
+    let mismatched = false;
+    for (let i = 0; i < selected.length; i++) {
+        const file = selected[i];
+        const otMeta = metaFiles.getByFile(file);
+        const count = otMeta ? (otMeta.sliceCount || 0) : 0;
+        if (count === 0) {
+            mismatched = true;
+            break;
+        }
+        if (commonSliceCount === -1) {
+            commonSliceCount = count;
+        } else if (commonSliceCount !== count) {
+            mismatched = true;
+            break;
+        }
+    }
+
+    if (mismatched || commonSliceCount <= 0) {
+        await dcDialog('alert', 'All selected samples, preferably 64 sources, must have the same number of slices (greater than 0, ideally 16) to perform a Mega-break.', {kind: 'info'});
+        return;
+    }
+
+    const confirmMega = await dcDialog('confirm', `Warning: Slicing to samples will remove the selected source samples from the list. <br>(For best results, slice 64 source samples evenly with 16 slices per file.)<br> <br>Do you want to continue?`);
+    if (!confirmMega) {
+        return;
+    }
+
+    const defaultName = selected[0].file.name.replace(/\.[^.]*$/, '');
+    const megaName = await dcDialog('prompt', 'Enter name for the Mega-break slice collection:', {
+        defaultValue: defaultName
+    });
+    if (megaName === false || megaName.trim() === '') {
+        return;
+    }
+
+    setLoadingText('Processing');
+    setTimeout(() => {
+        const firstIndex = getFileIndexById(selected[0].meta.id);
+        
+        // Stop playing, remove meta files, remove from unsorted
+        selected.forEach(file => {
+            file.source?.stop();
+            metaFiles.removeByName(file.file.name || file.file.filename);
+            unsorted = unsorted.filter(id => id !== file.meta.id);
+        });
+
+        // Filter out selected files from files array
+        files = files.filter(f => !selected.includes(f));
+
+        // Create the new files and insert them at firstIndex
+        const insertIndex = Math.min(firstIndex === -1 ? files.length : firstIndex, files.length);
+        const newFiles = [];
+
+        for (let s = 0; s < commonSliceCount; s++) {
+            // Calculate total length of this joined slice across all selected files, and track slices
+            let totalLength = 0;
+            const outputSlices = [];
+            const sliceRanges = selected.map(file => {
+                const fileOtMeta = metaFiles.getByFile(file);
+                const sliceInfo = fileOtMeta.slices[s];
+                const startPoint = sliceInfo.startPoint;
+                const endPoint = sliceInfo.endPoint;
+                const length = endPoint - startPoint;
+                
+                outputSlices.push({
+                    s: totalLength,
+                    e: totalLength + length,
+                    n: file.file.name.replace(/\.[^.]*$/, ''),
+                    l: -1
+                });
+
+                totalLength += length;
+                return { startPoint, endPoint, length, file };
+            });
+
+            // Create new audio buffer
+            const finalBuffer = audioCtx.createBuffer(masterChannels, totalLength, masterSR);
+
+            // Copy samples
+            let writeOffset = 0;
+            sliceRanges.forEach(range => {
+                const file = range.file;
+                const sliceStart = range.startPoint;
+                const sliceLen = range.length;
+
+                for (let channel = 0; channel < masterChannels; channel++) {
+                    const srcData = file.buffer.getChannelData(file.buffer.numberOfChannels > channel ? channel : 0);
+                    const destData = finalBuffer.getChannelData(channel);
+                    for (let i = 0; i < sliceLen; i++) {
+                        destData[writeOffset + i] = srcData[sliceStart + i];
+                    }
+                }
+                writeOffset += sliceLen;
+            });
+
+            const indexStr = `${s + 1}`.padStart(2, '0');
+            const newName = `${megaName.trim()}_${indexStr}.wav`;
+            const uuid = crypto.randomUUID();
+            const newFile = {
+                file: {
+                    lastModified: new Date().getTime(),
+                    name: getUniqueName([...files, ...newFiles], newName),
+                    filename: newName,
+                    path: '',
+                    fullPath: '',
+                    size: 0,
+                    type: 'audio/wav'
+                },
+                buffer: finalBuffer,
+                meta: {
+                    sourceBitDepth: masterBitDepth,
+                    sourceSampleRate: masterSR,
+                    length: finalBuffer.length,
+                    duration: Number(finalBuffer.length / masterSR).toFixed(3),
+                    startFrame: 0,
+                    endFrame: finalBuffer.length,
+                    checked: true,
+                    id: uuid,
+                    channel: finalBuffer.numberOfChannels > 1 ? 'L' : '',
+                    dualMono: false,
+                    slices: outputSlices,
+                    otLoop: 0,
+                    otLoopStart: 0,
+                    opPan: 16384,
+                    opPanAb: false,
+                    opPitch: 0,
+                    note: ''
+                }
+            };
+            newFiles.push(newFile);
+            unsorted.push(uuid);
+        }
+
+        // Insert new files at insertIndex
+        files.splice(insertIndex, 0, ...newFiles);
+
+        setLoadingText('');
+        renderList();
+    }, 250);
+}
+
 
 
 
@@ -3307,6 +3464,12 @@ const splitByOtSlices = (
           ? file.meta.slices
           : false;
         file.meta.op1Json = false;
+        if (file.meta.sliceNumber) {
+            delete file.meta.sliceNumber;
+        }
+        if (file.meta.slicedFrom) {
+            delete file.meta.slicedFrom;
+        }
         splitAction(event, id);
         return;
     }
@@ -3393,6 +3556,12 @@ const splitEvenly = (
         file.meta.slices = file.meta.slices.length > 0
           ? file.meta.slices
           : false;
+        if (file.meta.sliceNumber) {
+            delete file.meta.sliceNumber;
+        }
+        if (file.meta.slicedFrom) {
+            delete file.meta.slicedFrom;
+        }
         splitAction(event, id);
         return;
     }
@@ -6310,6 +6479,7 @@ window.digichain = {
     clearSlicesSelected,
     evenlySliceSelected,
     sliceToSamplesSelected,
+    megaBreakSelected,
     padWithZeroSelected,
     showMergePanel,
     showBlendPanel,

@@ -1053,6 +1053,53 @@ async function evenlySliceSelected(event) {
     }, 250);
 }
 
+async function sliceToSamplesSelected(event) {
+    files.forEach(f => f.meta.checked ? f.source?.stop() : '');
+    const selected = files.filter(f => f.meta.checked);
+    if (selected.length === 0) {
+        return;
+    }
+    const confirmSlice = await dcDialog('confirm', 'Slicing to samples will remove the selected source samples from the list. Do you want to continue?');
+    if (!confirmSlice) {
+        return;
+    }
+    setLoadingText('Processing');
+    setTimeout(() => {
+        let slicedAny = false;
+        selected.forEach((file, idx) => {
+            const otMeta = metaFiles.getByFile(file);
+            if (otMeta && otMeta.sliceCount > 0) {
+                const newSlices = splitByOtSlices(event, file.meta.id, false, 'ot', [], false, true);
+                if (newSlices && newSlices.length > 0) {
+                    slicedAny = true;
+                    const fileIndex = getFileIndexById(file.meta.id);
+                    if (fileIndex !== -1) {
+                        // Insert new slices in place of the original file
+                        files.splice(fileIndex + 1, 0, ...newSlices);
+                        newSlices.forEach(slice => {
+                            unsorted.push(slice.meta.id);
+                        });
+                        // Remove original file
+                        files.splice(fileIndex, 1);
+                        unsorted = unsorted.filter(id => id !== file.meta.id);
+                        metaFiles.removeByName(file.file.name || file.file.filename);
+                    }
+                }
+            }
+            if (idx === selected.length - 1) {
+                setLoadingText('');
+            }
+        });
+        if (slicedAny) {
+            renderList();
+        } else {
+            setLoadingText('');
+            dcDialog('alert', 'No slice data found on the selected samples.', {kind: 'info'});
+        }
+    }, 250);
+}
+
+
 
 async function assignFolder(event) {
     files.forEach(f => f.meta.checked ? f.source?.stop() : '');
@@ -6262,6 +6309,7 @@ window.digichain = {
     nudgeCrossingsSelected,
     clearSlicesSelected,
     evenlySliceSelected,
+    sliceToSamplesSelected,
     padWithZeroSelected,
     showMergePanel,
     showBlendPanel,

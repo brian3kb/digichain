@@ -1,5 +1,6 @@
 latest
 - Evenly Slice selected-action to embed slice points to all selected files.
+- Slice to Samples selected-action to slice the selected samples to a new set of samples, removing the source samples from the list.
 
 2026.06.02 1.6.0
 - Support for 24/32bit AIFF file importing.

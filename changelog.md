@@ -3,6 +3,7 @@ latest
 - Slice to Samples selected-action to slice the selected samples to a new set of samples, removing the source samples from the list.
 - Mega-break selected-action, re-arranges all the slice x from each source file into a single source file per slice.
 - Fixed a bug where slices could not be applied when a slice number was assigned to the metadata of the source file.
+- Allow Cmd/Ctrl+P to paste audio files from filesystem browser or URL links to audio files to the list (URL's must allow CORS).
 
 2026.06.02 1.6.0
 - Support for 24/32bit AIFF file importing.

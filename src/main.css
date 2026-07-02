@@ -3608,6 +3608,7 @@ html.scaled {
     top: 1rem;
     margin: auto calc(50% - 15rem);
     color: #ffffff;
+    word-wrap: break-word;
     border: 4px solid #43392d;
     border-style: double;
     border-radius: .4rem;

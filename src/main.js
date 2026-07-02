@@ -5640,6 +5640,51 @@ function init() {
       false
     );
 
+    window.addEventListener('paste', async (event) => {
+        const activeEl = document.activeElement;
+        const isInputActive = activeEl && (
+            activeEl.tagName === 'INPUT' ||
+            activeEl.tagName === 'TEXTAREA' ||
+            activeEl.isContentEditable
+        );
+        if (isInputActive) { return; }
+
+        const filesData = event.clipboardData?.files;
+        if (filesData && filesData.length > 0) {
+            await consumeFileInput({shiftKey: modifierKeys.shiftKey}, filesData);
+            return;
+        }
+
+        const pastedText = event.clipboardData?.getData('text');
+        if (pastedText && (pastedText.startsWith('http://') || pastedText.startsWith('https://'))) {
+            setLoadingText('Fetching audio URL');
+            try {
+                const response = await fetch(pastedText);
+                if (!response.ok) {
+                    throw new Error(response);
+                }
+                const blob = await response.blob();
+                let filename = pastedText.split('/').reverse()[0] || 'pasted-audio';
+                if (filename.includes('?')) {
+                    filename = filename.split('?')[0];
+                }
+                if (!filename) {
+                    filename = 'pasted-audio.wav';
+                }
+                const hasExt = filename.includes('.');
+                if (!hasExt) {
+                    const ext = blob.type.split('/')[1] || 'wav';
+                    filename = `${filename}.${ext}`;
+                }
+                const file = new File([blob], filename, { type: blob.type });
+                await consumeFileInput({shiftKey: modifierKeys.shiftKey}, [file]);
+            } catch (err) {
+                setLoadingText('');
+                showToastMessage(`Could not load audio URL:<br> ${pastedText}`, 10000);
+            }
+        }
+    });
+
     document.body.addEventListener(
       'dragover',
       (event) => {

@@ -44,6 +44,11 @@ let embedSliceData = false;
 let secondsPerFile = 0;
 let audioCtx;
 let files = [];
+let currentPage = 1;
+let pageSize = (() => {
+    const saved = localStorage.getItem('digichain_pageSize');
+    return saved ? parseInt(saved, 10) : 64;
+})();
 let unsorted = [];
 let importOrder = new Set();
 let metaFiles = [];
@@ -3756,6 +3761,16 @@ const move = (event, id, direction) => {
     } else {
         files.splice(to, 0, item);
     }
+    
+    // Auto-transition page if the moved item crosses a page boundary
+    const newIdx = getFileIndexById(id);
+    if (newIdx !== -1) {
+        const targetPage = Math.floor(newIdx / pageSize) + 1;
+        if (targetPage !== currentPage) {
+            currentPage = targetPage;
+        }
+    }
+    
     renderList();
 };
 const sort = (event, by, prop = 'meta') => {
@@ -4308,29 +4323,35 @@ const buildRowMarkupFromFile = (f, type = 'main') => {
 </tr>`;
 };
 
-const drawEmptyWaveforms = (_files) => {
+const drawEmptyWaveforms = () => {
     const canvasElements = document.querySelectorAll('.waveform');
     if (canvasElements.length === 0) {
-        document.querySelectorAll('.waveform-btn').forEach((el, i) => {
-            if (!_files[i] || _files[i].waveform) { return; }
-            _files[i].waveform = el;
+        document.querySelectorAll('.waveform-btn').forEach((el) => {
+            const tr = el.closest('tr.file-row');
+            if (!tr) return;
+            const file = getFileById(tr.dataset.id);
+            if (!file || file.waveform) { return; }
+            file.waveform = el;
         });
         return setCountValues();
     }
-    canvasElements.forEach((el, i) => {
-        if (!_files[i] || settings.skipMiniWaveformRender) { return; }
-        if (_files[i].waveform && _files[i].waveform.nodeName === 'CANVAS' && el.nodeName === 'CANVAS') {
-            el.replaceWith(_files[i].waveform);
-            if (_files[i].playHead && !_files[i].waveform.nextElementSibling) {
-                _files[i].waveform.parentElement.appendChild(
-                  _files[i].playHead);
+    canvasElements.forEach((el) => {
+        const tr = el.closest('tr.file-row');
+        if (!tr) return;
+        const file = getFileById(tr.dataset.id);
+        if (!file || settings.skipMiniWaveformRender) { return; }
+        if (file.waveform && file.waveform.nodeName === 'CANVAS' && el.nodeName === 'CANVAS') {
+            el.replaceWith(file.waveform);
+            if (file.playHead && !file.waveform.nextElementSibling) {
+                file.waveform.parentElement.appendChild(
+                  file.playHead);
             }
         } else {
-            drawWaveform(_files[i], el,
-              ((masterChannels > 1 && _files[i].buffer.numberOfChannels > 1)
+            drawWaveform(file, el,
+              ((masterChannels > 1 && file.buffer.numberOfChannels > 1)
                 ? 'S'
-                : _files[i].meta?.channel ?? 0));
-            _files[i].waveform = el;
+                : file.meta?.channel ?? 0));
+            file.waveform = el;
         }
     });
     setCountValues();
@@ -4340,18 +4361,105 @@ const renderRow = (item, type) => {
     const rowData = item || getFileById(lastSelectedRow.dataset.id);
     const rowEl = item ? getRowElementById(item.meta.id) : lastSelectedRow;
     rowEl.innerHTML = buildRowMarkupFromFile(rowData, type);
-    drawEmptyWaveforms(files);
+    drawEmptyWaveforms();
     setLoadingText('');
 };
 
+const updatePaginationUI = (maxPage) => {
+    const btnFirst = document.getElementById('btnFirstPage');
+    const btnPrev = document.getElementById('btnPrevPage');
+    const btnNext = document.getElementById('btnNextPage');
+    const btnLast = document.getElementById('btnLastPage');
+    const pageInfo = document.getElementById('pageInfo');
+    const container = document.querySelector('.pagination-container');
+
+    if (files.length === 0) {
+        if (container) {
+            container.style.display = 'none';
+        }
+        return;
+    } else {
+        if (container) {
+            container.style.display = 'flex';
+        }
+    }
+
+    if (pageInfo) {
+        pageInfo.textContent = `Page ${currentPage} of ${maxPage}`;
+    }
+    if (btnFirst) {
+        btnFirst.disabled = currentPage === 1;
+        btnFirst.classList.toggle('disabled', currentPage === 1);
+    }
+    if (btnPrev) {
+        btnPrev.disabled = currentPage === 1;
+        btnPrev.classList.toggle('disabled', currentPage === 1);
+    }
+    if (btnNext) {
+        btnNext.disabled = currentPage === maxPage;
+        btnNext.classList.toggle('disabled', currentPage === maxPage);
+    }
+    if (btnLast) {
+        btnLast.disabled = currentPage === maxPage;
+        btnLast.classList.toggle('disabled', currentPage === maxPage);
+    }
+};
+
+function setPageSize(val) {
+    pageSize = parseInt(val, 10);
+    localStorage.setItem('digichain_pageSize', pageSize);
+    currentPage = 1;
+    renderList();
+}
+
+function firstPage() {
+    if (currentPage > 1) {
+        currentPage = 1;
+        renderList();
+    }
+}
+
+function prevPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderList();
+    }
+}
+
+function nextPage() {
+    const maxPage = Math.max(1, Math.ceil(files.length / pageSize));
+    if (currentPage < maxPage) {
+        currentPage++;
+        renderList();
+    }
+}
+
+function lastPage() {
+    const maxPage = Math.max(1, Math.ceil(files.length / pageSize));
+    if (currentPage < maxPage) {
+        currentPage = maxPage;
+        renderList();
+    }
+}
+
 const renderList = (fromIdb = false) => {
+    const maxPage = Math.max(1, Math.ceil(files.length / pageSize));
+    if (currentPage > maxPage) {
+        currentPage = maxPage;
+    }
+
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = startIdx + pageSize;
+    const pageFiles = files.slice(startIdx, endIdx);
+
     listEl.innerHTML = showSamplesList ?
-      files.map(f => buildRowMarkupFromFile(f)).join('') :
+      pageFiles.map(f => buildRowMarkupFromFile(f)).join('') :
       `<tr><td colspan="14" style="padding: 2.5rem 1rem 0 4rem;"><p>Hiding samples list, press <code>Shift + L</code> to show.</p></td></tr>`;
     if (files.length === 0) {
         listEl.innerHTML = '';
     }
-    drawEmptyWaveforms(files);
+    drawEmptyWaveforms();
+    updatePaginationUI(maxPage);
     if (files.length && !fromIdb) {
         storeState();
     }
@@ -5585,6 +5693,16 @@ const dropHandler = async (event) => {
             let targetRowId = getFileIndexById(target.dataset.id);
             let item = files.splice(selectedRowId, 1)[0];
             files.splice((targetRowId <= selectedRowId ? targetRowId : (targetRowId - 1)), 0, item);
+            
+            // Auto-transition page if the dragged item crosses a page boundary
+            const newIdx = getFileIndexById(selectedRowUuid);
+            if (newIdx !== -1) {
+                const targetPage = Math.floor(newIdx / pageSize) + 1;
+                if (targetPage !== currentPage) {
+                    currentPage = targetPage;
+                }
+            }
+
             renderList();
             lastSelectedRow = getRowElementById(selectedRowUuid);
             lastSelectedRow.classList.add('selected');
@@ -5594,6 +5712,10 @@ const dropHandler = async (event) => {
 };
 
 function init() {
+    const pageSizeSelect = document.getElementById('pageSizeSelect');
+    if (pageSizeSelect) {
+        pageSizeSelect.value = pageSize;
+    }
 
     /*Basic browser version detection - we won't prevent trying to use, just an alert.*/
     (() => {
@@ -6498,6 +6620,11 @@ window.digichain = {
     changeAudioConfig,
     removeSelected,
     toggleSelectedActionsList,
+    setPageSize,
+    firstPage,
+    prevPage,
+    nextPage,
+    lastPage,
     trimRightSelected,
     roughStretchSelected,
     truncateSelected,

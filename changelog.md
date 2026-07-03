@@ -4,6 +4,7 @@ latest
 - Mega-break selected-action, re-arranges all the slice x from each source file into a single source file per slice.
 - Fixed a bug where slices could not be applied when a slice number was assigned to the metadata of the source file.
 - Allow Cmd/Ctrl+P to paste audio files from filesystem browser or URL links to audio files to the list (URL's must allow CORS).
+- Paginated main list.
 
 2026.06.02 1.6.0
 - Support for 24/32bit AIFF file importing.

@@ -603,6 +603,25 @@
                 </thead>
                 <tbody id="fileList"></tbody>
             </table>
+            <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; margin-top: -1rem; margin-bottom: 1rem; border-top: 1px solid var(--border-color, #dbdbdb);">
+                <div class="pagination-page-size">
+                    <label for="pageSizeSelect" style="margin-right: 0.5rem; font-weight: normal; display: inline;">Items per page:</label>
+                    <select id="pageSizeSelect" onchange="digichain.setPageSize(this.value)" style="display: inline-block; width: auto; height: 3rem; margin: 0; padding: 0.5rem 2rem 0.5rem 1rem;">
+                        <option value="8">8</option>
+                        <option value="16">16</option>
+                        <option value="32">32</option>
+                        <option value="64" selected>64</option>
+                        <option value="128">128</option>
+                    </select>
+                </div>
+                <div class="pagination-controls" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button id="btnFirstPage" onclick="digichain.firstPage()" class="button button-outline" style="margin: 0; height: 3rem; padding: 0 1rem; line-height: 3rem;">&laquo; First</button>
+                    <button id="btnPrevPage" onclick="digichain.prevPage()" class="button button-outline" style="margin: 0; height: 3rem; padding: 0 1rem; line-height: 3rem;">&lsaquo; Prev</button>
+                    <span id="pageInfo" style="margin: 0 1rem;">Page 1 of 1</span>
+                    <button id="btnNextPage" onclick="digichain.nextPage()" class="button button-outline" style="margin: 0; height: 3rem; padding: 0 1rem; line-height: 3rem;">Next &rsaquo;</button>
+                    <button id="btnLastPage" onclick="digichain.lastPage()" class="button button-outline" style="margin: 0; height: 3rem; padding: 0 1rem; line-height: 3rem;">Last &raquo;</button>
+                </div>
+            </div>
         </div>
     </div>
     <div class="row info-panel">

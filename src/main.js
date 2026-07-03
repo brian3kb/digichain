@@ -3754,8 +3754,25 @@ const move = (event, id, direction) => {
     let to = direction === 1 ? (from + 1) : (from - 1);
     if (to === -1) { to = files.length - 1; }
     if (to >= files.length) { to = 0; }
+    
+    // Calculate page boundaries before splicing
+    const pageStartIdx = (currentPage - 1) * pageSize;
+    const pageEndIdx = Math.min(files.length, pageStartIdx + pageSize);
+
     item = files.splice(from, 1)[0];
-    if ((event.shiftKey || modifierKeys.shiftKey)) { /*If shift key, move to top or bottom of list.*/
+    
+    const isShift = event.shiftKey || modifierKeys.shiftKey;
+    const isCtrlCmd = event.ctrlKey || event.metaKey || modifierKeys.ctrlKey;
+
+    if (isShift && isCtrlCmd) {
+        // Move to start/end of current page
+        if (direction === -1) {
+            files.splice(pageStartIdx, 0, item);
+        } else {
+            files.splice(pageEndIdx - 1, 0, item);
+        }
+    } else if (isShift) {
+        /*If shift key, move to top or bottom of list.*/
         from > to ? files.splice(0, 0, item) : files.splice(files.length, 0,
           item);
     } else {

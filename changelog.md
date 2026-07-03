@@ -5,6 +5,7 @@ latest
 - Fixed a bug where slices could not be applied when a slice number was assigned to the metadata of the source file.
 - Allow Cmd/Ctrl+P to paste audio files from filesystem browser or URL links to audio files to the list (URL's must allow CORS).
 - Paginated main list.
+- Shift+Cmd/Ctrl Click on the sample list move up/down buttons will move the sample to the start/end of the current page.
 
 2026.06.02 1.6.0
 - Support for 24/32bit AIFF file importing.

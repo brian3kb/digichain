@@ -483,6 +483,10 @@
                 </div>
                 &nbsp;
                 <div class="record-sample-controls button-clear"></div>
+                <button title="Chain Name List" onpointerdown="digichain.toggleChainNamePanel(event)"
+                        class="button-clear chain-name-toggle is-chain-count fade">
+                    <i class="gg-stack has-ctrl-mod-i"></i>
+                </button>
             </div>
         </div>
         <div class="column">
@@ -572,8 +576,7 @@
         <div class="column">
             <div class="pagination-container">
                 <div class="pagination-page-size">
-                    <div style="margin-right: 0.5rem; display: inline;">Page Size:</div>
-                    <select id="pageSizeSelect" onchange="digichain.setPageSize(this.value)">
+                    <select id="pageSizeSelect" title="Page Size" onchange="digichain.setPageSize(this.value)">
                         <option value="8">8</option>
                         <option value="16">16</option>
                         <option value="32">32</option>
@@ -584,7 +587,7 @@
                         <option value="999999">ALL</option>
                     </select>
                 </div>
-                <div class="pagination-controls" style="display: flex; align-items: center;">
+                <div class="pagination-controls">
                     <button id="btnFirstPage" onclick="digichain.firstPage()" class="button button-clear" title="First page"><i class="gg-push-chevron-left-r"></i></button>
                     <button id="btnPrevPage" onclick="digichain.prevPage()" class="button button-clear" title="Previous page"><i class="gg-chevron-left-r"></i></button>
                     <span id="pageInfoContainer" onclick="digichain.showPageSelect(event)" style="margin: 0 1rem; cursor: pointer; user-select: none;" title="Click to jump to page"><span id="pageInfo">Page 1 of 1</span></span>
@@ -617,12 +620,7 @@
                     <th class="w-0"></th>
                     <th class="w-0"></th>
                     <th class="w-0"></th>
-                    <th class="w-0">
-                        <button title="Chain Name List" onpointerdown="digichain.toggleChainNamePanel(event)"
-                                class="button-clear chain-name-toggle is-chain-count fade">
-                            <i class="gg-stack has-ctrl-mod-i"></i>
-                        </button>
-                    </th>
+                    <th class="w-0"></th>
                 </tr>
                 </thead>
                 <tbody id="fileList"></tbody>

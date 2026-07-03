@@ -4407,7 +4407,7 @@ const updatePaginationUI = () => {
         }
     
         if (pageInfoContainer) {
-            pageInfoContainer.innerHTML = `<span id="pageInfo">Page ${currentPage} of ${maxPage}</span>`;
+            pageInfoContainer.innerHTML = `<span id="pageInfo">${currentPage} of ${maxPage}</span>`;
         }
         if (btnFirst) {
             btnFirst.disabled = currentPage === 1;

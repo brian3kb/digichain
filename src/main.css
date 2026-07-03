@@ -1800,7 +1800,17 @@ body {
     padding: 1rem 0;
     border-bottom: 0.1rem solid #d79c4e30;
     margin-bottom: -1rem;
+    background-color: #202124;
+    z-index: 1;
+    position: sticky;
+    top: 20.5rem;
+    transition: all .25s ease-in;
+    font-size: .95em;
 }
+.pagination-controls {
+     display: flex;
+     align-items: center;
+ }
 .pagination-controls .button {
     margin: 0;
     height: 3rem;
@@ -1828,13 +1838,16 @@ body {
 }
 #masterList thead {
     position: sticky;
-    top: 20.5rem;
+    top: 26.4rem;
     background-color: #202124;
     z-index: 1;
     transition: all .25s ease-in;
 }
-.container:has(.all-options.hidden) #masterList thead {
+.container:has(.all-options.hidden) .pagination-container {
     top: 2rem;
+}
+.container:has(.all-options.hidden) #masterList thead {
+    top: 7.9rem;
 }
 .header-menu {
     position: fixed;
@@ -1965,11 +1978,11 @@ canvas.waveform:hover { opacity: .98; }
 
 .chain-name-toggle {
     padding: 0;
-    margin-left: -1.5rem;
+    margin-left: 1.25rem;
     height: 0;
     transition: all .25s ease;
     display: block;
-    margin-top: -1.5rem;
+    margin-top: -.05rem;
 }
 .chain-name-toggle:hover {
     color: #d79c4e;
@@ -2126,9 +2139,7 @@ td button { margin: 0.5rem; }
     content: 'DC';
     color: #b91c1c;
     font-size: .75rem;
-    margin-top: -0.55rem;
     position: absolute;
-    margin-left: 0.9rem;
     background-color: #202124;
     line-height: 1rem;
     min-width: 1rem;
@@ -3273,7 +3284,7 @@ body.grid-view .path-exceeds-127 {
         height: 35.5rem;
         position:relative;
     }
-    #masterList thead {
+    #masterList thead, .pagination-container {
         position: inherit;
     }
     .all-options.hidden {

@@ -4157,6 +4157,7 @@ function setCountValues() {
               forEach(row => row.classList.remove('end-of-grid'));
         } catch (e) {}
     }
+    updatePaginationUI();
     clearModifiers();
 }
 
@@ -4382,44 +4383,49 @@ const renderRow = (item, type) => {
     setLoadingText('');
 };
 
-const updatePaginationUI = (maxPage) => {
+const updatePaginationUI = () => {
+    const maxPage = Math.max(1, Math.ceil(files.length / pageSize));
+    if (currentPage > maxPage) {
+        currentPage = maxPage;
+    }
     const btnFirst = document.getElementById('btnFirstPage');
     const btnPrev = document.getElementById('btnPrevPage');
     const btnNext = document.getElementById('btnNextPage');
     const btnLast = document.getElementById('btnLastPage');
-    const pageInfo = document.getElementById('pageInfo');
     const container = document.querySelector('.pagination-container');
-
-    if (files.length === 0) {
-        if (container) {
-            container.style.display = 'none';
+    const pageInfoContainer = document.getElementById('pageInfoContainer');
+    try {
+        if (files.length === 0) {
+            if (container) {
+                container.style.display = 'none';
+            }
+            return;
+        } else {
+            if (container) {
+                container.style.display = 'flex';
+            }
         }
-        return;
-    } else {
-        if (container) {
-            container.style.display = 'flex';
+    
+        if (pageInfoContainer) {
+            pageInfoContainer.innerHTML = `<span id="pageInfo">Page ${currentPage} of ${maxPage}</span>`;
         }
-    }
-
-    if (pageInfo) {
-        pageInfo.textContent = `Page ${currentPage} of ${maxPage}`;
-    }
-    if (btnFirst) {
-        btnFirst.disabled = currentPage === 1;
-        btnFirst.classList.toggle('disabled', currentPage === 1);
-    }
-    if (btnPrev) {
-        btnPrev.disabled = currentPage === 1;
-        btnPrev.classList.toggle('disabled', currentPage === 1);
-    }
-    if (btnNext) {
-        btnNext.disabled = currentPage === maxPage;
-        btnNext.classList.toggle('disabled', currentPage === maxPage);
-    }
-    if (btnLast) {
-        btnLast.disabled = currentPage === maxPage;
-        btnLast.classList.toggle('disabled', currentPage === maxPage);
-    }
+        if (btnFirst) {
+            btnFirst.disabled = currentPage === 1;
+            btnFirst.classList.toggle('disabled', currentPage === 1);
+        }
+        if (btnPrev) {
+            btnPrev.disabled = currentPage === 1;
+            btnPrev.classList.toggle('disabled', currentPage === 1);
+        }
+        if (btnNext) {
+            btnNext.disabled = currentPage === maxPage;
+            btnNext.classList.toggle('disabled', currentPage === maxPage);
+        }
+        if (btnLast) {
+            btnLast.disabled = currentPage === maxPage;
+            btnLast.classList.toggle('disabled', currentPage === maxPage);
+        }
+    } catch (_) {}
 };
 
 function setPageSize(val) {
@@ -4459,12 +4465,44 @@ function lastPage() {
     }
 }
 
-const renderList = (fromIdb = false) => {
+function showPageSelect(event) {
+    event.stopPropagation();
+    const container = document.getElementById('pageInfoContainer');
+    if (!container || container.querySelector('select')) { return; }
+    
     const maxPage = Math.max(1, Math.ceil(files.length / pageSize));
-    if (currentPage > maxPage) {
-        currentPage = maxPage;
+    
+    const select = document.createElement('select');
+    select.id = 'pageSelectDropdown';
+    
+    for (let i = 1; i <= maxPage; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `${i}`;
+        if (i === currentPage) {
+            option.selected = true;
+        }
+        select.appendChild(option);
     }
+    
+    select.onchange = (e) => {
+        currentPage = parseInt(e.target.value, 10);
+        renderList();
+    };
+    
+    select.onblur = () => {
+        renderList();
+    };
+    
+    if (container && container.isConnected) {
+        container.innerHTML = '';
+    }
+    
+    container.appendChild(select);
+    select.focus();
+}
 
+const renderList = (fromIdb = false) => {
     const startIdx = (currentPage - 1) * pageSize;
     const endIdx = startIdx + pageSize;
     const pageFiles = files.slice(startIdx, endIdx);
@@ -4476,7 +4514,6 @@ const renderList = (fromIdb = false) => {
         listEl.innerHTML = '';
     }
     drawEmptyWaveforms();
-    updatePaginationUI(maxPage);
     if (files.length && !fromIdb) {
         storeState();
     }
@@ -6691,6 +6728,7 @@ window.digichain = {
     prevPage,
     nextPage,
     lastPage,
+    showPageSelect,
     trimRightSelected,
     roughStretchSelected,
     truncateSelected,

@@ -6050,33 +6050,82 @@ function init() {
         }
         if (eventCodes.includes(event.code) && lastSelectedRow &&
           lastSelectedRow?.isConnected) {
-            if (event.code === 'ArrowDown' &&
-              lastSelectedRow.nextElementSibling) {
+            if (event.code === 'ArrowDown') {
                 if (!(event.shiftKey || modifierKeys.shiftKey)) {
-                    event.preventDefault();
-                    return handleRowClick(event,
-                      lastSelectedRow.nextElementSibling.dataset.id);
+                    if (lastSelectedRow.nextElementSibling) {
+                        event.preventDefault();
+                        return handleRowClick(event,
+                          lastSelectedRow.nextElementSibling.dataset.id);
+                    } else if (currentPage < Math.ceil(files.length / pageSize)) {
+                        event.preventDefault();
+                        currentPage++;
+                        renderList();
+                        const firstRow = document.querySelector('#fileList tr');
+                        if (firstRow) {
+                            handleRowClick(event, firstRow.dataset.id);
+                            firstRow.scrollIntoViewIfNeeded(true);
+                        }
+                        return;
+                    }
+                } else {
+                    let idx = getFileIndexById(lastSelectedRow.dataset.id);
+                    if (idx < files.length - 1) {
+                        event.preventDefault();
+                        let item = files.splice(idx, 1)[0];
+                        files.splice(idx + 1, 0, item);
+                        
+                        const newIdx = idx + 1;
+                        const targetPage = Math.floor(newIdx / pageSize) + 1;
+                        if (targetPage !== currentPage) {
+                            currentPage = targetPage;
+                        }
+                        renderList();
+                        
+                        lastSelectedRow = getRowElementById(item.meta.id);
+                        if (lastSelectedRow) {
+                            lastSelectedRow.classList.add('selected');
+                            lastSelectedRow.scrollIntoViewIfNeeded(true);
+                        }
+                    }
                 }
-                event.preventDefault();
-                let idx = getFileIndexById(lastSelectedRow.dataset.id);
-                let item = files.splice(idx, 1)[0];
-                files.splice(idx + 1, 0, item);
-                lastSelectedRow.nextElementSibling.after(lastSelectedRow);
-                lastSelectedRow.scrollIntoViewIfNeeded(true);
-                setCountValues();
-            } else if (event.code === 'ArrowUp' &&
-              lastSelectedRow.previousElementSibling) {
+            } else if (event.code === 'ArrowUp') {
                 if (!(event.shiftKey || modifierKeys.shiftKey)) {
-                    return handleRowClick(event,
-                      lastSelectedRow.previousElementSibling.dataset.id);
+                    if (lastSelectedRow.previousElementSibling) {
+                        event.preventDefault();
+                        return handleRowClick(event,
+                          lastSelectedRow.previousElementSibling.dataset.id);
+                    } else if (currentPage > 1) {
+                        event.preventDefault();
+                        currentPage--;
+                        renderList();
+                        const lastRow = document.querySelector('#fileList tr:last-of-type');
+                        if (lastRow) {
+                            handleRowClick(event, lastRow.dataset.id);
+                            lastRow.scrollIntoViewIfNeeded(true);
+                        }
+                        return;
+                    }
+                } else {
+                    let idx = getFileIndexById(lastSelectedRow.dataset.id);
+                    if (idx > 0) {
+                        event.preventDefault();
+                        let item = files.splice(idx, 1)[0];
+                        files.splice(idx - 1, 0, item);
+                        
+                        const newIdx = idx - 1;
+                        const targetPage = Math.floor(newIdx / pageSize) + 1;
+                        if (targetPage !== currentPage) {
+                            currentPage = targetPage;
+                        }
+                        renderList();
+                        
+                        lastSelectedRow = getRowElementById(item.meta.id);
+                        if (lastSelectedRow) {
+                            lastSelectedRow.classList.add('selected');
+                            lastSelectedRow.scrollIntoViewIfNeeded(true);
+                        }
+                    }
                 }
-                event.preventDefault();
-                let idx = getFileIndexById(lastSelectedRow.dataset.id);
-                let item = files.splice(idx, 1)[0];
-                files.splice(idx - 1, 0, item);
-                lastSelectedRow.previousElementSibling.before(lastSelectedRow);
-                lastSelectedRow.scrollIntoViewIfNeeded(true);
-                setCountValues();
             } else if (event.code === 'Enter') {
                 event.preventDefault();
                 toggleCheck(event, lastSelectedRow.dataset.id);

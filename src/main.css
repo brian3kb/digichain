@@ -2144,6 +2144,10 @@ td button { margin: 0.5rem; }
     line-height: 1rem;
     min-width: 1rem;
 }
+.is-ot-file::after, .is-op-file::after, .is-dc-file::after, .sff-button::after, .file-has-slice-data::after{
+    margin-top: -0.55rem;
+    margin-left: 0.9rem;
+}
 .is-dc-file::after, .is-op-file::after {
     content: attr(data-slice-count);
 }

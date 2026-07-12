@@ -13,7 +13,9 @@ import {
     joinToStereo, Paula,
     Resampler,
     setLoadingText,
-    showToastMessage
+    showToastMessage,
+    createDT2PresetBlob,
+    sanitizeDT2Name, indexOfUint8Array
 } from './resources.js';
 import {
     drawWaveform,
@@ -100,7 +102,7 @@ metaFiles.getByFileName = function(filename) {
     return found;
 };
 metaFiles.getByFile = function(file) {
-    if (file.meta.slicedFrom) { return false; }
+    if (file?.meta?.slicedFrom) { return false; }
     const found = this.find(m => m.name.replace(/\.[^.]*$/, '') ===
       file.file.name.replace(/\.[^.]*$/, ''));
     if (found) { return found; }
@@ -153,7 +155,7 @@ metaFiles.getByFile = function(file) {
             slices: file.meta.slices.map(
               slice => ({
                   startPoint: slice.s,
-                  endPoint: slice.e,
+                  endPoint: slice.e || file.buffer.length,
                   loopPoint: slice.l ?? -1,
                   name: slice.n || slice.name || '',
                   p: slice.p ?? 16384,
@@ -171,7 +173,7 @@ metaFiles.getByFileInDcFormat = function(file) {
         metaFiles.getByFile(file) || {slices: []}).slices.map(slice => {
         let _slice = {
             s: slice.startPoint,
-            e: slice.endPoint,
+            e: slice.endPoint || file.buffer.length,
             l: slice.loopPoint,
             n: slice.name || ''
         };
@@ -374,16 +376,7 @@ async function changeAudioConfig(configString = '', onloadRestore = false) {
 
     if (commonSelectDevice) {
         settings.exportChainsAsPresets = false;
-        if ('xy' === commonSelectDevice) {
-            updateExportChainsAsPresets({device: 'xy', length: 24});
-        } else if ('tv' === commonSelectDevice) {
-            updateExportChainsAsPresets({device: 'tv', length: 84});
-        } else {
-            updateUiButtonAction('exportChainsAsPresets', '.toggle-preset-bundling-xy');
-            updateUiButtonAction('exportChainsAsPresets', '.toggle-preset-bundling-tv');
-            settings.spacedChainMode = 'dt' === commonSelectDevice;
-            updateSpacedChainMode();
-        }
+        changePresetBundling(commonSelectDevice.toLowerCase());
     }
 
     if (files.length > 0) {
@@ -716,7 +709,7 @@ function checkShouldExportOtFile(skipExportWithCheck = false) {
 
 async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverride) {
     let fileName = getNiceFileName('', file, false, true);
-    let wav, wavSR, blob;
+    let wav, wavSR, blob, hashes;
 
     fileName = targetContainer === 'a' ?
       fileName.replace('.wav', '.aif') :
@@ -724,14 +717,19 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
 
     file.meta.slices = file.meta.slices || metaFiles.getByFileInDcFormat(file);
 
+    const isDT = settings.exportChainsAsPresets?.device === 'dt';
+    const embedCuePoints = isDT ? false : settings.embedCuePoints;
+    const embedOrslData = isDT ? false : settings.embedOrslData;
+
     wav = audioBufferToWav(
       file.buffer, {...file.meta, renderAt: useTargetSR ? targetSR : false}, masterSR,
       (bitDepthOverride || masterBitDepth),
       masterChannels, settings.dePopClick,
       (renderAsAif && settings.pitchModifier === 1), settings.pitchModifier, embedSliceData,
-      settings.embedCuePoints, settings.embedOrslData
+      embedCuePoints, embedOrslData
     );
     wavSR = wav.sampleRate;
+    hashes = wav.hashes || {};
     wav = wav.buffer;
     blob = new window.Blob([new DataView(wav)], {
         type: renderAsAif && settings.pitchModifier === 1 ? 'audio/aiff' : 'audio/wav'
@@ -752,7 +750,7 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
           pitchedBuffer, {...meta, renderAt: useTargetSR ? targetSR : false}, masterSR,
           (bitDepthOverride || masterBitDepth),
           masterChannels, settings.dePopClick,
-          renderAsAif, 1, embedSliceData, settings.embedCuePoints, settings.embedOrslData
+          renderAsAif, 1, embedSliceData, embedCuePoints, embedOrslData
         );
         wavSR = wav.sampleRate;
         wav = wav.buffer;
@@ -764,7 +762,25 @@ async function setWavLink(file, linkEl, renderAsAif, useTargetSR, bitDepthOverri
     linkEl.href = URL.createObjectURL(blob);
     linkEl.setAttribute('download', fileName);
 
-    return {blob, sampleRate: wavSR};
+    let finalSlices = file.meta.slices || [];
+    if (settings.pitchModifier !== 1) {
+        finalSlices = finalSlices.map(slice => ({
+            ...slice,
+            s: Math.round(slice.s / settings.pitchModifier),
+            e: Math.round(slice.e / settings.pitchModifier),
+            l: (!slice.l || slice.l === -1) ? -1 : Math.round(slice.l / settings.pitchModifier)
+        }));
+    }
+    const checkSR = useTargetSR ? targetSR : masterSR;
+    if (file.buffer.sampleRate !== checkSR) {
+        finalSlices = finalSlices.map(slice => ({
+            ...slice,
+            s: Math.round((slice.s / file.buffer.sampleRate) * checkSR),
+            e: Math.round((slice.e / file.buffer.sampleRate) * checkSR),
+            l: slice.l && slice.l > -1 ? Math.round((slice.l / file.buffer.sampleRate) * checkSR) : -1
+        }));
+    }
+    return {blob, sampleRate: wavSR, slices: finalSlices, hashes};
 }
 
 async function downloadAll(event) {
@@ -1802,7 +1818,7 @@ function updateSpacedChainMode(toggleSetting) {
     spacedEl.style.display = settings.spacedChainMode ? 'block' : 'none';
     chainEl.style.display = settings.spacedChainMode ? 'none' : 'block';
     if (settings.spacedChainMode && settings.exportChainsAsPresets) {
-        updateExportChainsAsPresets(false);
+        changePresetBundling(false);
     }
 }
 
@@ -1814,16 +1830,40 @@ function updateUiButtonAction(param, buttonClass, toggleSetting, forceValue) {
     buttonEl?.classList[settings[param] ? 'remove' : 'add']('fade');
 }
 
-function updateExportChainsAsPresets(presetConfig) {
-    if (!settings.exportChainsAsPresets && settings.spacedChainMode) {
-        updateSpacedChainMode(true);
+function changePresetBundling(value) {
+    let presetConfig;
+    const _value = `${value}`;
+    if (value === 'tv') {
+        presetConfig = { device: 'tv', length: 84 };
+    } else if (value === 'xy') {
+        presetConfig = { device: 'xy', length: 24 };
+    } else if (value === 'dt') {
+        presetConfig = { device: 'dt', length: 64 };
+    } else {
+        presetConfig = false;
+        value = 'sl';
     }
-    const _presetConfig = presetConfig.device === settings.exportChainsAsPresets?.device ? undefined : presetConfig;
-    const buttonElements = document.querySelectorAll('button[class^=toggle-preset-bundling]');
-    buttonElements.forEach(el => el.classList.add('fade'));
-    updateUiButtonAction('exportChainsAsPresets', `.toggle-preset-bundling-${presetConfig.device}`,
-      (settings.exportChainsAsPresets !== presetConfig), _presetConfig);
-    setCountValues();
+    if (presetConfig) {
+        if (settings.spacedChainMode) {
+            settings.spacedChainMode = false;
+            updateSpacedChainMode(false);
+        }
+        settings.updateResampleChainsToList = false;
+        updateUiButtonAction('updateResampleChainsToList', '.toggle-top-list', false);
+        toggleSecondsPerFile({}, 0);
+    }
+    settings.exportChainsAsPresets = presetConfig;
+    const selectEl = document.getElementById('presetBundlingSelect');
+    if (selectEl) {
+        selectEl.value = value ?? 'sl';
+        selectEl.setAttribute('value', value ?? 'sl');
+    }
+    if (_value.startsWith('dt')) {
+        settings.spacedChainMode = true;
+        updateSpacedChainMode(false);
+        toggleSecondsPerFile({}, 0);
+    }
+    setTimeout(() => setCountValues(), 250);
 }
 
 function toggleHelp() {
@@ -2222,10 +2262,10 @@ function showExportSettingsPanel(page = 'settings') {
       <td style="border-bottom: none;">
         <select id="audioValuesFromCommonSelect" class="btn-audio-config" style="margin: 0 2rem; max-width: 25rem; float: right;" onchange="digichain.setAudioOptionsFromCommonConfig(event)">
             <option value="none" disabled selected>Common Configurations</option>
-            <option value="48000m16w0-4-8-16-32-64-128" data-device="dt">Digitakt</option>
-            <option value="48000s16w0-4-8-16-32-64-128" data-device="dt">Digitakt II</option>
-            <option value="44100s16w0-4-8-16-32-64-128" data-device="m8">Dirtywave M8</option>
-            <option value="48000m16w0-8-10-12-15-30-60" data-device="dt">Model:Samples</option>
+            <option value="48000m16w0-4-8-16-32-64-128" data-device="dt1">Digitakt</option>
+            <option value="48000s16w0-4-8-16-32-64-128" data-device="dt2">Digitakt II</option>
+            <option value="44100s16w0-4-8-16-32-64-128" data-device="sl">Dirtywave M8</option>
+            <option value="48000m16w0-8-10-12-15-30-60" data-device="sl">Model:Samples</option>
             <option value="44100s16w0-4-8-16-32-48-64" data-device="ot">Octatrack (16bit)</option>
             <option value="44100s24w0-4-8-16-32-48-64" data-device="ot">Octatrack (24bit)</option>
             <option value="44100s16a0-4-8-12-16-20-24" data-device="op1f">OP-1 Field</option>
@@ -2233,7 +2273,7 @@ function showExportSettingsPanel(page = 'settings') {
             <option value="44100s16w0-4-8-12-16-20-24" data-device="xy">OP-XY</option>
             <option value="44100m16w0-4-8-16-24-32-48" data-device="pt">Polyend Tracker</option>
             <option value="44100s16w0-4-8-16-24-32-48" data-device="pt">Polyend Tracker Mini</option>
-            <option value="48000m16w0-8-10-12-15-30-60" data-device="dt">Rytm</option>
+            <option value="48000m16w0-8-10-12-15-30-60" data-device="sl">Rytm</option>
             <option value="12000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 12kHz</option>
             <option value="24000m16w0-2-4-8-10-12-15">Sonicware Lofi-12 XT 24kHz</option>
             <option value="46875m16w0-3-4-6-8-9-12">TE EP-133 / EP-1320 (mono)</option>
@@ -2593,13 +2633,6 @@ async function joinAll(
       (event.shiftKey || modifierKeys.shiftKey)) && !settings.exportChainsAsPresets) { toInternal = true; }
     try {
         const joinedEl = document.getElementById('getJoined');
-        if (
-          (((settings.zipDownloads || window.__TAURI__) && !toInternal) || settings.exportChainsAsPresets) &&
-          files.filter(
-            f => f.meta.checked).length > 1
-        ) {
-            zip = zip || new JSZip();
-        }
 
         let _files = filesRemaining.length > 0 ? filesRemaining : files.filter(
           f => f.meta.checked);
@@ -2645,6 +2678,17 @@ async function joinAll(
         let totalLength = 0;
         let sliceGridT = settings.exportChainsAsPresets ? ((sliceGrid > settings.exportChainsAsPresets.length ||
           !sliceGrid) ? settings.exportChainsAsPresets.length : sliceGrid) : sliceGrid;
+
+        const totalChecked = files.filter(f => f.meta.checked).length;
+        const isDT = settings.exportChainsAsPresets?.device === 'dt';
+        const needsZip = isDT ? (sliceGridT > 0 && totalChecked > sliceGridT) : (totalChecked > 1);
+
+        if (
+          (((settings.zipDownloads || window.__TAURI__) && !toInternal) || settings.exportChainsAsPresets) &&
+          needsZip
+        ) {
+            zip = zip || new window.JSZip();
+        }
 
         if (secondsPerFile === 0) { /*Using slice grid file lengths*/
             tempFiles = _files.splice(0,
@@ -2750,7 +2794,7 @@ async function joinAll(
               `${path}dc-${pad ? 'sp-' : ''}${getNiceFileName('', _files[0], true)}-${fileCountText}--${_files.length}`
           );
 
-        if (settings.exportChainsAsPresets) {
+        if (settings.exportChainsAsPresets && settings.exportChainsAsPresets.device !== 'dt') {
             const presetSlices = [];
             const presetFileName = settings.exportChainsAsPresets.device === 'xy' ?
               `${sanitizeFileName(_fileName).substring(0, 14)}${fileCountText}`.replaceAll(/([-.])/gi, '') :
@@ -2862,6 +2906,17 @@ async function joinAll(
                     });
                 };
 
+            } else if (settings.exportChainsAsPresets?.device === 'dt') {
+                const wav = await setWavLink(fileData, joinedEl, false, true, 16);
+                const payloadName = sanitizeDT2Name(_fileName).toUpperCase();
+                const dtpresetBlob = await createDT2PresetBlob(wav.blob, payloadName, wav.slices, wav.hashes);
+                if (zip) {
+                    zip.file(`${payloadName}.dt2pst`, dtpresetBlob, {binary: true});
+                } else {
+                    joinedEl.href = URL.createObjectURL(dtpresetBlob);
+                    joinedEl.setAttribute('download', `${payloadName}.dt2pst`);
+                    joinedEl.click();
+                }
             } else {
                 const renderAsAif = targetContainer === 'a';
                 if (zip) {
@@ -3740,8 +3795,8 @@ const remove = (id, skipStateStore) => {
         metaFiles.removeByName(removed[0].file.name);
         removed.buffer ? delete removed.buffer : false;
     }
-    rowEl.classList.add('hide');
-    rowEl.remove();
+    rowEl?.classList?.add('hide');
+    rowEl?.remove();
     if (!skipStateStore) {
         setCountValues();
     }
@@ -4079,7 +4134,7 @@ function setCountValues() {
       (a, f) => a += +f.meta.duration, 0);
     joinCount = chainCount === 0 ? 0 : (chainCount > 0 &&
     sliceGridT > 0 ? Math.ceil(chainCount / sliceGridT) : 1);
-    const chainText = settings.exportChainsAsPresets ? ' Preset' : ' Chain';
+    const chainText = (settings.exportChainsAsPresets?.device ?? 'sl') !== 'sl' ? ' Preset' : ' Chain';
     document.body.dataset.selectedCount = `${filesSelected.length}`;
     document.getElementById(
       'fileNum').textContent = `${files.length}/${selectionCount}` + (selectionSlicesCount ?
@@ -4565,6 +4620,7 @@ async function createAndSetOtFileLink(slices, file, fileName, linkEl, skipExport
             loopStart: file.meta.otLoopStart ?? 0
         });
         let fName = fileName.replace(/\.[^.]*$/, '.ot');
+        fName = fName.endsWith('.ot') ? fName : fName + '.ot';
         if (!data) { return false; }
         let blob = new window.Blob([data], {
             type: 'application/octet-stream'
@@ -5190,6 +5246,15 @@ const parseWav = (
     } catch (e) {
         slices = false;
     }
+    if (!slices || slices.length === 0) {
+        const meta = metaFiles.getByFileName(file.name);
+        if (meta && !meta.loopEnd) {
+            meta.loopEnd = Math.floor((audioArrayBuffer.length / file.sampleRate) * masterSR);
+            if (meta?.sliceCount > 0  && meta?.slices) {
+                meta.slices[meta.sliceCount - 1].endPoint = meta.loopEnd;
+            }
+        }
+    }
     try {
         /*duration, length, numberOfChannels, sampleRate*/
         let resampledArrayBuffer;
@@ -5403,7 +5468,7 @@ const consumeFileInput = async (event, inputFiles) => {
     }
 
     let _zips = [...inputFiles].filter(
-      f => ['zip', 'dtprj', 'xrns', 'xrni'].includes(
+      f => ['zip', 'dt2pst', 'dtprj', 'xrns', 'xrni'].includes(
         f?.name?.split('.')?.reverse()[0].toLowerCase())
     );
 
@@ -5426,8 +5491,9 @@ const consumeFileInput = async (event, inputFiles) => {
                         setTimeout(() => consumeFileInput(event, inputFiles),
                           3000);
                     }
-                    return; /*Don't process zip contents if the files count exceed the importLimit if limit is on*/
+                    return; /*Don't process zip contents if the file count exceeds the importLimit if limit is on*/
                 }
+                let dt2Preset;
                 for (let key in zip.files) {
                     zip.files[key].async('blob').then(blobData => {
                         blobData.name = key.split('/').at(-1);
@@ -5436,7 +5502,21 @@ const consumeFileInput = async (event, inputFiles) => {
                         inputFiles.push(blobData);
                         blobData.uuid = crypto.randomUUID();
                         if (supportedAudioTypes.some(ext => blobData.name.toLowerCase().endsWith(ext))) {
+                            if (dt2Preset) {
+                                dt2Preset.sampleUuid = blobData.uuid;
+                                dt2Preset.sampleName = blobData.name;
+                                dt2Preset.samplePath = blobData.fullPath;
+                            }
                             importOrder.add(blobData.uuid);
+                        } else if (blobData.size > 50 && archive.name.toLocaleLowerCase().endsWith('.dt2pst')) {
+                            if (blobData.name.toLowerCase().endsWith('.json')) {
+                                dt2Preset = blobData;
+                            } else {
+                                const manifest = dt2Preset ?? false;
+                                dt2Preset = blobData;
+                                blobData.name = blobData.name + '.dt2presetdata';
+                                blobData.manifest = manifest;
+                            }
                         }
                         if (zidx === _zips.length - 1 && prog === fileCount) {
                             consumeFileInput(event, inputFiles);
@@ -5454,7 +5534,7 @@ const consumeFileInput = async (event, inputFiles) => {
         f?.name?.split('.')?.reverse()[0].toLowerCase())
     );
     let _mFiles = [...inputFiles].filter(
-      f => ['ot', 'xml', 'adv'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
+      f => ['ot', 'xml', 'adv', 'dt2presetdata'].includes(f?.name?.split('.')?.reverse()[0].toLowerCase())
     );
 
     if (event.shiftKey || modifierKeys.shiftKey) {
@@ -5489,16 +5569,93 @@ const consumeFileInput = async (event, inputFiles) => {
                 // binary data
                 const buffer = e.target.result;
                 const bufferByteLength = buffer.byteLength;
-                const bufferUint8Array = new Uint8Array(buffer, 0,
-                  bufferByteLength);
+                const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
                 let result = parseOt(bufferUint8Array, file, file.fullPath);
             }
             if (file.name.toLowerCase().endsWith('.xml')) {
                 const xmlString = e.target.result;
                 parseXml(xmlString, file.fullPath);
             }
+            if (file.name.toLowerCase().endsWith('.dt2presetdata')) {
+                const manifestReader = new FileReader();
+                manifestReader.onload = function(m) {
+                    const manifest = JSON.parse(m?.target?.result??false);
+                    if (!manifest) { return; }
+                    const targetSize = +(manifest.Samples[0]?.FileSize ?? 0);
+                    const anchor = new Uint8Array(8);
+                    const anchorDv = new DataView(anchor.buffer);
+                    anchorDv.setUint32(0, manifest.Samples[0]?.Hash??0);
+                    anchorDv.setUint32(4, (targetSize+16));
+                    const buffer = e.target.result;
+                    const bufferByteLength = buffer.byteLength;
+                    const bufferUint8Array = new Uint8Array(buffer, 0, bufferByteLength);
+                    const view = new DataView(buffer);
+                    const anchorOffset = indexOfUint8Array(bufferUint8Array, anchor);
+                    const MAX_SLICES = 64;
+
+                    let bestGap = -1;
+                    let bestSliceCount = 0;
+                    let finalSliceArrayStart = 0;
+                    console.log(`${manifest.Samples[0].FileName} : ${manifest.Samples[0]?.Hash??0}`);
+                    if (anchorOffset !== -1) {
+                        for (let gap = 0; gap <= 64; gap++) {
+                            const testBaseOffset = anchorOffset + 8 + gap;
+                            let currentValidSlices = 0;
+
+                            for (let s = 0; s < MAX_SLICES; s++) {
+                                const currentSliceOffset = testBaseOffset + (s * 12);
+                                
+                                if (currentSliceOffset + 12 > view.byteLength) break;
+                                
+                                const testStart = view.getUint32(currentSliceOffset, false);
+                                const testEnd   = view.getUint32(currentSliceOffset + 4, false);
+                                //const testLoop = view.getUint32(currentSliceOffset + 8, false);
+                                
+                                const isWithinFileSize = testStart <= targetSize && testEnd <= targetSize;// && testLoop <= targetSize;
+                                const isChronological = testStart <= testEnd;// && testLoop <= testEnd;
+
+                                if (isWithinFileSize && isChronological) {
+                                    currentValidSlices++;
+                                } else {
+                                    break;
+                                }
+                            }
+                            if (currentValidSlices > bestSliceCount) {
+                                bestSliceCount = currentValidSlices;
+                                bestGap = gap;
+                                finalSliceArrayStart = testBaseOffset;
+                            }
+                        }
+                    }
+                    let extractedSlices = [];
+                    if (bestSliceCount > 0) {
+                        let currentOffset = finalSliceArrayStart;
+                        for (let i = 0; i < bestSliceCount; i++) {
+                            let start = view.getUint32(currentOffset, false);
+                            let end   = view.getUint32(currentOffset + 4, false);
+                            let loop  = view.getUint32(currentOffset + 8, false);
+                            loop = loop > targetSize || loop > end || loop < start ? -1 : loop;
+                            extractedSlices.push({
+                                startPoint: Math.floor((start / 48000) * masterSR),
+                                endPoint: Math.floor((end / 48000) * masterSR),
+                                loopPoint: loop === -1 ? loop : Math.floor((loop / 48000) * masterSR),
+                                name: `DT Slice ${i + 1}`
+                            });
+                            currentOffset += 12;
+                        }
+                    }
+                    metaFiles.push({
+                        uuid: file.sampleUuid || '',
+                        name: file.sampleName || file.name,
+                        path: file.samplePath || file.fullPath,
+                        sliceCount: extractedSlices.length,
+                        slices: extractedSlices
+                    });
+                };
+                manifestReader.readAsText(file.manifest);
+            }
         };
-        if (file.name.toLowerCase().endsWith('.ot')) {
+        if (file.name.toLowerCase().endsWith('.ot') || file.name.toLowerCase().endsWith('.dt2presetdata')) {
             reader.readAsArrayBuffer(file);
         } else {
             reader.readAsText(file);
@@ -6232,7 +6389,7 @@ function init() {
     }
     updateSpacedChainMode();
     updateUiButtonAction('updateResampleChainsToList', '.toggle-top-list');
-    updateExportChainsAsPresets(settings.exportChainsAsPresets);
+    changePresetBundling(settings.exportChainsAsPresets?.device);
     setTimeout(() => toggleOptionsPanel(), 250);
     configDb();
     document.getElementById('modifierKeyctrlKey').textContent = navigator.userAgent.indexOf('Mac') !== -1
@@ -6800,7 +6957,7 @@ window.digichain = {
     toggleSecondsPerFile,
     updateSpacedChainMode,
     updateUiButtonAction,
-    updateExportChainsAsPresets,
+    changePresetBundling,
     changeOpParam,
     toggleHelp,
     toggleChainNamePanel,

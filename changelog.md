@@ -6,6 +6,11 @@ latest
 - Allow Cmd/Ctrl+P to paste audio files from filesystem browser or URL links to audio files to the list (URL's must allow CORS).
 - Paginated main list.
 - Shift+Cmd/Ctrl Click on the sample list move up/down buttons will move the sample to the start/end of the current page.
+- Fixed the incorrect behavior of render/spaced chain icons when switching between slice/preset modes.
+- Cleaned up the common configurations and removed redundant settings method.
+- Fixed .ot sometimes not having the .ot file extension.
+- Fixed empty file list placeholder instructions not always showing despite a cleared list.
+- Have dt1/2 turn on spaced chains rendering when selected from common config.
 
 2026.06.02 1.6.0
 - Support for 24/32bit AIFF file importing.

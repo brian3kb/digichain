@@ -562,10 +562,12 @@
                         <button title="When enabled, created chains will be added to the top of the sample list instead of producing a zip file to download (the same as holding the Shift key will pressing the Chain button)."
                                 class="button-clear toggle-top-list fade" onclick="digichain.updateUiButtonAction('updateResampleChainsToList', '.toggle-top-list', true)"><i class="gg-top-list"></i>
                         </button>
-                        <button title="Tonverk Preset bundling, chains will be limited to 128, and have an .elmulti preset for accessing the samples; When active, only zip downloads will be available."
-                                onclick="digichain.updateExportChainsAsPresets({device: 'tv', length: 84})" class="toggle-preset-bundling-tv button-clear">TV</button>
-                        <button title="OP-XY Preset bundling, chains will be limited to 24, samples longer than 20 seconds will be truncated to allow playback on the Xy (be mindful that the XY has a total 64mb of memory per project loaded for samples). When active, only zip downloads will be available."
-                                onclick="digichain.updateExportChainsAsPresets({device: 'xy', length: 24})" class="toggle-preset-bundling-xy button-clear">XY</button>
+                        <select id="presetBundlingSelect" title="Preset bundling options. SL: Slice Markers (Default), TV: Tonverk, XY: OP-XY, DT: Digitakt 2."
+                                onchange="digichain.changePresetBundling(this.value)">
+                            <option value="sl" title="Slice Markers (Default)">SL</option>
+                            <option value="tv" title="Tonverk Preset bundling (up to 84 slices, elmulti)">TV</option>
+                            <option value="xy" title="OP-XY Preset bundling (up to 24 slices, truncated to 20s)">XY</option>
+                        </select>
                     </div>
                 </div>
                 <a id="getJoined">_</a>

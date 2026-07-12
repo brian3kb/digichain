@@ -1817,7 +1817,7 @@ body {
     padding: 0 .5rem;
     line-height: 3rem;
 }
-#pageSizeSelect, #pageSelectDropdown {
+#pageSizeSelect, #pageSelectDropdown, #presetBundlingSelect {
     width: auto;
     margin: 0;
     background-color: #202124;
@@ -1899,7 +1899,7 @@ input, .btn-audio-config { color: #a8a8a8; }
 #getJoined, .wav-link-hidden, .meta-link-hidden, .hidden { visibility: hidden; }
 .hide { display: none !important; }
 .fade { opacity: .15 !important; }
-.chain-action-icons:has(button[class^=toggle-preset-bundling]:not(.fade)) .toggle-top-list {
+.chain-action-icons:has(#presetBundlingSelect:not([value="sl"])) .toggle-top-list {
     opacity: .15 !important;
 }
 .slice-loop {
@@ -1922,7 +1922,7 @@ table#masterList { padding-bottom: 12rem; padding-top: 1rem; }
 #fileList {
     content-visibility: auto;
 }
-#fileList:empty::after {
+#fileList:empty::after, #fileList:not(:has(tr))::after {
     content: 'Load / Drop samples here to get started... (Shift+K to see keyboard shortcuts)';
     text-align: center;
     padding-top: 7rem;
@@ -2583,16 +2583,22 @@ dialog .content {
 }
 .chain-action-icons button {
     padding: 0;
+    display: none;
 }
 
-button[class^=toggle-preset-bundling] {
-    width: 1.75rem;
-    display: flex;
-    height: 4rem;
-    align-content: center;
-    align-items: center;
-    justify-content: center;
-    padding: 0 .25rem;
+#presetBundlingSelect {
+    width: 13.5rem;
+    margin: 0 -.5rem 0 -.5rem;
+    padding: 0.1rem 0 0.1rem 0.76rem;
+    line-height: 3.5rem;
+    transition: width .2s ease;
+}
+#presetBundlingSelect[value=sl] {
+    width: 5.75rem;
+}
+.chain-action-icons:has(#presetBundlingSelect[value=sl]) button,
+.right-buttons:has(#presetBundlingSelect[value=sl]) .toggle-seconds-per-file {
+    display: block;
 }
 
 button:has(.selection-count[data-selection-count="0"]),
@@ -2608,6 +2614,7 @@ button:has(.join-count[data-join-count="0"]) {
 .toggle-seconds-per-file {
     margin: 0.7rem 0 0 0;
     color: #d79c4e;
+    display: none;
 }
 .toggle-seconds-per-file.on { color: #d79c4e !important;}
 .slice-group {
@@ -2631,8 +2638,7 @@ button:has(.join-count[data-join-count="0"]) {
     color: #343433;
     transition: color .2s;
 }
-.button-clear:has(i):focus,
-.button-clear[class^=toggle-preset-bundling] {
+.button-clear:has(i):focus {
     color: #d79c4e;
 }
 .button-clear.remove:hover,
@@ -3600,7 +3606,8 @@ body.light *[class*=sff-]:after,
 body.light #masterList thead,
 body.light .pagination-container,
 body.light #pageSizeSelect,
-body.light #pageSelectDropdown
+body.light #pageSelectDropdown,
+body.light #presetBundlingSelect
 {
     background-color: #f5f5f5;
     background-blend-mode: normal;

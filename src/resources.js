@@ -306,6 +306,199 @@ export function buildXyMultiSamplePatchData(file, slices = []) {
 
 }
 
+export function  sanitizeDT2Name(name, suffix = '') {
+    let sanitized = '';
+    for (let i = 0; i < name.length; i++) {
+        const c = name[i];
+        if (/[a-zA-Z0-9 ]/.test(c)) {
+            sanitized += c;
+        } else {
+            sanitized += '_';
+        }
+    }
+    let result = sanitized.trim();
+    const suffixStr = suffix !== undefined && suffix !== null ? String(suffix) : '';
+    const maxLen = 12 - suffixStr.length;
+    if (result.length > maxLen) {
+        result = result.substring(0, maxLen);
+    }
+    result = result + suffixStr;
+    if (result === '') {
+        result = 'OUTPUT';
+    }
+    return result.toUpperCase();
+}
+
+function buildDT2PresetBinary(slices, anchorSize, hash, totalFrames) {
+    
+    const templateBuffer = new Uint8Array([
+        0xAC, 0x11, 0xD3, 0x03, 0x02, 0x00, 0x04, 0x00, 0x10, 0x30, 0x30, 0x37,
+        0x31, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+        0x8D, 0x00, 0x00, 0x04, 0x5A, 0x01, 0x0C, 0x00, 0x00, 0x01, 0x33, 0x91,
+        0x00, 0x00, 0x00, 0x03, 0x00, 0xBE, 0xEF, 0xBA, 0xCE, 0x09, 0x00, 0xA7,
+        0x00, 0x00, 0x00, 0x31, 0x36, 0x54, 0x45, 0x53, 0x54, 0x00, 0x01, 0x00,
+        0x11, 0x70, 0x02, 0x00, 0x51, 0x00, 0x00, 0x01, 0x00, 0x03, 0x23, 0x00,
+        0x11, 0x40, 0x02, 0x00, 0x06, 0x21, 0x00, 0x16, 0x01, 0x0B, 0x00, 0x09,
+        0x02, 0x00, 0x00, 0x26, 0x00, 0x00, 0x28, 0x00, 0x11, 0x40, 0x36, 0x00,
+        0x26, 0x00, 0x19, 0x1D, 0x00, 0x51, 0x64, 0x00, 0x00, 0x00, 0x7F, 0x1A,
+        0x00, 0x00, 0x14, 0x00, 0x00, 0x06, 0x00, 0x00, 0x04, 0x00, 0x02, 0x14,
+        0x00, 0x00, 0x02, 0x00, 0x70, 0x7F, 0x00, 0x40, 0x00, 0x7F, 0x00, 0x20,
+        0x0B, 0x00, 0x01, 0x26, 0x00, 0x91, 0x6E, 0x00, 0x01, 0x00, 0x01, 0x00,
+        0x3F, 0x00, 0x27, 0x10, 0x00, 0x0F, 0x02, 0x00, 0x11, 0x7F, 0x06, 0x00,
+        0x02, 0x00, 0x00, 0x01, 0x02, 0x2B, 0x00, 0x11, 0x0F, 0x02, 0x00, 0x12,
+        0x11, 0x02, 0xB4, 0x00, 0x00, 0x02, 0x00, 0xD0, 0x0B, 0xBE, 0x4F, 0xC6,
+        0x99, 0x00, 0x00, 0x2E, 0x50, 0x00, 0x00, 0x00, 0x0B, 0x11, 0x00, 0x40,
+        0x00, 0x00, 0x01, 0x6F, 0x06, 0x00, 0x83, 0x00, 0x00, 0x01, 0x73, 0x00,
+        0x00, 0x02, 0xEA, 0x08, 0x00, 0x53, 0xDB, 0x00, 0x00, 0x04, 0x78, 0x08,
+        0x00, 0x53, 0x82, 0x00, 0x00, 0x05, 0xE8, 0x08, 0x00, 0x53, 0xBB, 0x00,
+        0x00, 0x07, 0x3D, 0x08, 0x00, 0x53, 0x28, 0x00, 0x00, 0x08, 0xBF, 0x08,
+        0x00, 0x53, 0xB2, 0x00, 0x00, 0xA1, 0x1E, 0x08, 0x00, 0x53, 0x12, 0x00,
+        0x00, 0xB8, 0x04, 0x08, 0x00, 0x53, 0x7E, 0x00, 0x00, 0x0C, 0xFD, 0x08,
+        0x00, 0x53, 0xF0, 0x00, 0x00, 0x0E, 0x72, 0x08, 0x00, 0x53, 0x62, 0x00,
+        0x00, 0x0F, 0xDE, 0x08, 0x00, 0x53, 0xD1, 0x00, 0x00, 0x11, 0x51, 0x08,
+        0x00, 0x53, 0x4A, 0x00, 0x00, 0x12, 0xBC, 0x08, 0x00, 0x53, 0xAD, 0x00,
+        0x00, 0x14, 0x2E, 0x08, 0x00, 0x53, 0x27, 0x00, 0x00, 0x15, 0xA0, 0x08,
+        0x00, 0x50, 0x90, 0x00, 0x00, 0x16, 0xF3, 0xB2, 0x00, 0x0F, 0x02, 0x00,
+        0xFF, 0xFF, 0x30, 0x6C, 0x0D, 0x00, 0x0E, 0x0F, 0xFF, 0xFF, 0x47, 0x02,
+        0x50, 0x00, 0xBA, 0xCE, 0xF0, 0x0C, 0x00, 0x00, 0x00, 0x00, 0xDF, 0x58,
+        0x6A, 0x2A, 0x00, 0x00, 0x01, 0x3B, 0xAA, 0xA1, 0xDA, 0xAA
+    ]);
+    const bin = new Uint8Array(templateBuffer);
+    const view = new DataView(bin.buffer);
+
+    let numSlices = slices.length;
+    if (numSlices === 0) numSlices = 1;
+    if (numSlices > 64) numSlices = 64;
+    
+    const TEMPLATE_HASH = 3192899225;
+    const TEMPLATE_SIZE = 11856; 
+
+    let anchorOffset = -1;
+    for (let i = 0; i <= bin.length - 8; i++) {
+        if (view.getUint32(i, false) === TEMPLATE_HASH &&
+          view.getUint32(i + 4, false) === TEMPLATE_SIZE) {
+            anchorOffset = i;
+            break;
+        }
+    }
+
+    if (anchorOffset === -1) throw new Error("Template anchor not found.");
+    
+    view.setUint32(anchorOffset, hash, false);
+    view.setUint32(anchorOffset + 4, anchorSize, false);
+    
+    let sliceStartOffset = -1;
+    for (let i = anchorOffset + 8; i < bin.length - 1; i++) {
+        if (bin[i] === 0x08 && bin[i+1] === 0x00) {
+            sliceStartOffset = i;
+            break;
+        }
+    }
+
+    let footerOffset = -1;
+    for (let i = sliceStartOffset; i < bin.length - 4; i++) {
+        if (bin[i] === 0x0F && bin[i+1] === 0x02 && bin[i+2] === 0x00 && bin[i+3] === 0xFF && bin[i+4] === 0xFF) {
+            footerOffset = i - 1;
+            break;
+        }
+    }
+
+    if (sliceStartOffset === -1 || footerOffset === -1) throw new Error("Could not map template boundaries.");
+
+    const header = bin.subarray(0, sliceStartOffset);
+    const footer = bin.subarray(footerOffset);
+
+    const payload = new Uint8Array(numSlices * 10);
+    const payloadView = new DataView(payload.buffer);
+
+    for (let i = 0; i < numSlices; i++) {
+        const startFrame = Math.floor(Number(slices[i].s) || 0);
+
+        let endFrame = totalFrames;
+        if (i < numSlices - 1 && slices[i + 1]) {
+            endFrame = Math.floor(Number(slices[i + 1].s) || 0);
+        }
+
+        const offset = i * 10;
+        payload[offset] = 0x08;
+        payload[offset + 1] = 0x00;
+        payload[offset + 2] = 0x71; 
+        
+        payload[offset + 3] = (startFrame >> 16) & 0xFF;
+        payload[offset + 4] = (startFrame >> 8) & 0xFF;
+        payload[offset + 5] = startFrame & 0xFF;
+        
+        payloadView.setUint32(offset + 6, endFrame, false);
+    }
+
+    const finalBinary = new Uint8Array(header.length + payload.length + footer.length);
+    finalBinary.set(header, 0);
+    finalBinary.set(payload, header.length);
+    finalBinary.set(footer, header.length + payload.length);
+
+    return finalBinary;
+}
+
+function buildDT2Manifest(payloadName, samplePath, wavSize, hash) {
+    return JSON.stringify({
+        FormatVersion: "1.0",
+        ProductType: [],
+        Payload: payloadName,
+        FileType: "Sound",
+        FirmwareVersion: "1.15C",
+        MetaInfo: { Tags: [] },
+        Samples: [
+            {
+                FileName: samplePath,
+                FileSize: wavSize,
+                Hash: String(hash)
+            }
+        ]
+    }, null, 2);
+}
+
+function getDT2TransferDir() {
+    const d = new Date();
+    const yy = String(d.getFullYear()).substring(2);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `Samples/transfers-${yy}${mm}${dd}`;
+}
+
+export async function createDT2PresetBlob(wavBlob, payloadName, slices = [], hashes = {}, templateBuffer) {
+    const wavArrayBuffer = await wavBlob.arrayBuffer();
+    const totalWavBytes = wavArrayBuffer.byteLength;
+    
+    const anchorSize = totalWavBytes + 16;
+    
+    const totalFrames = (totalWavBytes - 172) / 2;
+
+    const presetBin = buildDT2PresetBinary(
+      (slices || []),
+      anchorSize,
+      hashes?.fullFile ?? 0,
+      totalFrames
+    );
+
+    const transferDir = getDT2TransferDir();
+    const sampleName = `${payloadName}.WAV`;
+    
+    const manifestData = buildDT2Manifest(
+      payloadName,
+      `${transferDir}/${sampleName}`,
+      totalWavBytes,
+      hashes?.fullFile ?? 0
+    );
+
+    const presetZip = new window.JSZip();
+    presetZip.file('manifest.json', manifestData);
+    presetZip.file(`${transferDir}/${sampleName}`, wavArrayBuffer, { binary: true });
+    
+    presetZip.file(payloadName, presetBin, { binary: true });
+
+    return await presetZip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+}
+
 export function showToastMessage(messageString, duration = 3000) {
     const attachToEl = [...document.querySelectorAll('dialog')].find(d => d.open) || document.body;
     const toast = document.createElement('div');
@@ -672,10 +865,12 @@ export function audioBufferToWav(
         result, sampleRate, numChannels,
         buildOpData(meta?.slices, numChannels, buffer)
       ) :
-      encodeWAV(
-        result, format, sampleRate, numChannels, bitDepth, buffer.length,
-        meta?.slices, pitchModifier, embedSliceData, embedCuePoints, embedOrslData
-      );
+      (settings.exportChainsAsPresets?.device === 'dt' ?
+        encodeDT2Wav(result, sampleRate, numChannels, bitDepth) :
+        encodeWAV(
+          result, format, sampleRate, numChannels, bitDepth, buffer.length,
+          meta?.slices, pitchModifier, embedSliceData, embedCuePoints, embedOrslData
+        ));
 }
 
 DataView.prototype.setInt24 = function(pos, val, littleEndian) {
@@ -1042,6 +1237,107 @@ function floatTo24BitPCM(output, offset, input) {
         const s = Math.floor((input[i] + noise()) * 8388608 + 0.5);
         output.setInt24(offset, s, true);
     }
+}
+
+// Internal helper function to compute standard CRC32 (IEEE 802.3)
+function computeCRC32(arrayBuffer, byteOffset = 0, byteLength) {
+    const table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) {
+            c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+        }
+        table[n] = c;
+    }
+    let crc = 0xFFFFFFFF;
+    const length = byteLength !== undefined ? byteLength : (arrayBuffer.byteLength - byteOffset);
+    const u8 = new Uint8Array(arrayBuffer, byteOffset, length);
+    for (let i = 0; i < u8.length; i++) {
+        crc = (crc >>> 8) ^ table[(crc ^ u8[i]) & 0xFF];
+    }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+export function encodeDT2Wav(samples, sampleRate, numChannels, bitDepth) {
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const pcmLength = samples.length * bytesPerSample;
+    const totalSize = 172 + pcmLength;
+
+    const arrayBuffer = new ArrayBuffer(totalSize);
+    const view = new DataView(arrayBuffer);
+
+    // 1. RIFF
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, totalSize - 8, true);
+    writeString(view, 8, 'WAVE');
+
+    // 2. JUNK (size 52)
+    writeString(view, 12, 'JUNK');
+    view.setUint32(16, 52, true);
+    for (let i = 0; i < 52; i++) {
+        view.setUint8(20 + i, 0);
+    }
+
+    // 3. fmt (size 16)
+    writeString(view, 72, 'fmt ');
+    view.setUint32(76, 16, true);
+    view.setUint16(80, 1, true); // PCM Format = 1
+    view.setUint16(82, numChannels, true);
+    view.setUint32(84, sampleRate, true);
+    view.setUint32(88, sampleRate * blockAlign, true);
+    view.setUint16(92, blockAlign, true);
+    view.setUint16(94, bitDepth, true);
+
+    // 4. smpl (size 60)
+    writeString(view, 96, 'smpl');
+    view.setUint32(100, 60, true);
+    view.setUint32(104, 0, true); // Manufacturer
+    view.setUint32(108, 0, true); // Product
+    view.setUint32(112, Math.round(1000000000 / sampleRate), true); // Sample Period
+    view.setUint32(116, 60, true); // MIDI Unity Note
+    view.setUint32(120, 0, true); // MIDI Pitch Fraction
+    view.setUint32(124, 0, true); // SMPTE Format
+    view.setUint32(128, 0, true); // SMPTE Offset
+    view.setUint32(132, 1, true); // Num Sample Loops
+    view.setUint32(136, 0, true); // Sampler Data
+
+    // Loop 0
+    view.setUint32(140, 0, true); // Cue Point ID
+    view.setUint32(144, 127, true); // Type = 127
+    view.setUint32(148, 0, true); // Start
+    const totalFrames = samples.length / numChannels;
+    view.setUint32(152, totalFrames - 1, true); // End
+    view.setUint32(156, 0, true); // Fraction
+    view.setUint32(160, 0, true); // Play Count
+
+    // 5. data
+    writeString(view, 164, 'data');
+    view.setUint32(168, pcmLength, true);
+
+    // Write PCM
+    if (bitDepth === 16) {
+        floatTo16BitPCM(view, 172, samples);
+    } else if (bitDepth === 24) {
+        floatTo24BitPCM(view, 172, samples);
+    } else if (bitDepth === 8) {
+        floatTo8BitPCM(view, 172, samples);
+    } else {
+        writeFloat32(view, 172, samples);
+    }
+
+    // 6. Calculate hardware tokens
+    const fullFileHash = computeCRC32(arrayBuffer, 0, totalSize);
+    const payloadOnlyHash = computeCRC32(arrayBuffer, 172, pcmLength);
+
+    return {
+        buffer: arrayBuffer,
+        sampleRate,
+        hashes: {
+            fullFile: fullFileHash,
+            payloadOnly: payloadOnlyHash
+        }
+    };
 }
 
 function writeString(view, offset, string) {
@@ -1717,6 +2013,41 @@ export function setLoadingText(text = 'Loading', dismissTimeout) {
     if (dismissTimeout) {
         setTimeout(() => document.body.classList.remove('loading'), parseInt(dismissTimeout));
     }
+}
+
+export function indexOfUint8Array(haystack, needle) {
+    const haystackLen = haystack.length;
+    const needleLen = needle.length;
+
+    // Edge cases
+    if (needleLen === 0) return 0;
+    if (needleLen > haystackLen) return -1;
+
+    const firstByte = needle[0];
+
+    // Jump to the first potential match using native, highly-optimized code
+    let i = haystack.indexOf(firstByte);
+
+    while (i !== -1 && i <= haystackLen - needleLen) {
+        let match = true;
+
+        // Check the remaining bytes
+        for (let j = 1; j < needleLen; j++) {
+            if (haystack[i + j] !== needle[j]) {
+                match = false;
+                break;
+            }
+        }
+
+        if (match) {
+            return i; // Full sequence found
+        }
+
+        // Move to the next occurrence of the first byte
+        i = haystack.indexOf(firstByte, i + 1);
+    }
+
+    return -1; // Sequence not found
 }
 
 CanvasRenderingContext2D.prototype.clear =

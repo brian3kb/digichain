@@ -287,6 +287,13 @@
     <a class="aif-link-hidden hidden" target="_blank"></a>
 </div>
 
+<div id="dtBrowserPanel" class="op-export-side-panel-options dt-browser-side-panel" data-id="">
+    <a class="float-right sticky-top-0"
+       onpointerdown="document.getElementById('dtBrowserPanel').classList.remove('show'); if (!document.querySelector('#opExportPanel.show')) { document.querySelector('.right-buttons').classList.remove('fade'); }"><i
+            class="gg-close"></i></a>
+    <div id="dtBrowserPanelContent"></div>
+</div>
+
 <dialog id="mergePanel" class="dialog-pop-up">
     <a class="float-right sticky-top-0" onpointerdown="document.getElementById('mergePanel').close(); digichain.renderList();"><i
             class="gg-close"></i></a>
@@ -487,6 +494,10 @@
                         class="button-clear chain-name-toggle is-chain-count fade">
                     <i class="gg-stack has-ctrl-mod-i"></i>
                 </button>
+                <button id="toggleDtBrowserBtn" title="Digitakt / Digitakt II Transfer & Browser"
+                        class="button-clear toggle-dt-browser fade" onclick="digichain.toggleDtBrowser(event)">
+                    <i class="gg-keyboard has-ctrl-mod-i"></i>
+                </button>
             </div>
         </div>
         <div class="column">
@@ -567,6 +578,7 @@
                             <option value="sl" title="Slice Markers (Default)">SL</option>
                             <option value="tv" title="Tonverk Preset bundling (up to 84 slices, elmulti)">TV</option>
                             <option value="xy" title="OP-XY Preset bundling (up to 24 slices, truncated to 20s)">XY</option>
+                            <option value="dt" title="Digitakt 2 Preset bundling (up to 64 slices, dtpreset)">DT</option>
                         </select>
                     </div>
                 </div>

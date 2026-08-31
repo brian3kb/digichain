@@ -27,6 +27,12 @@ import {
     setEditorConf,
     showEditor
 } from './editor.js';
+import {
+    initDigitaktUI,
+    toggleDtBrowser,
+    updateSendCount,
+    dtController
+} from './digitakt.js';
 import './jszip.js';
 import './msgpack.min.js';
 
@@ -493,6 +499,7 @@ const toggleModifier = (key) => {
 
 const closePopUps = () => {
     lastSelectedRow?.focus();
+    toggleDtBrowser(false);
     document.querySelectorAll('.pop-up').
       forEach(w => w.classList.remove('show'));
     document.querySelectorAll('.dialog-pop-up').
@@ -4214,6 +4221,7 @@ function setCountValues() {
     }
     updatePaginationUI();
     clearModifiers();
+    updateSendCount(selectionCount);
 }
 
 function reRenderListRow(id) {
@@ -6968,7 +6976,10 @@ window.digichain = {
     setAudioOptionsFromCommonConfig,
     bufferRateResampler,
     showWelcome,
-    editor
+    editor,
+    toggleDtBrowser,
+    digitakt: dtController
 };
 
 updateRecordingUI();
+initDigitaktUI(consumeFileInput, () => files);

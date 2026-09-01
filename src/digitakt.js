@@ -1237,15 +1237,15 @@ export function renderDtBrowser() {
             <div class="dt-connection-section">
                 <div class="dt-port-selectors">
                     <div class="dt-port-field">
-                        <label>MIDI In</label>
-                        <select onchange="digichain.digitakt.selectInPort(this.value)">
+                        <label for="dtMidiIn">MIDI In</label>
+                        <select id="dtMidiIn" onchange="digichain.digitakt.selectInPort(this.value)">
                             <option value="">-- Select Input --</option>
                             ${inputs.map(p => `<option value="${p.id}" ${p.id === inPortId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="dt-port-field">
-                        <label>MIDI Out</label>
-                        <select onchange="digichain.digitakt.selectOutPort(this.value)">
+                        <label for="dtMidiOut">MIDI Out</label>
+                        <select id="dtMidiOut" onchange="digichain.digitakt.selectOutPort(this.value)">
                             <option value="">-- Select Output --</option>
                             ${outputs.map(p => `<option value="${p.id}" ${p.id === outPortId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
                         </select>

@@ -2672,7 +2672,7 @@ button:has(.join-count[data-join-count="0"]) {
     align-items: center;
     margin: -1.5rem 0 0 0;
     font-size: 1.6rem;
-    color: #e0e0e0;
+    color: #606c76;
 }
 .dt-badge {
     font-size: 1.1rem;
@@ -2722,7 +2722,7 @@ button:has(.join-count[data-join-count="0"]) {
     font-size: 1.2rem;
     background-color: #202124;
     border-color: #4a4d53;
-    color: #eee;
+    color: #606c76;
 }
 .dt-port-field select:focus {
     border-color: #d79c4e;
@@ -4022,6 +4022,7 @@ body.light .slice-group,
 body.light .pop-up,
 body.light .dialog-pop-up,
 body.light #opExportPanel,
+body.light #dtBrowserPanel,
 body.light select,
 body.light input,
 body.light .slice-options #sliceSelection,

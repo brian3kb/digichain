@@ -11,6 +11,7 @@ latest
 - Fixed .ot sometimes not having the .ot file extension.
 - Fixed empty file list placeholder instructions not always showing despite a cleared list.
 - Have dt1/2 turn on spaced chains rendering when selected from common config.
+- Basic connection to Digitakt II for file transfer to and from the device.
 
 2026.06.02 1.6.0
 - Support for 24/32bit AIFF file importing.

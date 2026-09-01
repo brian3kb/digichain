@@ -1,5 +1,5 @@
 /*!
-DigiChain v1.6.0 [ https://digichain.brianbar.net/ ]
+DigiChain v1.6.1 [ https://digichain.brianbar.net/ ]
 <https://github.com/brian3kb/digichain>
 
 (c) 2023 Brian Barnett <me [at] brianbar.net>
@@ -18,6 +18,7 @@ Brian referenced the following during development:
 [Unlicense] OctaChainer, how to read/write .ot binary files correctly : <https://github.com/KaiDrange/OctaChainer/blob/master/otwriter.cpp> / <https://github.com/KaiDrange/OctaChainer/blob/master/License.txt>
 Tips and Tricks on drawing array buffers to the canvas element: <https://css-tricks.com/making-an-audio-waveform-visualizer-with-vanilla-javascript/>
 [MIT License] Basic beat detection : https://github.com/JMPerez/beats-audio-api/blob/gh-pages/script.js / http://joesul.li/van/beat-detection-using-web-audio/
+[BSD-2] Elkherd, for details on  how sysEx messages are sent to and from the Digitakt : https://github.com/mzero/elk-herd
 */
 import {settings} from './settings.js';
 

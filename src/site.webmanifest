@@ -23,6 +23,7 @@
     "/index.html",
     "/main.css",
     "/main.js",
+    "/digitakt.js",
     "/editor.js",
     "/resources.js",
     "/settings.js",

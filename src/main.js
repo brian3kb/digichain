@@ -35,6 +35,7 @@ import {
 } from './digitakt.js';
 import './jszip.js';
 import './msgpack.min.js';
+import './webmidi-polyfill.js';
 
 const uploadInput = document.getElementById('uploadInput');
 const listEl = document.getElementById('fileList');
